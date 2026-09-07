@@ -1,46 +1,48 @@
 # Benchwarmer
 
-Benchwarmer is a local-first toolkit for comparing language models and agent
-configurations on repeatable tasks. It records quality, cost, latency, and
-behavior separately so the report shows tradeoffs instead of declaring one
-winner.
+Benchwarmer is a local app for choosing language models using personal sessions,
+task simulations, trusted public evaluations, and usage economics. It brings
+usage across Pi, Nous Research's Hermes Agent, and Codex where accessible into
+one place, then helps compare whether alternative models can do everyday work
+better or more cheaply.
 
-The project is currently a design scaffold. The first implementation will
-compare models and reasoning levels through an OpenAI-compatible API, with
-OpenRouter as the initial provider.
+The project is a design scaffold. The planned application uses a Python backend,
+SQLite database and mobile-friendly Svelte frontend on an always-on Mac mini,
+with private access over Tailscale. Importers, the UI and experiment execution
+are not implemented yet.
 
-## Goals
+## Scope
 
-- Define shareable benchmark tasks independently of any agent harness.
-- Run the same task against a matrix of models and reasoning levels.
-- Support fixed multi-turn scenarios and a small controlled agent loop.
-- Combine deterministic checks with criterion-level model and human review.
-- Record API list-price estimates, cache use, batch use, tokens, and latency.
-- Generate a self-contained HTML report for comparison and human feedback.
-- Keep raw trial results available instead of collapsing them into one score.
+- Aggregate usage, spend and classifications with source provenance.
+- Add personal ratings and notes to real sessions.
+- Prepare task simulations from successful or unsuccessful work.
+- Compare models, reasoning levels, harnesses, prompts, skills and tools as
+  distinct dimensions. Direct Python API execution is a harness too.
+- Track accessible system prompts and make missing or partial capture visible.
+- Start with native harness configurations; add controlled comparisons later.
+- Keep trusted external evaluations with dates, sources and configuration details.
+- Preserve trial results and quality/cost tradeoffs without one combined score.
 
-## Initial scope
+Imported session content is retained as private snapshots alongside metadata.
+Application data stays on the Mac mini and outside the public checkout by default. Private
+sessions, prompts, databases, artifacts and annotations must not be committed.
+Tool-capable simulations run only in disposable fixture workspaces.
 
-The first benchmark pack will cover:
+## Design and tasks
 
-- implementation and debugging, including project-pattern fit
-- planning and architecture
-- documentation and editing
-- research over a bounded source set
-- pedagogical explanation tasks
-- fixed multi-turn personal workflows
-
-System prompts, skills, tool sets, temperature, additional harnesses, and
-LLM-simulated users are extension points, not MVP variables.
+- [Architecture](docs/architecture.md): product direction, application components,
+  data boundaries and delivery stages.
+- [Experiments](docs/experiments.md): task derivation, harness dimensions and
+  system-prompt provenance.
+- [Open decisions](docs/decisions.md): choices needed before implementation.
+- [TODO](docs/TODO.md): implementation queue and completed work.
 
 ## Project setup
 
-Benchwarmer uses Python 3.12 or newer and [uv](https://docs.astral.sh/uv/).
+The Python scaffold uses Python 3.12 or newer and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
 ```
 
-The package does not have runtime dependencies or a command-line interface
-yet. See [docs/architecture.md](docs/architecture.md) for the agreed design and
-MVP boundaries.
+There are no runtime dependencies, application commands or frontend setup yet.

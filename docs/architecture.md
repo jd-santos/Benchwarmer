@@ -1,304 +1,255 @@
 # Benchwarmer architecture
 
-## Problem
+## Product direction
+
+Benchwarmer is a local app for choosing models using personal experience,
+task simulations, trusted public evaluations, and usage economics. It runs on
+the user's always-on Mac mini alongside Nous Research's Hermes Agent. The
+repository is intended to be public; personal data stays local.
+
+The main questions are:
+
+- What am I using and spending across Pi, Hermes, and Codex where accessible?
+- Can a cheaper model do the kinds of work I already do well enough?
+- Could another model or harness do better, even when the original session worked?
+- How do my observations compare with published evaluations I trust?
 
-Model selection is an economic decision as well as a quality decision. A large
-model may perform better, but the useful question is how models and reasoning
-levels trade quality, cost, latency, and behavior across different task types.
-
-Benchwarmer will provide a shareable and repeatable benchmark suite for those
-comparisons. It will not choose a winner or reduce every result to one utility
-score. The report should leave the tradeoffs visible for human judgment.
-
-The toolkit also needs room to evaluate system prompts, tools, skills, agent
-harnesses, and complete configurations later. Those variables must not be baked
-into the core task format.
-
-## Chosen approach
-
-Use a portable task format with a script-driven Python runner. The core owns
-task definitions, trial records, grader results, price estimates, and reports.
-Adapters connect that core to model providers and agent harnesses.
-
-OpenRouter will be the first provider through an OpenAI-compatible API. Provider
-base URLs and authentication must remain configurable so another compatible
-endpoint can replace it without changing task definitions.
-
-Pi is a possible future harness adapter and simulation runner. It is not an MVP
-dependency, extension, or canonical execution environment.
-
-## Alternatives considered
-
-### Promptfoo as the core
-
-Promptfoo already supports configurable prompts, providers, and rubric-based
-evaluation. It would reduce the first implementation effort, but it would make
-Benchwarmer's task and result semantics depend on another evaluation framework.
-That becomes limiting when repository state, agent tools, fixed conversations,
-and interactive human feedback become primary evaluation inputs.
-
-Promptfoo can still be supported through an adapter or export later.
-
-### Pi-native evaluation
-
-A Pi extension could replay realistic personal workflows and capture native
-traces. It would be useful for Pi-specific regression testing, but it would
-couple the benchmark to one harness and make it harder to compare full agent
-configurations elsewhere.
-
-Pi remains a candidate adapter after the harness-neutral runner works.
-
-### Historical-trace grading
-
-Existing traces are useful for discovering realistic task shapes and failure
-modes. They are not the canonical dataset because they contain private context,
-mix multiple requests into long sessions, and do not provide controlled trials
-across candidate configurations.
-
-Public tasks may be inspired by historical patterns only after they are
-rewritten as self-contained fixtures.
-
-## Design principles
-
-### Keep experimental variables explicit
-
-A candidate configuration may eventually include:
-
-- provider and model
-- reasoning or thinking level
-- temperature and sampling controls
-- system prompt
-- skills or injected instructions
-- available tools
-- agent harness and harness configuration
-
-The MVP varies only model and reasoning level. Other fields should have stable
-places in the schema without becoming active sweep dimensions yet.
-
-### Preserve trials before aggregating
-
-Every attempt should remain independently inspectable. Aggregation may show
-means, ranges, confidence intervals, distributions, and category summaries, but
-it must not discard the original trial or grader evidence.
-
-### Separate observations from judgments
-
-Observed data includes outputs, file changes, tool calls, token counts, cache
-use, latency, and provider-reported usage. Judgments include rubric scores,
-human feedback, and model-judge feedback. Store them separately so a grader can
-be replaced without rerunning the candidate when the original artifacts are
-sufficient.
-
-### Make economics auditable
-
-Store raw usage alongside the price catalog entry used for each estimate. A
-result should distinguish:
-
-- uncached input tokens
-- cached input tokens
-- output tokens
-- provider-reported reasoning tokens when available
-- batch execution
-- API list-price estimate
-- actual API charge when the provider returns one
-- whether a subscription-backed harness was used, when known
-
-Subscription usage is descriptive only. Benchwarmer will not try to allocate a
-subscription price across trials.
-
-### Prefer reproducible conversations
-
-Multi-turn tasks begin as fixed scripts with defined decision points. An
-LLM-simulated user may be added later as a separate scenario type because it
-introduces another source of cost and variance.
-
-## Core concepts
-
-The initial domain model should cover these concepts without committing to a
-serialization syntax yet:
-
-- **Suite**: A versioned collection of tasks and shared configuration.
-- **Task**: A prompt, fixture, evaluation criteria, and task metadata.
-- **Scenario**: A single-turn request or fixed multi-turn script.
-- **Candidate**: The provider, model, reasoning level, and stubbed future
-  configuration fields being evaluated.
-- **Trial**: One execution of one task against one candidate.
-- **Artifact**: Output text, trace, changed files, command results, or other
-  evidence produced by a trial.
-- **Grader**: A deterministic, model-based, or human evaluation of a criterion.
-- **Observation**: Usage, latency, tool activity, and environment outcomes that
-  do not require subjective judgment.
-- **Result**: The trial, observations, grader outputs, provenance, and errors.
-- **Report**: An aggregated view that links back to individual trials.
-
-Serialized forms should include schema versions from the start.
-
-## Execution pipeline
-
-1. Load a benchmark suite and validate its task definitions.
-2. Expand the selected model and reasoning-level matrix.
-3. Run repeated trials for every task and candidate combination.
-4. Capture artifacts, provider usage, timing, errors, and pricing provenance.
-5. Apply deterministic graders to outcomes that can be verified directly.
-6. Apply criterion-level model judges where subjective review is required.
-7. Preserve human feedback entered through the report.
-8. Aggregate results by trial, task, category, model, and reasoning level.
-9. Generate a self-contained HTML report without selecting a winner.
-
-The number of repetitions should be configurable by suite, task, and candidate.
-
-## Small agent loop
-
-The MVP may include a controlled agent loop rather than depending on an existing
-harness. Its purpose is to expose enough behavior to evaluate implementation,
-tool judgment, and repository outcomes while keeping the loop understandable.
-
-The loop should eventually support:
-
-- a disposable workspace created from a fixture
-- a bounded set of file and shell tools
-- explicit turn and cost limits
-- complete tool-call and tool-result capture
-- fixed multi-turn user messages where the scenario requires them
-- final workspace artifacts for deterministic grading
-
-The exact tool set and isolation mechanism remain open design questions. The
-loop should not attempt to reproduce every feature of a production coding
-agent.
-
-## Grading
-
-Benchwarmer should report criteria individually. Likely starting dimensions
-include:
-
-- task correctness and completeness
-- implementation quality and project-pattern fit
-- planning usefulness
-- documentation quality
-- source use and synthesis quality
-- pedagogical clarity
-- communication quality
-- tool-use judgment
-- efficiency observations such as turns, calls, tokens, latency, and cost
-
-Each task selects only the criteria that apply. Rubrics should use behavioral
-anchors and short evidence rather than a generic overall-quality prompt.
-
-GPT-5.6 Sol will be the initial model judge. Its reasoning level must be recorded
-and calibrated on the seed suite instead of treated as an invisible constant.
-
-### Evaluating the judge
-
-Judge selection is itself an economic evaluation problem. Early development
-should create a small meta-evaluation set containing human-reviewed candidate
-outputs and intentional perturbations. Judge candidates can then be compared on:
-
-- agreement with human criterion labels
-- pairwise ordering consistency
-- repeated-run stability
-- sensitivity to answer order and verbosity
-- cost and latency
-
-The production judge should not grade its own fitness. Human labels remain the
-calibration reference even if a less expensive judge eventually handles routine
-runs.
-
-## Initial benchmark pack
-
-The first target is roughly 20 carefully reviewed tasks:
-
-- 5 implementation and debugging tasks, including project-pattern fit
-- 3 planning and architecture tasks
-- 3 documentation and editing tasks
-- 3 research tasks over bounded source sets
-- 3 pedagogical explanation tasks with named audiences and learning goals
-- 3 fixed multi-turn personal-workflow scenarios
-
-The categories are starting slices, not a permanent taxonomy. Some tasks may
-carry more than one category, but each should have a clear primary purpose.
-
-## HTML report and human feedback
-
-The primary output will be a self-contained HTML report. It should support:
-
-- filtering by task category, model, reasoning level, and trial status
-- side-by-side candidate outputs
-- criterion-level scores and evidence
-- cost, token, cache, batch, latency, and tool-use views
-- per-trial inspection rather than summaries alone
-- human ratings, corrections, and notes
-- export of human annotations for later judge calibration
-
-A standalone HTML file cannot silently write changes back to the filesystem.
-The design must choose between browser-local persistence, downloading an
-annotation file, or an optional local server for annotation sessions. The
-delivered report should remain viewable without that server.
-
-## MVP boundary
-
-The MVP includes:
-
-- Python 3.12+ managed with uv
-- a versioned portable task and result format
-- an OpenAI-compatible provider interface
-- an initial OpenRouter configuration
-- model and reasoning-level sweeps
-- repeated trials
-- single-turn and fixed multi-turn scenarios
-- a small controlled agent loop
-- deterministic and model-based graders
-- API list-price estimation with cache and batch metadata
-- a self-contained HTML comparison report
-- human feedback collection through the report workflow
-
-The MVP does not include:
-
-- automatic model routing or a recommended winner
-- subscription-cost allocation
-- a Pi extension or required Pi adapter
-- LLM-simulated users
-- automatic import of private historical traces
-- active sweeps across system prompts, skills, tool sets, or temperature
-
-Those deferred variables should fit the data model without requiring a redesign.
-
-## Acceptance criteria
-
-The MVP is complete when it can:
-
-1. Load a public benchmark suite with versioned task definitions.
-2. Run at least two models and two reasoning levels through the same tasks.
-3. Repeat trials and preserve every raw result.
-4. Execute a repository task in a disposable workspace through the small agent
-   loop.
-5. Run deterministic graders and GPT-5.6 Sol rubric graders on applicable
-   criteria.
-6. Record tokens, latency, cache use, batch use, and price provenance.
-7. Generate one self-contained HTML report showing quality and economic
-   tradeoffs without a composite winner.
-8. Collect human criterion ratings and export them in a reusable format.
-9. Swap OpenRouter for another OpenAI-compatible endpoint through configuration.
-10. Keep private traces and local run artifacts outside the public repository.
-
-## Open questions
-
-- Which file and shell tools belong in the first agent loop?
-- What isolation mechanism should disposable repository fixtures use?
-- How should provider-specific reasoning levels map into a common schema?
-- Which price catalog should be authoritative, and how should historical prices
-  remain reproducible?
-- What reasoning level should the initial GPT-5.6 Sol judge use?
-- How should human annotations persist from a self-contained report?
-- Which public license should the project use?
-- Which concrete tasks should make up the first calibration set?
-
-## Later phases
-
-After the MVP, likely extensions are:
-
-1. System-prompt, skill, tool-set, and temperature benchmarks.
-2. Judge meta-evaluation and cheaper calibrated judges.
-3. Harness adapters, with Pi as an early candidate.
-4. LLM-simulated user scenarios.
-5. Historical-trace mining and task distillation tools.
-6. Optional routing experiments built from benchmark results.
+Everyday sessions supply candidate tasks. Initially, personal evaluation means
+ratings and notes. Repeatable evaluations should emerge from useful simulations
+and reviewed sessions rather than a predetermined benchmark pack. Benchwarmer
+supports experimentation; the user's actual work continues in their harnesses.
+
+This direction supersedes the original standalone benchmark-runner MVP. A custom
+agent loop, fixed 20-task pack, named model judge, and self-contained HTML as the
+primary interface are no longer initial requirements. Harness-neutral tasks,
+preserved trials, and separate quality and economics remain core.
+
+## Application shape
+
+Use SQLite for structured data, a Svelte frontend, and a Python 3.12+ backend
+managed with uv. Large private artifacts live in local files referenced by the
+database. The exact backend framework and Svelte tooling remain open.
+
+The intended runtime has a local API and a background execution worker. Import
+and experiment state persist independently of the browser. Start with one local
+installation; multi-user hosting and synchronization are outside the initial
+scope. Plan for private access over Tailscale from other devices, with a
+mobile-friendly frontend. The serving mechanism, process binding and access
+configuration remain implementation decisions in [decisions.md](decisions.md).
+
+Core workflows must work on phone-sized screens: browsing usage, filtering
+sessions, adding ratings and notes, viewing experiment progress and reviewing
+results. Charts and navigation must support touch. Comparisons should offer
+stacked or switchable views on narrow screens; wide tables and code panes should
+not force the whole page to scroll horizontally. The database and execution
+worker remain on the Mac mini.
+
+| Component | Responsibility |
+| --- | --- |
+| Svelte frontend | Usage charts, session inspection, annotations, experiments and saved evidence |
+| Python API | Queries, validation, configuration, annotations and experiment operations |
+| Worker | Imports, reconciliation, execution, progress and recovery |
+| SQLite | Versioned records, relationships, provenance, annotations and durable job state |
+| Private artifact directory | Transcripts, prompt snapshots, fixtures, outputs and raw source records |
+| Adapters | Harness imports/execution, provider usage, pricing and published evidence |
+
+This is a design, not an implemented service. Add dependencies when an implemented
+feature needs them. Choose job scheduling and SQLite concurrency details during
+implementation; interrupted jobs must never silently rerun paid work.
+
+## Application areas
+
+### Activity and usage
+
+Import sessions and usage from Pi, Hermes, and Codex to the extent each source
+allows. Combine harness observations with provider records when useful. Support
+date, harness, provider, model, project and classification filters, charts, and
+drill-down to sessions or individual usage records.
+
+Show source coverage, last successful import, and unavailable fields. A source
+may offer account totals without session attribution. Keep those totals useful
+without inventing a breakdown.
+
+### Personal review
+
+Attach ratings, labels and notes to sessions and trials. Successful sessions are
+valid simulation seeds. Record interventions and retries when available, but the
+product is not a workflow for rescuing failed tasks.
+
+### Experiments
+
+Prepare tasks from imported work and run alternative model/harness configurations.
+Broad sweeps across inexpensive candidates are a first-class use case. Each task
+needs reviewed starting context and an explicit definition of what it tests;
+an arbitrary transcript is not automatically executable.
+
+Compare outputs and artifacts with usage and criterion-level judgments. Keep all
+attempts, including failures and incomplete runs. See
+[experiments.md](experiments.md) for harness, prompt and simulation semantics.
+
+### Trusted external evidence
+
+Keep a dated collection of evaluations the user trusts. Begin with saved links,
+notes and published results where available. Record publisher, publication and
+retrieval dates, benchmark/version, model/configuration, methodology, units, and
+source artifact or permitted excerpt when available.
+
+Preserve updated publications as distinct revisions. Missing configuration
+details remain unknown. Do not merge unrelated benchmark scores into a common
+ranking or treat a model-only result as evidence about every harness using it.
+
+Automated fetching is source-specific and optional. Published APIs, exports,
+access terms and reuse permissions need verification before building importers.
+The initial product does not require broad scraping or a news feed.
+
+### Model views
+
+Bring activity, experiments, and saved evidence together for a model. Preserve
+provider-specific IDs, versions and aliases; uncertain identity mappings remain
+visible. A shared display name is insufficient to merge records or conclude that
+configurations are equivalent.
+
+## Core records
+
+These are conceptual boundaries, not a finalized SQL schema.
+
+| Record | Meaning |
+| --- | --- |
+| Source / import batch | Source identity, cursor, coverage, timestamps and import outcome |
+| Session | Observed harness session, source ID, metadata and linked artifacts |
+| Usage observation | Raw and normalized usage at request, session or account scope |
+| Price snapshot | Effective date, source, currency, rates and estimation assumptions |
+| Classification | Label, subject, origin, classifier/version and confidence if supplied |
+| Annotation | Human rating, note or correction with subject and revision history |
+| Task version | Harness-neutral intent, starting inputs, fixture and success criteria |
+| Task source link | Sessions or evidence used to derive a task, with extraction notes |
+| Harness configuration | Harness identity/version, execution mode and settings snapshot |
+| Candidate configuration | Model, provider, reasoning, harness, prompts, skills, tools and sampling |
+| Experiment | Task/configuration matrix, repetitions, budgets and execution policy |
+| Trial | One attempt with status, observed configuration, artifacts and usage |
+| Judgment | Criterion-level human, deterministic or model assessment with evidence |
+| External evaluation | Published result or reference, its provenance and revisions |
+| Job | Durable import/execution work, progress, cancellation and recovery state |
+
+One session may yield several tasks, and one task may draw on several sessions.
+Task versions and trial configuration snapshots remain stable after execution.
+Keep observations separate from judgments so later review does not rewrite what
+was recorded. Version serialized schemas from the start and use database
+migrations when their structure or meaning changes.
+
+## Usage and cost semantics
+
+Keep raw provider usage and the pricing source behind each estimate. Preserve
+input, cached input, output, reasoning and other token categories when exposed,
+along with batch behavior, latency and provider-specific fields. Do not sum
+overlapping token categories as if they were disjoint.
+
+Distinguish actual provider charges, API list-price estimates, subscription
+payments, quota consumption, credits and remaining capacity. An API-equivalent
+estimate is not an actual subscription charge. Initially, subscription expense
+belongs at account/period scope; do not allocate it across tasks without an
+explicit later decision.
+
+Imports must be idempotent. Harness and provider observations can refer to the
+same request: retain both sources but reconcile their relationship before
+aggregating. Account totals may also overlap session totals. Unmatched records
+and reconciliation differences should be inspectable rather than silently added
+together. Store currency and reporting time zone explicitly.
+
+Track provider classifications, user labels and Benchwarmer-generated labels
+with separate provenance. OpenRouter's recently introduced classifications are a
+requested integration target; their interface, granularity and historical
+availability have not yet been verified for this project.
+
+## Source feasibility
+
+Pi and Hermes imports and execution adapters require inspection of their actual
+local versions, storage formats and supported interfaces. Codex import and
+execution are separate capabilities; neither is a prerequisite for the initial
+app. Build a source coverage matrix before promising parity.
+
+The official [Codex App Server documentation](https://learn.chatgpt.com/docs/app-server),
+reviewed on 2026-09-07, documents `account/usage/read` for account token summaries
+and optional daily buckets, `account/rateLimits/read` for quota information, and
+`thread/tokenUsage/updated` for active-thread usage. These are potential data
+sources, not proof of complete historical coverage or per-model billing access.
+Availability in the installed version and account remains to be tested.
+
+## Local data boundary
+
+The application data root should default outside the repository and be
+configurable. Its exact location, backup and retention policy remain open.
+Retain private snapshots of imported session content alongside normalized
+metadata, so source-log deletion or changes do not erase comparison evidence.
+Record source identity and capture time; retention and deletion rules remain open.
+
+SQLite databases, journal/WAL files, raw usage, session content, system prompts,
+annotations, fixtures, outputs and logs belong within that private boundary.
+Backups need to preserve database/artifact consistency.
+
+The existing gitignored `.benchwarmer/`, `artifacts/` and `reports/` directories
+remain available for development data. Public fixtures or exports require
+deliberate sanitization. Keep credentials out of imported snapshots, logs and
+exports; use configured credential references for execution.
+
+Run simulations with file or shell tools only in disposable fixture workspaces.
+Live project paths and captured commands are evidence, not instructions to run
+against the user's working environment. Network access, external mutations and
+credential availability need an explicit run policy.
+
+## Delivery stages and acceptance criteria
+
+### 1. Data feasibility and application foundation
+
+Document coverage for each harness/provider and select the first import source.
+Establish the Python API, SQLite migrations, private artifact root and Svelte UI.
+Use sanitized fixtures for development. Establish private access over Tailscale
+and verify responsive layouts on phone and desktop viewports. No custom agent
+loop is required.
+
+### 2. Useful activity and personal review
+
+The first useful release imports at least one real source without duplicates,
+supports incremental updates, and shows usage charts and session detail. Ratings
+and notes survive restart. Costs retain provenance; missing fields remain visible.
+Add a second source to verify consolidated totals and reconciliation rather than
+assuming one adapter generalizes.
+
+### 3. Saved external evidence
+
+Save and retrieve trusted evaluations with source dates, model identity and
+notes. Attach structured results where available without forcing a common score.
+
+### 4. Task simulations and comparisons
+
+Derive and version a task from actual work, select a harness configuration, and
+run at least two candidate models using native harness configurations first.
+Preserve prompt capture status and all trials,
+compare quality and economics independently, and keep workspaces disposable.
+Budget limits, cancellation and restart recovery work without duplicate paid
+attempts. Add another harness, including direct API execution, to verify the
+cross-harness representation.
+
+### 5. Organic evaluation collections
+
+Promote useful tasks into repeatable suites, add fixed multi-turn scripts and
+deterministic checks, and assess whether model judges would help. If introduced,
+calibrate judges against human labels and record their configuration and cost.
+
+## Alternatives and deferred work
+
+- A usage-only dashboard is smaller but leaves simulation context and review
+  disconnected. Usage remains the first delivery slice within the broader app.
+- A notebook or static HTML report cannot serve as the primary durable workflow
+  for imports, annotations and jobs. Portable reports may follow as exports.
+- An evaluation-first platform postpones useful everyday data and commits too
+  early to a task taxonomy and agent loop.
+- A Pi-only core prevents independent harness comparisons. Pi and Hermes remain
+  adapters, with direct Python API execution represented as another harness.
+- Hosted multi-user deployment adds identity, access and maintenance work that
+  the initial personal Mac mini installation does not need.
+- Automatic routing, LLM-simulated users, subscription-cost allocation, a custom
+  agent loop, automated source discovery and public sharing are deferred.
+
+See [decisions.md](decisions.md) for unresolved choices and [TODO.md](TODO.md) for
+the implementation queue.
