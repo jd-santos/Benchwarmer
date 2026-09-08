@@ -60,6 +60,7 @@
 
 [Root]: ./docs/
 design: {architecture.md,experiments.md,decisions.md}
+delivery: {roadmap.md,plans/}
 tasks: {TODO.md}
 
 ## File-Specific Notes
@@ -68,6 +69,11 @@ tasks: {TODO.md}
   alternatives, acceptance criteria, and open questions.
 - **`docs/experiments.md`**: Defines simulation, harness and prompt semantics.
 - **`docs/decisions.md`**: Records unresolved choices and proposed defaults.
+- **`docs/roadmap.md`**: Records delivery slices, dependencies, milestone gates
+  and the agent handoff protocol.
+- **`docs/plans/`**: Contains executable plans with exact paths, commands,
+  acceptance criteria and verification steps. Follow the plan linked by a TODO
+  task rather than inventing missing implementation details.
 - **`docs/TODO.md`**: Tracks work using In Progress, Up Next, Backlog and Done.
 - **`src/benchwarmer/`**: Keep domain models independent from provider and
   harness adapters.

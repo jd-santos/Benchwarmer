@@ -35,6 +35,8 @@ Tool-capable simulations run only in disposable fixture workspaces.
 - [Experiments](docs/experiments.md): task derivation, harness dimensions and
   system-prompt provenance.
 - [Open decisions](docs/decisions.md): choices needed before implementation.
+- [Buildout roadmap](docs/roadmap.md): delivery slices, dependencies, acceptance
+  gates and agent handoff protocol.
 - [TODO](docs/TODO.md): implementation queue and completed work.
 
 ## Project setup
