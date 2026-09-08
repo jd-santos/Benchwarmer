@@ -61,6 +61,8 @@
 [Root]: ./docs/
 design: {architecture.md,experiments.md,decisions.md}
 delivery: {roadmap.md,plans/}
+evidence: {sources/,source-coverage.md}
+decisions: {decisions.md,decisions/}
 tasks: {TODO.md}
 
 ## File-Specific Notes
@@ -69,6 +71,10 @@ tasks: {TODO.md}
   alternatives, acceptance criteria, and open questions.
 - **`docs/experiments.md`**: Defines simulation, harness and prompt semantics.
 - **`docs/decisions.md`**: Records unresolved choices and proposed defaults.
+- **`docs/decisions/`**: Stores independently authored ADR proposals and their
+  index. A coordinator reconciles accepted records into `docs/decisions.md`.
+- **`docs/sources/`**: Stores one evidence report per inspected source. A
+  coordinator synthesizes them into `docs/source-coverage.md`.
 - **`docs/roadmap.md`**: Records delivery slices, dependencies, milestone gates
   and the agent handoff protocol.
 - **`docs/plans/`**: Contains executable plans with exact paths, commands,

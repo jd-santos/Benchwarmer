@@ -38,13 +38,17 @@ start:
   `DEP-002` should prefer adapter-static unless a concrete SSR or Node runtime
   requirement justifies a second serving process.
 - `web/` for the frontend and `src/benchwarmer/` for Python.
-- A configurable private data root outside the checkout, supplied through the
-  `BENCHWARMER_DATA_ROOT` environment variable. Tests always override it with a
+- A configurable private data root outside the checkout. `DEP-001` decides the
+  configuration interface and default; tests always override it with a
   temporary directory.
 - Separate API and future worker processes. Do not add an idle worker stub.
 
 If a different choice is recorded, update this plan's paths and commands in the
 same commit so later agents do not inherit contradictory instructions.
+
+Commands below use `BENCHWARMER_DATA_ROOT` as the proposed configuration
+interface. `DEC-001` must replace it throughout this plan if the accepted
+data/recovery record chooses another interface.
 
 ## API contract for the slice
 
@@ -59,9 +63,12 @@ database; it is not an API contract version:
 }
 ```
 
-Before `FND-008` creates the migration, the service cannot return `"0001"`.
-Startup before migrations returns an explicit unmigrated state or actionable
-startup error; it must not hard-code a successful revision.
+`alembic_revision` is `null` until migrations exist in the configured database.
+Health always returns HTTP 200 — unmigrated is an expected state, not an error,
+and `curl --fail` must succeed against it. The revision is read from the
+database on each request from `FND-005` onward; no task may hard-code it.
+Migrations `0001` and `0002` are created by FND-006 and FND-007; `FND-008` only
+extends health tests to assert `"0002"` after `alembic upgrade head`.
 
 `GET /api/v1/sources` returns a stable envelope even when no sources exist:
 
@@ -102,21 +109,24 @@ reviewable decisions before agents generate code.
 
 **Files:**
 
-- Create: `docs/decisions/<today>-application-foundation.md`
+- Create: `docs/decisions/0001-application-foundation.md`
 - Modify if needed: this plan
 
 **Steps:**
 
 1. Record the selected backend framework, ORM/migration layer, frontend package
-   manager and tooling, API path/versioning, API/UI process boundary, and the
-   future worker boundary in a dedicated foundation decision document.
+   manager and tooling, exact `sv` scaffold version, API path/versioning,
+   API/UI process boundary, and the future worker boundary in a dedicated
+   foundation decision document.
 2. State why the SvelteKit server cannot own domain persistence and why no
    worker stub is needed yet.
 3. Record which items remain under `DEP-001` and `DEP-002` instead of silently
    choosing private deployment or backup behavior here.
 4. Run `git diff --check` and inspect the rendered links.
 5. Commit with `docs: record application foundation defaults`.
-6. The coordinating agent moves `FND-001` to **Done** in `docs/TODO.md`.
+6. Return the proposal to the coordinating agent. `DEC-001` reviews it with the
+   data/recovery and serving proposals before updating canonical decisions or
+   TODO status.
 
 **Acceptance:** Every later task has one unambiguous toolchain and path layout;
 no deployment or source-capability claim is presented as verified.
@@ -133,10 +143,12 @@ no deployment or source-capability claim is presented as verified.
 
 **Steps:**
 
-1. Add exact runtime packages:
+1. Add development tooling only. Runtime packages land with the first task that
+   consumes them (Task 3 adds pydantic, Task 4 adds sqlalchemy and alembic,
+   Task 5 adds fastapi and uvicorn); this respects the repo rule that
+   dependencies wait for an implemented feature:
 
    ```bash
-   uv add fastapi uvicorn[standard] sqlalchemy alembic pydantic
    uv add --dev pytest pytest-asyncio httpx ruff
    ```
 
@@ -146,9 +158,8 @@ no deployment or source-capability claim is presented as verified.
 4. Run `uv run pytest` and verify it passes.
 5. Run `uv run ruff check .`, `uv run ruff format --check .`, and
    `uv run python -m compileall src`.
-6. Update `AGENTS.md` Commands so Install reads `uv sync --dev` for
-   development once pytest and Ruff exist (that file requires owner approval;
-   stop and ask if the edit is not permitted).
+6. Update `AGENTS.md` Commands so Install reads `uv sync --dev` for development
+   once pytest and Ruff exist.
 7. Commit with `build: add Python test and lint tooling`.
 
 **Acceptance:** A fresh `uv sync --dev` followed by all four checks succeeds.
@@ -166,13 +177,19 @@ application data outside the checkout by default.
 
 **Steps:**
 
-1. Write failing tests for an explicit `BENCHWARMER_DATA_ROOT`, the `DEP-001`
-   default, directory creation, and a non-writable/invalid path.
-2. Run `uv run pytest tests/test_config.py -q` and verify the new tests fail.
-3. Implement a typed settings object that resolves database, artifact,
+1. Add the first runtime dependency this task consumes:
+
+   ```bash
+   uv add pydantic
+   ```
+
+2. Write failing tests for the configuration interface and default accepted by
+   `DEC-001`, directory creation, and a non-writable/invalid path.
+3. Run `uv run pytest tests/test_config.py -q` and verify the new tests fail.
+4. Implement a typed settings object that resolves database, artifact,
    snapshot, and job/log paths from one root. Avoid module-import side effects.
-4. Run the focused tests, then all Python checks from Task 2.
-5. Commit with `feat: add private data root configuration`.
+5. Run the focused tests, then all Python checks from Task 2.
+6. Commit with `feat: add private data root configuration`.
 
 **Acceptance:** Tests use `tmp_path`; importing the package creates no files;
 an invalid root fails with an actionable error and no private path enters git.
@@ -191,21 +208,28 @@ SQLite database before domain tables exist.
 
 **Steps:**
 
-1. Write failing tests that initialize an empty temporary database, report its
-   current Alembic revision, and reject a non-SQLite URL if unsupported.
-2. Implement SQLAlchemy engine/session configuration and Alembic configuration
-   using the resolved application database URL, never a checkout-relative
-   production default.
-3. Define exact commands for task verification:
+1. Add the first persistence dependencies this task consumes:
 
    ```bash
-   BENCHWARMER_DATA_ROOT="$(mktemp -d)" uv run alembic current
-   BENCHWARMER_DATA_ROOT="$(mktemp -d)" uv run alembic upgrade head
-   BENCHWARMER_DATA_ROOT="$(mktemp -d)" uv run alembic downgrade base
+   uv add sqlalchemy alembic
    ```
 
-4. Run focused tests and all Python checks.
-5. Commit with `build: add database migration plumbing`.
+2. Write failing tests that initialize an empty temporary database, report its
+   current Alembic revision, and reject a non-SQLite URL if unsupported.
+3. Implement SQLAlchemy engine/session configuration and Alembic configuration
+   using the resolved application database URL, never a checkout-relative
+   production default.
+4. Define exact commands for task verification:
+
+   ```bash
+   root="$(mktemp -d)"
+   BENCHWARMER_DATA_ROOT="$root" uv run alembic current
+   BENCHWARMER_DATA_ROOT="$root" uv run alembic upgrade head
+   BENCHWARMER_DATA_ROOT="$root" uv run alembic downgrade base
+   ```
+
+5. Run focused tests and all Python checks.
+6. Commit with `build: add database migration plumbing`.
 
 **Acceptance:** Alembic can inspect and migrate a temporary database through
 the configured data root; no domain table is required yet.
@@ -223,12 +247,18 @@ reports migration state without pretending `0001` exists.
 
 **Steps:**
 
-1. Write a failing FastAPI client test for `/api/v1/health`, including status
-   code, content type, exact keys, explicit unmigrated `alembic_revision`, and
+1. Add the first web dependencies this task consumes:
+
+   ```bash
+   uv add fastapi 'uvicorn[standard]'
+   ```
+
+2. Write a failing FastAPI client test for `/api/v1/health`, including status
+   code, content type, exact keys, explicit null `alembic_revision`, and
    data-root writability.
-2. Implement an application factory that accepts settings explicitly in tests
+3. Implement an application factory that accepts settings explicitly in tests
    and expose the health route through an `/api/v1` router.
-3. Start it with the exact command:
+4. Start it with the exact command:
 
    ```bash
    BENCHWARMER_DATA_ROOT="$(mktemp -d)" \
@@ -236,9 +266,9 @@ reports migration state without pretending `0001` exists.
      --host 127.0.0.1 --port 8000
    ```
 
-4. Verify with `curl --fail http://127.0.0.1:8000/api/v1/health`.
-5. Run focused and full Python checks.
-6. Stop the process and commit with `feat: add API health endpoint`.
+5. Verify with `curl --fail http://127.0.0.1:8000/api/v1/health`.
+6. Run focused and full Python checks.
+7. Stop the process and commit with `feat: add API health endpoint`.
 
 **Acceptance:** Startup does not require a repository-local database and cannot
 claim an applied migration before the migration task creates it.
@@ -308,8 +338,7 @@ an explicit migration path before serving fixture records.
 **Steps:**
 
 1. Extend health tests so a temporary database reports `"alembic_revision":
-   "0002"` after `uv run alembic upgrade head` and reports an explicit
-   unmigrated state or actionable startup error before migrations.
+   "0002"` after `uv run alembic upgrade head` and `null` before migrations.
 2. Run the focused test and verify failure.
 3. Implement revision inspection against the configured database. Do not cache
    it at process startup if migrations can change while the process is alive.
@@ -390,17 +419,11 @@ tests and the production adapter selected by `DEP-002`.
 
 **Steps:**
 
-1. Record the current scaffold version, then pin that version in this task and
-   the resulting development documentation:
-
-   ```bash
-   npm view sv version
-   ```
-
-2. If `DEP-002` selected adapter-node, run the following from the repository
-   root with the recorded version substituted. If it selected adapter-static,
-   substitute `'sveltekit-adapter=adapter:static'` and update the acceptance
-   text in this task before scaffolding:
+1. Read the exact `sv` version pinned by `DEC-001`; do not resolve `latest` during
+   implementation.
+2. If `DEC-001` selected adapter-node, run the following from the repository
+   root with the pinned version substituted. If it selected adapter-static,
+   substitute `'sveltekit-adapter=adapter:static'`:
 
    ```bash
    npx -y sv@<recorded-version> create web --template minimal --types ts \
@@ -449,7 +472,34 @@ empty future-feature pages.
 horizontal scroll appears at 375px, and no accessibility warning is ignored
 without rationale.
 
-### Task 13: Add the first useful home page (`UI-003`)
+### Task 13: Add the typed API client and `/api` proxy (`UI-004`)
+
+**Objective:** Give SvelteKit one narrow, testable path to the Python API while
+keeping browser requests same-origin.
+
+**Files:**
+
+- Create: `web/src/lib/api/client.ts`
+- Create: `web/src/lib/api/types.ts`
+- Modify: `web/vite.config.ts`
+- Create: `web/src/lib/api/client.test.ts`
+
+**Steps:**
+
+1. Write failing client tests for request paths, cancellation, non-2xx
+   responses, and malformed JSON.
+2. Configure the Vite development proxy for `/api` from a server-side
+   `BENCHWARMER_API_ORIGIN`, defaulting to `http://127.0.0.1:8000` for local
+   development. Do not expose that target to browser code.
+3. Implement a typed client only for `/api/v1/health` and `/api/v1/sources`; do
+   not create a generic request framework.
+4. Run focused tests, all frontend checks, and the production build.
+5. Commit with `feat: add typed source status client`.
+
+**Acceptance:** Browser code calls only same-origin `/api/v1/*` paths and
+represents API failures without substituting fabricated data.
+
+### Task 14: Add the first useful home page (`UI-003`)
 
 **Objective:** Make `/` useful for this slice by presenting typed health and
 source-status state without pretending later features exist.
@@ -472,32 +522,6 @@ source-status state without pretending later features exist.
 **Acceptance:** The home page has no dead future-feature controls and clearly
 labels unavailable or unmigrated state.
 
-### Task 14: Add the typed API client and `/api` proxy (`UI-004`)
-
-**Objective:** Give SvelteKit one narrow, testable path to the Python API while
-keeping browser requests same-origin.
-
-**Files:**
-
-- Create: `web/src/lib/api/client.ts`
-- Create: `web/src/lib/api/types.ts`
-- Modify: `web/vite.config.ts`
-- Create: `web/src/lib/api/client.test.ts`
-
-**Steps:**
-
-1. Write failing client tests for request paths, cancellation, non-2xx
-   responses, and malformed JSON.
-2. Configure the Vite development proxy for `/api` to
-   `http://127.0.0.1:8000`; do not embed that target in browser code.
-3. Implement a typed client only for `/api/v1/health` and `/api/v1/sources`; do
-   not create a generic request framework.
-4. Run focused tests, all frontend checks, and the production build.
-5. Commit with `feat: add typed source status client`.
-
-**Acceptance:** Browser code calls only same-origin `/api/v1/*` paths and
-represents API failures without substituting fabricated data.
-
 ### Task 15: Connect the source status page (`UI-005`)
 
 **Objective:** Complete the vertical slice from SQLite through Python to typed,
@@ -517,7 +541,8 @@ mobile-friendly UI states.
    text plus visual treatment; color alone cannot carry meaning.
 3. At 375px, present source records as readable cards or stacked rows. At wide
    widths, a table is acceptable if it does not force the page to scroll.
-4. Run all frontend checks and the Svelte MCP autofixer on changed components.
+4. If Svelte MCP is available, run its `svelte-autofixer` on changed components;
+   otherwise record the fallback and run all required local checks.
 5. Commit with `feat: show source coverage status`.
 
 **Acceptance:** Every API state is actionable; unknown values remain unknown;
@@ -536,7 +561,9 @@ loading, process startup, process shutdown, and cleanup.
 
 **Steps:**
 
-1. Configure a temporary `BENCHWARMER_DATA_ROOT` for each browser run.
+1. Allocate free loopback ports for the API and frontend and configure a
+   temporary `BENCHWARMER_DATA_ROOT` for each browser run. Export the API URL as
+   `BENCHWARMER_API_ORIGIN` for the Vite process.
 2. Start the API with:
 
    ```bash
@@ -546,13 +573,14 @@ loading, process startup, process shutdown, and cleanup.
      --load tests/fixtures/sources.json
    BENCHWARMER_DATA_ROOT="$test_root" \
      uv run uvicorn benchwarmer.api.app:create_app --factory \
-     --host 127.0.0.1 --port 18000
+     --host 127.0.0.1 --port "$api_port"
    ```
 
 3. Start the frontend with:
 
    ```bash
-   npm --prefix web run dev -- --host 127.0.0.1 --port 15173
+   BENCHWARMER_API_ORIGIN="http://127.0.0.1:$api_port" \
+     npm --prefix web run dev -- --host 127.0.0.1 --port "$web_port"
    ```
 
 4. Inject the API-error state by intercepting requests with Playwright
@@ -563,8 +591,9 @@ loading, process startup, process shutdown, and cleanup.
 6. Run `npm run test:e2e` and all frontend checks.
 7. Commit with `test: add foundation browser harness`.
 
-**Acceptance:** Tests create, migrate, seed, stop, and delete their own state;
-parallel or repeated runs do not require repository-local data.
+**Acceptance:** Tests allocate their own ports and create, migrate, seed, stop,
+and delete their own state; parallel or repeated runs do not collide or require
+repository-local data.
 
 ### Task 17: Verify desktop and mobile flows (`QA-002`)
 
@@ -625,7 +654,7 @@ instructions.
 **Steps:**
 
 1. Document `uv sync --dev`, `BENCHWARMER_DATA_ROOT`, migration, fixture-load,
-   API startup, `npm ci --prefix web`, Playwright browser install, development,
+   API startup, `npm --prefix web ci`, Playwright browser install, development,
    test, build, and cleanup commands.
 2. Record the pinned `sv` scaffold version chosen by `UI-001` and the adapter
    chosen by `DEP-002`.

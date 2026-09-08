@@ -29,8 +29,9 @@ in [TODO.md](TODO.md).
 four source inspections
   └─► SRC-001 coverage matrix ──► SRC-002 first adapter choice ─────────┐
                                                                         │
-FND-001 foundation defaults ──► FND-002..FND-010 Python foundation      │
-  └─► DEP-001 data/recovery ──► DEP-002 serving ──► UI-001..UI-005      ┼─► QA
+three decision proposals ──► DEC-001 decision integration               │
+  ├─► FND-002..FND-010 Python foundation                                │
+  └─► UI-001..UI-005                                                     ┼─► QA
                                                                         │
 QA-001..QA-004 foundation verification ─────────────────────────────────┘
 
@@ -44,15 +45,14 @@ ACT/REV usable ──► TSK-001 task preparation ──► EXP-001 safety subst
 ```
 
 The four source inspections can run in parallel because each writes a distinct
-`docs/sources/<name>.md` file. Decision tasks are serial because the repository
-has one coordinator-maintained decision index, and only that coordinator moves
-items between TODO sections.
+`docs/sources/<name>.md` file. The initial decision proposals can also run in
+parallel because they write `docs/decisions/0001-*.md` through `0003-*.md`.
+`SRC-001` and `DEC-001` are coordinator-owned integration tasks: they combine
+reports, update the canonical summaries, and move TODO items after review.
 
-`FND-001` blocks all foundation implementation. `DEP-001` blocks private
-data-root implementation (`FND-003`). `DEP-002` blocks frontend scaffolding
-(`UI-001`), not unrelated Python tasks. `SRC-002` blocks source-specific schema
-and importer work, but it does not block the fixture-backed application
-foundation.
+`DEC-001` blocks foundation implementation that relies on the three decision
+records. `SRC-002` blocks source-specific schema and importer work, but it does
+not block the fixture-backed application foundation.
 
 ## Milestones and gates
 
@@ -68,11 +68,13 @@ process boundaries, or storage locations.
   `docs/source-coverage.md`.
 - `SRC-002`: select the first import adapter using the completed matrix.
 - `FND-001`: record the backend, migration, frontend, package-manager, and
-  worker defaults in `docs/decisions/<date>-application-foundation.md`.
+  worker defaults in `docs/decisions/0001-application-foundation.md`.
 - `DEP-001`: decide the private data root and coordinated backup/restore
-  contract in `docs/decisions/<date>-data-recovery.md`.
+  contract in `docs/decisions/0002-data-recovery.md`.
 - `DEP-002`: decide process binding, supervision, and Tailscale routing in
-  `docs/decisions/<date>-serving-supervision.md` before deployment work.
+  `docs/decisions/0003-serving-supervision.md` before deployment work.
+- `DEC-001`: reconcile those three proposals, update `docs/decisions.md`, and
+  apply their TODO status transitions in a coordinator-owned commit.
 
 **Gate:** Every selected capability has evidence, unknowns remain labeled, and
 the first adapter has stable identifiers plus a viable incremental-import
@@ -195,8 +197,10 @@ controls must be keyboard accessible and touch friendly.
      started `YYYY-MM-DDTHH:mm:ssZ`
    ```
 
-   The coordinator moves only that task to **In Progress**; implementation
-   subagents do not edit [TODO.md](TODO.md) status directly.
+   The coordinator moves only that task to **In Progress**; research, decision,
+   and implementation subagents do not edit [TODO.md](TODO.md) status directly.
+   Parallel workers receive disjoint output files. Integration tasks alone
+   update shared summaries and the task queue.
 3. If a required decision is unresolved, complete its decision task or stop
    with a precise question. Do not hide a product choice inside implementation.
 4. Work on a branch or worktree. Keep private inputs and runtime state outside

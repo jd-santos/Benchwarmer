@@ -10,9 +10,9 @@ acceptance criteria, and verification commands.
 
 ## Claim protocol
 
-Only a coordinating agent may move an item between sections. Implementation
-subagents claim work through that coordinator so one task does not modify this
-queue while another edits the same file.
+Only a coordinating agent may move an item between sections. Research,
+decision, and implementation subagents claim work through that coordinator so
+one task does not modify this queue while another edits the same file.
 
 When the coordinator assigns work, add exactly one metadata line beneath the
 task:
@@ -27,12 +27,16 @@ task:
 ## Up Next
 
 The four source inspections can run in parallel because each writes a distinct
-`docs/sources/<name>.md` file. Decision tasks are serial because the repository
-has one coordinator-maintained decision index.
+`docs/sources/<name>.md` file. Foundation decision proposals may also run in
+parallel because each writes one assigned ADR. A coordinator integrates source
+reports into `docs/source-coverage.md`, decision records into
+`docs/decisions.md`, and all status changes into this queue after review.
 
 - [ ] **SRC-PI-001 — Inspect Pi capabilities**
   - Dependencies: none
   - Output: create `docs/sources/pi.md`
+  - Ownership: edit only that report; do not edit this queue or the coverage
+    matrix
   - Cover: observed version, local session format, stable IDs, incremental
     cursor, usage fields, prompt visibility, automation/execution support,
     retention, and known overlap with provider records
@@ -45,6 +49,8 @@ has one coordinator-maintained decision index.
 - [ ] **SRC-HERMES-001 — Inspect Hermes capabilities**
   - Dependencies: none
   - Output: create `docs/sources/hermes.md`
+  - Ownership: edit only that report; do not edit this queue or the coverage
+    matrix
   - Cover and acceptance: same evidence/field/privacy contract as
     `SRC-PI-001`, including profile/session stores and supported automation
     surfaces
@@ -53,6 +59,8 @@ has one coordinator-maintained decision index.
 - [ ] **SRC-CODEX-001 — Inspect Codex capabilities**
   - Dependencies: none
   - Output: create `docs/sources/codex.md`
+  - Ownership: edit only that report; do not edit this queue or the coverage
+    matrix
   - Cover and acceptance: same evidence/field/privacy contract as
     `SRC-PI-001`, plus installed support for history, `account/usage/read`,
     rate limits, active thread usage, and accessible prompt metadata
@@ -61,6 +69,8 @@ has one coordinator-maintained decision index.
 - [ ] **SRC-OPENROUTER-001 — Inspect OpenRouter capabilities**
   - Dependencies: none
   - Output: create `docs/sources/openrouter.md`
+  - Ownership: edit only that report; do not edit this queue or the coverage
+    matrix
   - Cover and acceptance: same evidence/field/privacy contract as
     `SRC-PI-001`, plus usage, actual charges, classifications, retention, and
     request IDs needed to reconcile provider and harness observations
@@ -70,29 +80,37 @@ has one coordinator-maintained decision index.
   - Dependencies: none
   - Plan: Task 1 in the
     [foundation plan](plans/2026-09-07-application-foundation.md)
-  - Output: create `docs/decisions/<today>-application-foundation.md` with
+  - Output: create `docs/decisions/0001-application-foundation.md` with
     the selected backend, ORM/migrations, SvelteKit/npm tooling, API version
-    boundary, and API/future-worker processes
+    boundary, exact `sv` scaffold version, and API/future-worker processes
+  - Ownership: edit only that ADR; do not edit the plan, this queue, or
+    `docs/decisions.md`
   - Acceptance: all later foundation tasks have one unambiguous toolchain and
     path layout; data/recovery decisions remain in `DEP-001` and serving
     decisions in `DEP-002`
   - Verify: `git diff --check`
 
 - [ ] **DEP-001 — Decide the private data and recovery boundary**
-  - Dependencies: `FND-001`
-  - Output: create `docs/decisions/<today>-data-recovery.md` with the
+  - Dependencies: none
+  - Output: create `docs/decisions/0002-data-recovery.md` with the
     data-root default/override, `BENCHWARMER_DATA_ROOT` behavior, retention
     boundary, and coordinated database/artifact backup and restore
+  - Ownership: edit only that ADR; do not edit this queue or
+    `docs/decisions.md`
   - Acceptance: recovery preserves database/artifact consistency and secrets
     stay external
-  - Verify: `git diff --check`; exercise backup/restore against disposable
-    state before marking Done
+  - Verify: `git diff --check`; the ADR specifies the disposable prototype
+    (temporary SQLite file + temporary artifact directory plus exact
+    backup/restore/verify commands) that `FND-003` and `QA-004` implement and
+    execute
 
 - [ ] **DEP-002 — Decide private serving and supervision**
-  - Dependencies: `DEP-001`
-  - Output: create `docs/decisions/<today>-serving-supervision.md` with
+  - Dependencies: none
+  - Output: create `docs/decisions/0003-serving-supervision.md` with
     loopback bindings, Tailscale routing, frontend deployment adapter, process
     supervision, and trusted-proxy assumptions
+  - Ownership: edit only that ADR; do not edit this queue or
+    `docs/decisions.md`
   - Compare: `adapter-static` behind the chosen static/proxy boundary versus
     `adapter-node`; prefer the static build unless a concrete SSR or Node
     runtime requirement justifies another supervised process
@@ -106,6 +124,8 @@ has one coordinator-maintained decision index.
     `SRC-OPENROUTER-001`
   - Output: create `docs/source-coverage.md` comparing observed coverage,
     overlap, missing fields, execution support, and reconciliation identifiers
+  - Coordinator: review all four reports, create the matrix, and apply their
+    status transitions to this queue in one integration change
   - Acceptance: the matrix links to source reports, preserves
     conflicting/unknown evidence, and does not choose an adapter
   - Verify: `git diff --check`; cross-check every matrix cell against its
@@ -113,22 +133,32 @@ has one coordinator-maintained decision index.
 
 - [ ] **SRC-002 — Select the first import adapter**
   - Dependencies: `SRC-001`
-  - Output: create `docs/decisions/<today>-first-import-adapter.md` with the
+  - Output: create `docs/decisions/0004-first-import-adapter.md` with the
     selected source and evidence-based rationale; add adapter-specific
-    implementation tasks to this queue
+    implementation tasks through the coordinator
   - Acceptance: source exposes stable identity and an incremental/idempotent
     import strategy; unsupported fields remain explicit
   - Verify: trace the proposed cursor and duplicate key against sanitized
     examples
 
+- [ ] **DEC-001 — Integrate the initial decision records**
+  - Dependencies: `FND-001`, `DEP-001`, `DEP-002`
+  - Output: review the three ADRs together, resolve contradictions, update
+    `docs/decisions.md`, update the foundation plan where accepted choices
+    differ from its proposed defaults, and apply TODO transitions in one
+    coordinator commit
+  - Acceptance: each accepted choice links to its ADR; conflicts are resolved
+    explicitly rather than hidden in implementation
+  - Verify: `git diff --check`; verify all ADR links resolve
+
 - [ ] **FND-002 — Add Python test and lint tooling**
-  - Dependencies: `FND-001`
+  - Dependencies: `DEC-001`
   - Plan: Task 2 in the foundation plan
   - Verify: `uv sync --dev`; `uv run pytest`; `uv run ruff check .`;
     `uv run ruff format --check .`; `uv run python -m compileall src`
 
 - [ ] **FND-003 — Implement private data-root configuration**
-  - Dependencies: `FND-002`, `DEP-001`
+  - Dependencies: `FND-002`, `DEC-001`
   - Plan: Task 3 in the foundation plan
   - Verify: focused config tests plus all `FND-002` checks
 
@@ -169,7 +199,7 @@ has one coordinator-maintained decision index.
   - Verify: service/API contract tests plus all Python checks
 
 - [ ] **UI-001 — Scaffold SvelteKit with the selected adapter and checks**
-  - Dependencies: `FND-001`, `DEP-002`
+  - Dependencies: `DEC-001`
   - Plan: Task 11 in the foundation plan
   - Verify from `web/`: `npm run check`; `npm run lint`;
     `npm run test:unit -- --run`; `npm run build`
@@ -180,13 +210,13 @@ has one coordinator-maintained decision index.
   - Verify: frontend checks, 375px/desktop inspection, and keyboard navigation
 
 - [ ] **UI-003 — Add the first useful home page**
-  - Dependencies: `UI-002`
-  - Plan: Task 13 in the foundation plan
+  - Dependencies: `UI-002`, `UI-004`
+  - Plan: Task 14 in the foundation plan
   - Verify: loading/healthy/unmigrated/error UI tests and frontend checks
 
 - [ ] **UI-004 — Add the typed API client and `/api` proxy**
   - Dependencies: `UI-001`
-  - Plan: Task 14 in the foundation plan
+  - Plan: Task 13 in the foundation plan
   - Verify: client tests, frontend checks, and a development-proxy inspection
 
 - [ ] **UI-005 — Connect the source status page**
@@ -214,7 +244,7 @@ has one coordinator-maintained decision index.
 
 - [ ] **QA-004 — Document development and final integration**
   - Dependencies: `QA-003`
-  - Plan: Task 19 and Final integration gate in the foundation plan
+  - Plan: Task 19 in the foundation plan; run its Final integration gate
   - Output: `docs/development.md`
   - Acceptance: a fresh checkout can migrate disposable state, start both
     processes, and pass desktop/mobile/restart flows with no private or
