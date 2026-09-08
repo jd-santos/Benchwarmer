@@ -110,7 +110,6 @@ reviewable decisions before agents generate code.
 **Files:**
 
 - Create: `docs/decisions/0001-application-foundation.md`
-- Modify if needed: this plan
 
 **Steps:**
 
@@ -610,8 +609,8 @@ and phone-sized viewports.
    navigate to `/sources`, and verify fixture records.
 2. Add a 375px mobile viewport test covering the same path, keyboard-visible
    navigation, and no page-level horizontal overflow.
-3. Include a same-run API-error state using the closed-port fixture from
-   `QA-001`.
+3. Include a same-run API-error state using the Playwright request interception
+   mechanism defined by `QA-001`.
 4. Run `npm run test:e2e` and all frontend checks.
 5. Commit with `test: verify desktop and mobile foundation flows`.
 
