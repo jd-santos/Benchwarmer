@@ -76,11 +76,6 @@ process boundaries, or storage locations.
   `docs/decisions/0003-serving-supervision.md` before deployment work.
 - `DEC-001`: reconcile those three proposals, update `docs/decisions.md`, and
   apply their TODO status transitions in a coordinator-owned commit.
-- `ENV-001`: pin a Python/runtime mechanism with a fixed SQLite library and an
-  executable pre-connection WAL gate before migration plumbing begins.
-- `DEP-003`: execute ADR 0003's deployment checks on the target host after the
-  foundation is verified; this blocks operational rollout, not fixture-backed
-  implementation.
 
 **Gate:** Every selected capability has evidence, unknowns remain labeled, and
 the first adapter has stable identifiers plus a viable incremental-import
@@ -102,6 +97,12 @@ The executable plan is
 It includes Python and frontend checks, truthful health/migration reporting,
 the first source/import migrations, responsive navigation, API error states,
 browser tests, and restart persistence.
+
+- `ENV-001`: pin a Python/runtime mechanism with a fixed SQLite library and an
+  executable pre-connection WAL gate after `FND-002` and before `FND-003`.
+- `DEP-003`: implement the private deployment and execute ADR 0003's target-host
+  checks after `QA-004`; this blocks operational rollout, not fixture-backed
+  implementation.
 
 **Gate:** A fresh checkout resolves a WAL-safe SQLite runtime and passes all
 documented checks; no runtime data lands in git; stopping and restarting the API
