@@ -344,10 +344,17 @@ depth. Check the loopback application and declarative Serve route without
 printing identity headers or private configuration:
 
 ```sh
+set -eu
 docker compose exec -T benchwarmer python -c \
   "import json,urllib.request; print(json.load(urllib.request.urlopen(\
 'http://127.0.0.1:8000/api/v1/health')))"
-docker compose exec -T tailscale-hermes tailscale serve status --json
+docker compose exec -T tailscale-hermes tailscale serve status --json |
+  python3 -c '
+import json, sys
+payload = json.dumps(json.load(sys.stdin), sort_keys=True)
+assert "8443" in payload
+assert "http://127.0.0.1:8000" in payload
+'
 curl --fail --show-error \
   https://<node>.<tailnet>.ts.net:8443/api/v1/health
 curl --fail --show-error https://<node>.<tailnet>.ts.net:8443/
@@ -356,16 +363,26 @@ curl --fail --show-error https://<node>.<tailnet>.ts.net:8443/
 Compare the health response's Alembic revision with `alembic heads`. From a LAN
 peer and an unauthorized tailnet identity, verify that port 8000 and the HTTPS
 origin respectively are unreachable. Confirm that `tailscale funnel status`
-does not list Benchwarmer.
+does not list Benchwarmer. These checks must emit only pass/fail status in the
+deployment record; never retain raw Serve/Funnel JSON, node names, identities,
+or the complete private routing configuration.
 
 Exercise process behavior in a maintenance window:
 
 ```sh
+set -eu
+restore_service() {
+  docker compose start benchwarmer >/dev/null 2>&1 || true
+}
+trap restore_service EXIT HUP INT TERM
+
 container_id="$(docker compose ps -q benchwarmer)"
 test -n "$container_id"
 restart_before="$(docker inspect --format '{{.RestartCount}}' "$container_id")"
 docker compose exec -T benchwarmer sh -c 'kill -KILL 1' || true
 attempt=0
+restart_after="$restart_before"
+health=""
 while [ "$attempt" -lt 30 ]; do
   restart_after="$(docker inspect --format '{{.RestartCount}}' "$container_id")"
   health="$(docker inspect --format '{{.State.Health.Status}}' "$container_id")"
@@ -382,11 +399,14 @@ test "$(docker inspect --format '{{.State.Status}}' "$container_id")" = exited
 sleep 5
 test "$(docker inspect --format '{{.State.Status}}' "$container_id")" = exited
 docker compose start benchwarmer
+trap - EXIT HUP INT TERM
 ```
 
 Killing PID 1 from an exec process simulates an application crash rather than a
 Docker stop operation. The restart count must increase after that crash and the
 service must return to healthy. An operator stop must remain stopped through the
-explicit delay. Finally, make the health probe fail in a disposable deployment
-and confirm Docker reports `unhealthy` without claiming it automatically
-restarted; restore the configuration, inspect logs, and verify HTTPS recovery.
+explicit delay. `set -eu` makes every assertion fail closed, while the trap
+restores the service if the block exits early. Finally, make the health probe
+fail in a disposable deployment and confirm Docker reports `unhealthy` without
+claiming it automatically restarted; restore the configuration, inspect logs,
+and verify HTTPS recovery.
