@@ -24,8 +24,9 @@ are not implemented yet.
 - Preserve trial results and quality/cost tradeoffs without one combined score.
 
 Imported session content is retained as private snapshots alongside metadata.
-Application data stays on the Mac mini and outside the public checkout by default. Private
-sessions, prompts, databases, artifacts and annotations must not be committed.
+Application data stays on the Mac mini and outside the public checkout by
+default. Private sessions, prompts, databases, artifacts and annotations must
+not be committed.
 Tool-capable simulations run only in disposable fixture workspaces.
 
 ## Design and tasks
@@ -35,6 +36,12 @@ Tool-capable simulations run only in disposable fixture workspaces.
 - [Experiments](docs/experiments.md): task derivation, harness dimensions and
   system-prompt provenance.
 - [Open decisions](docs/decisions.md): choices needed before implementation.
+- [Decision records](docs/decisions/README.md): independent ADR proposals and
+  coordinator integration rules.
+- [Source reports](docs/sources/README.md): per-source evidence and privacy
+  requirements.
+- [Buildout roadmap](docs/roadmap.md): delivery slices, dependencies, acceptance
+  gates and agent handoff protocol.
 - [TODO](docs/TODO.md): implementation queue and completed work.
 
 ## Project setup

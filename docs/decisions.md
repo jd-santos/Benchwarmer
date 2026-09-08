@@ -1,5 +1,9 @@
 # Design decisions
 
+Independently authored proposals live under [decisions/](decisions/README.md).
+This document remains the canonical summary after a coordinating task reviews
+and integrates those records.
+
 The product direction is agreed: a local SQLite/Svelte app with a Python backend,
 personal session review, consolidated usage, trusted external evidence and task
 simulations. Harness and system prompts are explicit dimensions; direct Python
@@ -18,11 +22,25 @@ API execution is a harness.
 
 ## Before the first implementation slice
 
-| Decision | Why it matters | Proposed starting point |
-| --- | --- | --- |
-| Initial import source | Determines the first usable slice and real schema constraints | Inspect Pi, Hermes, Codex and provider coverage, then choose the richest accessible session source |
-| Tailscale serving and access | Determines binding, authentication and deployment work | Private access to the Mac mini; choose serving mechanism and access configuration before deployment |
-| Data location and recovery | Records and artifact files must remain consistent | Configurable root outside the checkout, migrations and coordinated backup/restore |
+### Initial import source
+
+- **Why it matters:** Determines the first usable slice and real schema
+  constraints.
+- **Proposed starting point:** Inspect Pi, Hermes, Codex, and provider coverage,
+  then choose the richest accessible session source.
+
+### Tailscale serving and access
+
+- **Why it matters:** Determines binding, authentication, and deployment work.
+- **Proposed starting point:** Keep access private to the Mac mini and choose the
+  serving mechanism and access configuration before deployment.
+
+### Data location and recovery
+
+- **Why it matters:** Database records and artifact files must remain
+  consistent.
+- **Proposed starting point:** Use a configurable root outside the checkout,
+  migrations, and coordinated backup/restore.
 
 Source inspection should establish stable IDs, incremental imports, token/cost
 granularity, classifiers, historical coverage, prompt visibility and request IDs
@@ -31,13 +49,36 @@ OpenRouter classification access or Codex history is complete.
 
 ## Before the first simulation
 
-| Decision | Why it matters | Proposed starting point |
-| --- | --- | --- |
-| First task family | Coding, research and text tasks need different fixtures and tools | Select representative everyday tasks after inspecting sessions |
-| First execution harness | Establishes process control and capture requirements | Pi or Hermes based on supported automation; direct API baseline where capabilities fit |
-| Reconstruction threshold | Transcripts may lack starting files or external state | Reviewed inputs and fixtures, with approximations labeled before a sweep |
-| Scope and budget of broad sweeps | Cheap calls multiply across tasks and retries | Explicit count/time limits and total spend policy; no unbounded runs on import |
-| Meaning of good enough | Enables useful comparison without a universal score | Task-specific human criteria and notes, then verifiable checks |
+### First task family
+
+- **Why it matters:** Coding, research, and text tasks need different fixtures
+  and tools.
+- **Proposed starting point:** Select representative everyday tasks after
+  inspecting sessions.
+
+### First execution harness
+
+- **Why it matters:** Establishes process control and capture requirements.
+- **Proposed starting point:** Use Pi or Hermes based on supported automation,
+  with a direct API baseline where capabilities fit.
+
+### Reconstruction threshold
+
+- **Why it matters:** Transcripts may lack starting files or external state.
+- **Proposed starting point:** Require reviewed inputs and fixtures, with
+  approximations labeled before a sweep.
+
+### Scope and budget of broad sweeps
+
+- **Why it matters:** Cheap calls multiply across tasks and retries.
+- **Proposed starting point:** Require explicit count/time limits and a total
+  spend policy; never run unbounded work on import.
+
+### Meaning of good enough
+
+- **Why it matters:** Enables useful comparison without a universal score.
+- **Proposed starting point:** Use task-specific human criteria and notes, then
+  verifiable checks.
 
 A direct API baseline cannot replace a tool-using harness on tasks that require
 it, even when both are represented through the same experiment interface.
