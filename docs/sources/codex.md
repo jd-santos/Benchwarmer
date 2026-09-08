@@ -36,13 +36,15 @@ inspected at schema level only; its separate desktop build number was not read.
 Safe, repeatable evidence commands were:
 
 ```console
-codex --version
-codex --help
-codex resume --help
-codex exec --help
-codex app-server --help
-codex app-server generate-json-schema --out <temporary-directory>
-codex app-server generate-json-schema --experimental \
+CODEX_BIN="${CODEX_BIN:-$(npm prefix --global)/bin/codex}"
+test -x "$CODEX_BIN"
+"$CODEX_BIN" --version
+"$CODEX_BIN" --help
+"$CODEX_BIN" resume --help
+"$CODEX_BIN" exec --help
+"$CODEX_BIN" app-server --help
+"$CODEX_BIN" app-server generate-json-schema --out <temporary-directory>
+"$CODEX_BIN" app-server generate-json-schema --experimental \
   --out <temporary-directory>
 ```
 
@@ -181,11 +183,14 @@ endpoint. They do not claim per-thread, per-request, per-model, cached,
 reasoning, or batch detail in these account buckets. Bucket timezone, update
 latency, historical horizon, and correction behavior are not specified.
 
-Current `account/rateLimits/read` documentation adds a multi-bucket view,
-workspace credit details, and optional earned reset-credit details. These are
-quota/credit observations, not invoices. Pricing docs say ChatGPT plan usage is
-shared across local and cloud work and may also be shared with other agentic
-features. They also distinguish API-key usage, which is billed at API rates.
+Current `account/rateLimits/read` documentation adds optional earned
+reset-credit details. The other listed account-limit features are not
+current-only: installed 0.129.0 already exposes the multi-bucket
+`rateLimitsByLimitId` map and a `CreditsSnapshot` with `balance`, `hasCredits`,
+and `unlimited`. These are quota/credit observations, not invoices. Pricing docs
+say ChatGPT plan usage is shared across local and cloud work and may also be
+shared with other agentic features. They also distinguish API-key usage, which
+is billed at API rates.
 
 No inspected Codex source provides all of the following in one stable record:
 actual charge, currency, tax, subscription payment, API list-price estimate,
