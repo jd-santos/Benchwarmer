@@ -60,11 +60,13 @@ local behavior remains unknown because no installation was found.
 
 - **Primary local identity:** profile/source installation plus `sessions.id` and
   `messages.id`.
-- **Lineage:** session parent/root/fork metadata and message ordering are stored.
+- **Lineage:** `parent_session_id` records compression continuations and message
+  ordering is stored. General root/fork metadata was not established.
 - **Incremental path:** no first-party change cursor or deletion tombstone was
   observed. A message-ID watermark can reduce reads but is not sufficient alone.
 - **Reconciliation:** periodically rescan sessions for mutable metadata, usage,
-  rewinds, forks, and deletions; version-gate every schema capability.
+  message edits/rewinds, compression continuations, and deletions; version-gate
+  every schema capability.
 - **Provider bridge:** canonical session storage has no generic provider request
   or response ID. Platform message IDs are optional and not billing IDs.
 
@@ -106,9 +108,9 @@ local behavior remains unknown because no installation was found.
 | Input/output tokens | Upstream | Observed | Observed | Public schema |
 | Cache categories | Upstream | Observed | Observed | Public schema |
 | Reasoning tokens | Upstream | Version gated | Observed | Schema |
-| Media/search units | Unknown | Not generic | Item partial | Schema |
+| Media/search units | Unknown | Not generic | Unknown | Schema |
 | Monetary cost | Estimated | Tagged | Not stored | Actual |
-| Account balance | Unknown | Not applicable | Credits schema | Unknown |
+| Account balance | Unknown | Unknown | Credits schema | Unknown |
 | Rate limits | Provider | Provider | Installed | Unknown |
 
 Interpretation rules:
@@ -210,7 +212,7 @@ confidence label and user-visible provenance.
 
 1. Pi must be inspected again if a local installation becomes available.
 2. Hermes schema adapters need fixtures for each supported schema/version pair,
-   including rewinds, forks, usage updates, and deletions.
+   including rewinds, compression continuations, usage updates, and deletions.
 3. Codex account/rate-limit coverage needs a privacy-preserving live probe before
    private account claims can become available.
 4. OpenRouter account endpoints, historical coverage, and workspace scope need an
