@@ -99,15 +99,29 @@ windows, but no cursor token or continuation token. **Evidence: E1.**
 
 A practical importer can use these keys:
 
-| Record | Idempotent key | Incremental signal | Limitation |
-| --- | --- | --- | --- |
-| Session | installation/profile scope + `sessions.id` | rescan sessions changed by observed activity | no general `updated_at`; rename, pin/archive, prompt/config, usage, end-state, and deletion can change in place |
-| Message | database scope + `messages.id` | `id > last_message_id` in one store | edits, compaction flags, rewinds, and deletes require reconciliation |
-| Model/task usage | scope + full `session_model_usage` primary key | `last_seen` plus row reread | counters are updated in place; deleted rows have no tombstone |
-| Gateway route | scope + `gateway_routing.scope` + `session_key` | `updated_at` | routing metadata is not a transcript cursor and contains private identifiers |
+- **Session**
+  - **Idempotent key:** installation/profile scope + `sessions.id`
+  - **Incremental signal:** rescan sessions changed by observed activity
+  - **Limitation:** no general `updated_at`; rename, pin/archive,
+    prompt/config, usage, end-state, and deletion can change in place
+- **Message**
+  - **Idempotent key:** database scope + `messages.id`
+  - **Incremental signal:** `id > last_message_id` in one store
+  - **Limitation:** edits, compaction flags, rewinds, and deletes require
+    reconciliation
+- **Model/task usage**
+  - **Idempotent key:** scope + full `session_model_usage` primary key
+  - **Incremental signal:** `last_seen` plus row reread
+  - **Limitation:** counters are updated in place; deleted rows have no
+    tombstone
+- **Gateway route**
+  - **Idempotent key:** scope + `gateway_routing.scope` + `session_key`
+  - **Incremental signal:** `updated_at`
+  - **Limitation:** routing metadata is not a transcript cursor and contains
+    private identifiers
 
-**Evidence for the table: E2 `SCHEMA_SQL`, usage update methods, and pruning
-methods; E3.**
+**Evidence for the import keys: E2 `SCHEMA_SQL`, usage update methods, and
+pruning methods; E3.**
 
 Use a read transaction against SQLite in WAL mode (or SQLite's backup API) so
 related tables come from one consistent snapshot. Copying only `state.db` while
