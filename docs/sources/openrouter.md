@@ -31,9 +31,20 @@ permissively, as recommended for [router metadata][router-metadata].
 
 ## Session and request identity
 
-A successful completion response has a top-level `id` in the `gen-...`
-namespace. The documented [`GET /api/v1/generation?id=...`][generation]
-lookup returns request metadata for that exact generation, including:
+OpenRouter and the selected API protocol have distinct identifier layers. The
+[streaming reference][streaming] documents an `X-Generation-Id` response header
+for chat completions, legacy completions, OpenAI Responses, and Anthropic
+Messages. Its OpenRouter generation ID is the cross-interface identifier for
+the documented [`GET /api/v1/generation?id=...`][generation] lookup; published
+examples use the `gen-...` namespace.
+
+The response body's top-level `id` is instead shaped by the selected protocol.
+The [OpenAI Responses schema][responses] uses `resp_...`, while the
+[Anthropic Messages schema][messages] uses `msg_...`; chat/completion examples
+are not a safe contract for the other interfaces. Preserve the protocol response
+ID, but do not assume it equals the `X-Generation-Id` value or pass it to the
+generation lookup. That lookup returns request metadata for the OpenRouter
+generation ID, including:
 
 - `id`, `created_at`, `api_type`, `streamed`, `cancelled`, `finish_reason`, and
   `native_finish_reason`;
@@ -46,11 +57,13 @@ lookup returns request metadata for that exact generation, including:
   generation; and
 - `provider_responses`, which may describe fallback attempts.
 
-`id` is the provider observation's primary duplicate key. `request_id` is a
-request-group key, not a substitute for `id`; one request can be associated
-with multiple generations. `upstream_id` is nullable and provider-defined, so
-it should be retained as secondary evidence rather than assumed globally
-unique. The published schema does not promise ordering for ID lookups.
+Generation-detail `data.id`, correlated from `X-Generation-Id`, is the provider
+observation's primary duplicate key. A protocol response `id` must be stored
+separately and namespaced by interface. `request_id` is a request-group key, not
+a substitute for the generation ID; one request can be associated with multiple
+generations. `upstream_id` is nullable and provider-defined, so it should be
+retained as secondary evidence rather than assumed globally unique. The
+published schema does not promise ordering for ID lookups.
 
 Callers may supply `session_id` in the request body (or `x-session-id` header)
 to group related requests; OpenRouter documents a 256-character maximum and
@@ -70,14 +83,19 @@ verified.
 There is no single incremental interface covering all OpenRouter activity.
 Viable strategies differ by data type:
 
-1. **Capture at execution time.** Persist the completion `id`, response `model`,
-   `usage`, and any opted-in router metadata alongside the harness request. Then
-   upsert generation detail by `data.id`. This has the strongest request-level
-   identity and does not depend on a provider history listing. The
+1. **Capture at execution time.** Persist the HTTP `X-Generation-Id` before an
+   SDK or stream abstraction discards the response headers, plus the interface,
+   protocol response `id`, response `model`, `usage`, and any opted-in router
+   metadata alongside the harness request. Header capture is required for
+   Responses and Messages because their body IDs can be `resp_...` and `msg_...`
+   rather than OpenRouter generation IDs. Then upsert generation detail by
+   `data.id` and verify it against the captured header. This has the strongest
+   request-level identity and does not depend on a provider history listing. The
    [usage-accounting guide][usage-accounting] says usage is always returned in
    non-streaming responses and in the final SSE chunk for streaming responses.
-2. **Enrich known IDs.** Fetch `GET /api/v1/generation?id=...` for IDs already
-   captured by a harness. The endpoint documents no update cursor or conditional
+2. **Enrich known generation IDs.** Fetch `GET /api/v1/generation?id=...` for
+   OpenRouter generation IDs captured from `X-Generation-Id`, not arbitrary
+   protocol body IDs. The endpoint documents no update cursor or conditional
    retrieval. Re-fetching by ID should therefore be treated as an upsert, not an
    append.
 3. **Import recent daily aggregates.** [`GET /api/v1/activity`][activity] accepts
@@ -103,9 +121,12 @@ Viable strategies differ by data type:
    `created_after`, `created_before`, and repeated status filters. OpenRouter
    explicitly warns that whole-second `created_at` values can lose subsecond
    precision and says to use `after`, not timestamps, for gap-free pagination.
-   Use batch `id` as the batch key, each caller-defined `custom_id` within that
-   batch as the input key, and each successful result's response-body `id` as
-   the generation key.
+   Use batch `id` as the batch key and each caller-defined `custom_id` within
+   that batch as the input key. For chat, Responses, and Messages batch results,
+   the Batch API specifically documents `response.body.id` as the OpenRouter
+   generation ID; preserve the batch `endpoint` with it and do not generalize
+   that batch-only contract to synchronous protocol response IDs. Embedding
+   result bodies do not have such an ID.
 6. **Snapshot catalog prices.** The [Models API][models] supports opt-in
    `offset`/`limit` pagination with `links.next`, while an RSS mode advertises
    new models. It does not document a price-change cursor or historical price
@@ -271,11 +292,13 @@ stable programmatic contract.
 
 **Execution interfaces:** OpenRouter provides OpenAI-compatible chat and legacy
 completion routes, Responses and Anthropic Messages routes, plus asynchronous
-batch execution. Usage is returned with inference responses, enabling capture
-at the strongest evidence boundary. This report did not execute any of them.
-Import support must not be interpreted as replay support: stored metadata or
-content does not capture all harness prompts, retries, tools, local artifacts,
-or hidden provider behavior.
+batch execution. Usage is returned with inference responses, and
+`X-Generation-Id` is documented across the four synchronous interfaces;
+request-time capture should therefore retain response headers as well as the
+decoded body or events. This report did not execute any of them. Import support
+must not be interpreted as replay support: stored metadata or content does not
+capture all harness prompts, retries, tools, local artifacts, or hidden provider
+behavior.
 
 The beta batch list is workspace-scoped, so every key in a workspace can see
 batches submitted by other keys in that workspace. Batch inputs/results are
@@ -286,8 +309,13 @@ must snapshot needed results before that deadline.
 
 Preserve these fields without normalizing them into one identifier:
 
-- **Completion/generation `id`:** OpenRouter generation; primary provider
-  duplicate key and argument to generation/content lookup.
+- **OpenRouter generation ID:** The `X-Generation-Id` response-header value and
+  generation-detail `data.id`; primary provider duplicate key and argument to
+  generation/content lookup.
+- **Protocol response `id`:** Interface-shaped body/event identity, including
+  `resp_...` for Responses and `msg_...` for Messages. Retain it with the
+  interface for trace replay and protocol correlation, but do not substitute it
+  for the OpenRouter generation ID.
 - **`request_id`:** Groups generations produced by one OpenRouter API request.
 - **`upstream_id`:** Nullable upstream-provider generation ID; strongest direct
   provider cross-check when exposed.
@@ -313,16 +341,21 @@ Preserve these fields without normalizing them into one identifier:
 - **API-key hash:** Joins management key inventory to Activity filtering without
   storing the secret key; it is still private account metadata.
 - **Batch identifiers:** Batch `id`, item `custom_id`, result `id`, result
-  `response.request_id`, and response-body `id` join the submission, caller
-  item, batch result, request, and OpenRouter generation.
+  `response.request_id`, and the inference result's `response.body.id` join the
+  submission, caller item, batch result, request, and OpenRouter generation. The
+  last field is a batch-specific documented generation ID, not evidence that a
+  synchronous Responses or Messages body `id` has the same semantics.
 
-For new harness integrations, capture the response generation `id` directly and
-send a pseudonymous `session_id` that maps to the local harness session. Opt in
-to `X-OpenRouter-Metadata: enabled` when routing evidence is needed: it records
-the requested slug, strategy, selected endpoint/provider/model, attempts, BYOK
-status, region, and material pipeline stages. Cache hits intentionally omit this
-metadata, so absence does not prove no routing occurred. Store this evidence
-privately because caller/user/session attribution can be sensitive.
+For new harness integrations, capture `X-Generation-Id` directly from the HTTP
+response, retain any protocol response ID separately, and send a pseudonymous
+`session_id` that maps to the local harness session. Ensure the client exposes
+headers for both streaming and non-streaming calls instead of retaining only a
+decoded body or event iterator. Opt in to `X-OpenRouter-Metadata: enabled` when
+routing evidence is needed: it records the requested slug, strategy, selected
+endpoint/provider/model, attempts, BYOK status, region, and material pipeline
+stages. Cache hits intentionally omit this metadata, so absence does not prove
+no routing occurred. Store this evidence privately because caller/user/session
+attribution can be sensitive.
 
 Never reconcile on display name alone. The live model snapshot had unique `id`
 values, while populated `canonical_slug` values were not unique across all 579
@@ -379,10 +412,13 @@ records. Preserve requested slug, observed response model, catalog `id`,
 [generation-content]: https://openrouter.ai/docs/api/api-reference/generations/get-stored-prompt-completion-and-error-content-for-a-generation
 [io-logging]: https://openrouter.ai/docs/guides/features/input-output-logging
 [limits]: https://openrouter.ai/docs/api_reference/limits
+[messages]: https://openrouter.ai/docs/api/api-reference/anthropic-messages/create-a-message
 [models]: https://openrouter.ai/docs/guides/overview/models
 [openapi]: https://openrouter.ai/openapi.json
 [provider-logging]: https://openrouter.ai/docs/guides/privacy/provider-logging
+[responses]: https://openrouter.ai/docs/api/api-reference/responses/create-a-response
 [router-metadata]: https://openrouter.ai/docs/guides/features/router-metadata
+[streaming]: https://openrouter.ai/docs/api/reference/streaming
 [task-classifications]: https://openrouter.ai/docs/api/api-reference/classifications/task-classification-market-share
 [usage-accounting]: https://openrouter.ai/docs/cookbook/administration/usage-accounting
 [zdr]: https://openrouter.ai/docs/guides/features/zdr
