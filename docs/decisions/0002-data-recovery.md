@@ -271,7 +271,10 @@ a particular supervisor command:
    `jobs/`, `logs/`, and `locks/`; never restore SQLite `-wal` or `-shm` files.
 4. Run `PRAGMA quick_check`, read the schema/Alembic revision, and run an
    application verifier that proves every database file reference exists under
-   the staged root with the recorded digest. Refuse unsupported newer schema or
+   the staged root with the recorded digest. Before joining or reading any path
+   obtained from the database, require a non-empty, canonical POSIX relative
+   path: absolute paths, `..` components, and normalized spellings that differ
+   from the stored value are invalid. Refuse unsupported newer schema or
    backup-format versions. Do not migrate or mutate the only backup generation
    during verification.
 5. After verification, retain the old root as a rollback sibling and atomically
@@ -573,6 +576,20 @@ import shutil
 import sqlite3
 import sys
 
+
+def validated_database_relative_path(raw_path: object) -> PurePosixPath:
+    relative = PurePosixPath(raw_path) if isinstance(raw_path, str) else None
+    if (
+        relative is None
+        or not relative.parts
+        or relative.is_absolute()
+        or ".." in relative.parts
+        or relative.as_posix() != raw_path
+    ):
+        raise SystemExit("invalid database file reference")
+    return relative
+
+
 os.umask(0o077)
 backup = Path(sys.argv[1]).resolve()
 restore = Path(sys.argv[2]).resolve()
@@ -644,24 +661,39 @@ with sqlite3.connect(database) as connection:
     result = connection.execute("PRAGMA quick_check").fetchone()[0]
     if result != "ok":
         raise SystemExit(f"restored quick_check failed: {result}")
-    for relative, digest, length in connection.execute(
+    for raw_relative, digest, length in connection.execute(
         "SELECT path, sha256, bytes FROM private_files ORDER BY path"
     ):
+        relative = validated_database_relative_path(raw_relative)
         path = stage / relative
         payload = path.read_bytes()
         if len(payload) != length:
-            raise SystemExit(f"restored length mismatch: {relative}")
+            raise SystemExit(f"restored length mismatch: {raw_relative}")
         if hashlib.sha256(payload).hexdigest() != digest:
-            raise SystemExit(f"restored digest mismatch: {relative}")
+            raise SystemExit(f"restored digest mismatch: {raw_relative}")
 os.replace(stage, restore)
 PY
 
 # Verify: prove WAL content and durable files survived; transient data did not.
 uv run python - "$RESTORE_ROOT" <<'PY'
 import hashlib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import sqlite3
 import sys
+
+
+def validated_database_relative_path(raw_path: object) -> PurePosixPath:
+    relative = PurePosixPath(raw_path) if isinstance(raw_path, str) else None
+    if (
+        relative is None
+        or not relative.parts
+        or relative.is_absolute()
+        or ".." in relative.parts
+        or relative.as_posix() != raw_path
+    ):
+        raise SystemExit("invalid database file reference")
+    return relative
+
 
 root = Path(sys.argv[1]).resolve()
 database = root / "database/benchwarmer.sqlite3"
@@ -675,12 +707,31 @@ with sqlite3.connect(f"file:{database}?mode=ro", uri=True) as connection:
     ).fetchall()
 if len(rows) != 2:
     raise SystemExit("WAL-backed rows were not restored")
-for relative, digest, length in rows:
+for invalid_reference in (
+    "",
+    ".",
+    "/tmp/benchwarmer-outside",
+    "../outside",
+    "artifacts/../outside",
+    "./artifacts/trials/example/output.txt",
+    "artifacts//trials/example/output.txt",
+    "artifacts/trials/example/output.txt/",
+):
+    try:
+        validated_database_relative_path(invalid_reference)
+    except SystemExit:
+        pass
+    else:
+        raise SystemExit(
+            f"accepted invalid database file reference: {invalid_reference!r}"
+        )
+for raw_relative, digest, length in rows:
+    relative = validated_database_relative_path(raw_relative)
     payload = (root / relative).read_bytes()
     if len(payload) != length:
-        raise SystemExit(f"restored length mismatch: {relative}")
+        raise SystemExit(f"restored length mismatch: {raw_relative}")
     if hashlib.sha256(payload).hexdigest() != digest:
-        raise SystemExit(f"restored digest mismatch: {relative}")
+        raise SystemExit(f"restored digest mismatch: {raw_relative}")
 if any(path.is_file() for path in (root / "jobs").rglob("*")):
     raise SystemExit("transient job data was restored")
 if any(path.is_file() for path in (root / "logs").rglob("*")):
@@ -692,11 +743,13 @@ PY
 `FND-003` first supplies a runtime linked to an accepted SQLite build. It tests
 the safety predicate against its fixed and vulnerable boundary versions, proves
 that gate failure occurs before database or sidecar creation, executes this
-prototype as a design fixture, and separately tests the accepted resolver
-behavior, directory creation, permissions, invalid roots, and lack of
-import-time side effects with `tmp_path`. Passing the prototype at that stage
-validates the selected path layout and recovery algorithm only; it does not mean
-an application backup command or multi-process write gate exists.
+prototype as a design fixture, including rejection of empty, dot-only, absolute,
+`..` traversal, and noncanonical database file references before file reads. It
+separately tests the accepted resolver behavior, directory creation,
+permissions, invalid roots, and lack of import-time side effects with `tmp_path`.
+Passing the prototype at that stage validates the selected path layout and
+recovery algorithm only; it does not mean an application backup command or
+multi-process write gate exists.
 
 `QA-004` executes the same prototype again on an integrated toolchain whose
 in-process gate passes and records `recovery prototype: PASS` in its verification
@@ -842,7 +895,12 @@ After `DEC-001` accepts the record:
 - The recovery implementation tests write-gate timeout/failure, a concurrent
   attempted mutation, partial-generation rejection, symlink rejection, corrupt
   database and file hashes, missing and extra files, unsupported formats/schema,
-  rollback preservation, and external credential absence.
+  rollback preservation, and external credential absence. Before allowing a
+  file-read spy to observe any access, its database-reference tests reject `""`,
+  `"."`, `"/tmp/benchwarmer-outside"`, `"../outside"`,
+  `"artifacts/../outside"`, `"./artifacts/example"`,
+  `"artifacts//example"`, and `"artifacts/example/"`; a canonical relative
+  reference remains accepted.
 - `QA-004` runs the exact prototype and the implemented backup/restore path in a
   disposable root, restarts the migrated application against the restored root,
   verifies all database file references, and confirms that no runtime or private
