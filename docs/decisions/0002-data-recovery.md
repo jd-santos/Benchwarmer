@@ -294,10 +294,13 @@ The following prototype is the executable design fixture for `FND-003` and
 operation checks the SQLite library linked to `uv run python`, before `mktemp`,
 `sqlite3.connect`, or any WAL file creation. Failure stops the entire shell; do
 not bypass the gate or run the remaining lines separately. After a successful
-gate, the fixture writes only beneath `mktemp`, creates a committed row that
-remains in an active WAL, backs up only the durable boundary through Python's
-Online Backup API, restores to a fresh root, checks hashes/references, prints one
-success line, and removes all temporary state.
+gate, the writer and backup Python blocks repeat the exact predicate in their own
+processes before filesystem mutation or connection to the live database; the
+standalone preflight is not a substitute for either same-process check. The
+fixture then writes only beneath `mktemp`, creates a committed row that remains
+in an active WAL, backs up only the durable boundary through Python's Online
+Backup API, restores to a fresh root, checks hashes/references, prints one success
+line, and removes all temporary state.
 
 At DEP-001 verification time, `uv run python` links SQLite 3.50.4. The gate
 correctly reports it as blocked, so the WAL portion of this prototype must not be
@@ -360,6 +363,21 @@ from pathlib import Path
 import sqlite3
 import sys
 import time
+
+
+def sqlite_has_wal_reset_fix(version: tuple[int, int, int]) -> bool:
+    return (
+        version >= (3, 51, 3)
+        or (version[:2] == (3, 50) and version[2] >= 7)
+        or (version[:2] == (3, 44) and version[2] >= 6)
+    )
+
+
+if not sqlite_has_wal_reset_fix(sqlite3.sqlite_version_info):
+    raise SystemExit(
+        "WAL safety gate: BLOCKED; linked SQLite "
+        f"{sqlite3.sqlite_version} lacks the WAL-reset fix"
+    )
 
 os.umask(0o077)
 root = Path(sys.argv[1])
@@ -434,6 +452,21 @@ from pathlib import Path
 import shutil
 import sqlite3
 import sys
+
+
+def sqlite_has_wal_reset_fix(version: tuple[int, int, int]) -> bool:
+    return (
+        version >= (3, 51, 3)
+        or (version[:2] == (3, 50) and version[2] >= 7)
+        or (version[:2] == (3, 44) and version[2] >= 6)
+    )
+
+
+if not sqlite_has_wal_reset_fix(sqlite3.sqlite_version_info):
+    raise SystemExit(
+        "WAL safety gate: BLOCKED; linked SQLite "
+        f"{sqlite3.sqlite_version} lacks the WAL-reset fix"
+    )
 
 os.umask(0o077)
 source_root = Path(sys.argv[1]).resolve()
@@ -787,7 +820,10 @@ with 3.50.4 and 3.51.2 rejected and 3.51.3, 3.50.7, and 3.44.6 accepted. Run the
 prototype preflight against the current environment and require it to report
 `WAL safety gate: BLOCKED` for linked SQLite 3.50.4 with a nonzero status. Confirm
 that no prototype root, database, `-wal`, or `-shm` file was created; do not run
-the WAL portion in that environment.
+the WAL portion in that environment. Statically inspect or extract each later
+Python block with a fixed-version `sqlite3` stub and prove that the writer and
+backup processes each evaluate the exact predicate before their first filesystem
+mutation or `sqlite3.connect` to the live database.
 
 Once `uv run python` links an accepted SQLite build, execute the whole disposable
 prototype and require exactly `recovery prototype: PASS` with a zero exit status.
