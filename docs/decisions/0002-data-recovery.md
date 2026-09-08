@@ -27,6 +27,15 @@ only `benchwarmer.sqlite3` is not a valid live-backup procedure. It also states
 that all WAL users must be on the same host, so the live database belongs on a
 local filesystem, not a network share.
 
+Section 11 of SQLite's WAL documentation describes the
+[WAL-reset bug](https://www.sqlite.org/wal.html#the_wal_reset_bug), a rare
+corruption race likely present from SQLite 3.7.0 through 3.51.2 when multiple
+connections on one database write or checkpoint concurrently. The general fix
+is in 3.51.3 and later, with backports on two older release branches at 3.44.6
+and 3.50.7. Benchwarmer's planned API and worker boundary can create the affected
+concurrency, so WAL use must fail closed unless the SQLite library linked into
+the running process has one of those fixes.
+
 SQLite's [Online Backup API documentation](https://www.sqlite.org/backup.html)
 states that a completed backup is a consistent snapshot of the source database.
 Python 3.12 exposes that API as
@@ -73,6 +82,40 @@ permissions (`0700` directories and `0600` files, subject to the host's stronger
 controls). Startup fails with an actionable error if the root cannot be created,
 is not a directory, is not writable, or cannot provide the required child
 layout.
+
+### SQLite WAL safety gate
+
+WAL is permitted only when `sqlite3.sqlite_version_info` reports one of these
+fixed version lines:
+
+- 3.51.3 or later;
+- 3.50.7 or later on the 3.50 release branch; or
+- 3.44.6 or later on the 3.44 release branch.
+
+The precise predicate is:
+
+```python
+def sqlite_has_wal_reset_fix(version: tuple[int, int, int]) -> bool:
+    return (
+        version >= (3, 51, 3)
+        or (version[:2] == (3, 50) and version[2] >= 7)
+        or (version[:2] == (3, 44) and version[2] >= 6)
+    )
+```
+
+The branch checks are intentional. In particular, 3.45.x through 3.49.x do not
+inherit the 3.44 backport; 3.50.0 through 3.50.6 and 3.51.0 through 3.51.2 also
+remain blocked.
+
+Every application, worker, migration, maintenance, backup, or restore process
+that can open the live database in WAL mode must evaluate this predicate in the
+same Python process, using the runtime-linked SQLite version. It does so before
+its first `sqlite3.connect`, including before opening a database whose persistent
+journal mode may already be WAL. A failed gate aborts before touching the
+database; package metadata, a separately installed `sqlite3` shell, and a check
+performed by another process are not substitutes. A deployment that does not
+meet the gate must keep the database in a rollback journal mode and must not
+enable, open, write, or checkpoint it in WAL mode.
 
 ### Directory layout and ownership
 
@@ -185,8 +228,9 @@ started or supervised. Backup performs these steps:
    standalone `database/benchwarmer.sqlite3` in the partial generation, then set
    that destination to `journal_mode=DELETE` so opening the portable copy does
    not require or create WAL sidecars. Application startup may enable WAL again
-   after restore. Do not copy the live database, `-wal`, or `-shm` files and do
-   not treat a checkpoint as a substitute for the backup API.
+   after restore only after passing the SQLite WAL safety gate. Do not copy the
+   live database, `-wal`, or `-shm` files and do not treat a checkpoint as a
+   substitute for the backup API.
 4. Copy `artifacts/` and `snapshots/` without following symlinks. Any symlink,
    path traversal, unreadable file, or file change is a failed generation.
 5. Run `PRAGMA quick_check` on the backup database. Inventory every recovery
@@ -246,11 +290,18 @@ configuration state rather than being reconstructed from private snapshots.
 ### Disposable WAL/recovery prototype
 
 The following prototype is the executable design fixture for `FND-003` and
-`QA-004`. Run the entire block in one POSIX shell from the checkout. It writes
-only beneath `mktemp`, creates a committed row that remains in an active WAL,
-backs up only the durable boundary through Python's Online Backup API, restores
-to a fresh root, checks hashes/references, prints one success line, and removes
-all temporary state.
+`QA-004`. Run the entire block in one POSIX shell from the checkout. Its first
+operation checks the SQLite library linked to `uv run python`, before `mktemp`,
+`sqlite3.connect`, or any WAL file creation. Failure stops the entire shell; do
+not bypass the gate or run the remaining lines separately. After a successful
+gate, the fixture writes only beneath `mktemp`, creates a committed row that
+remains in an active WAL, backs up only the durable boundary through Python's
+Online Backup API, restores to a fresh root, checks hashes/references, prints one
+success line, and removes all temporary state.
+
+At DEP-001 verification time, `uv run python` links SQLite 3.50.4. The gate
+correctly reports it as blocked, so the WAL portion of this prototype must not be
+run in the current environment. A future run requires an accepted SQLite build.
 
 The fixture writer becomes idle before backup and remains open only to keep the
 committed WAL present. That idle point represents the closed application write
@@ -258,6 +309,26 @@ gate; it is not an implementation of cross-process locking.
 
 ```bash
 set -eu
+
+# Safety preflight: this must run before any SQLite connection or temporary root.
+uv run python - <<'PY'
+import sqlite3
+
+
+def sqlite_has_wal_reset_fix(version: tuple[int, int, int]) -> bool:
+    return (
+        version >= (3, 51, 3)
+        or (version[:2] == (3, 50) and version[2] >= 7)
+        or (version[:2] == (3, 44) and version[2] >= 6)
+    )
+
+
+if not sqlite_has_wal_reset_fix(sqlite3.sqlite_version_info):
+    raise SystemExit(
+        "WAL safety gate: BLOCKED; linked SQLite "
+        f"{sqlite3.sqlite_version} lacks the WAL-reset fix"
+    )
+PY
 
 prototype_root="$(mktemp -d \
   "${TMPDIR:-/tmp}/benchwarmer-recovery.XXXXXX")"
@@ -585,17 +656,21 @@ print("recovery prototype: PASS")
 PY
 ```
 
-`FND-003` executes this prototype as a design fixture and separately tests the
-accepted resolver behavior, directory creation, permissions, invalid roots, and
-lack of import-time side effects with `tmp_path`. Passing the prototype at that
-stage validates the selected path layout and recovery algorithm only; it does
-not mean an application backup command or multi-process write gate exists.
+`FND-003` first supplies a runtime linked to an accepted SQLite build. It tests
+the safety predicate against its fixed and vulnerable boundary versions, proves
+that gate failure occurs before database or sidecar creation, executes this
+prototype as a design fixture, and separately tests the accepted resolver
+behavior, directory creation, permissions, invalid roots, and lack of
+import-time side effects with `tmp_path`. Passing the prototype at that stage
+validates the selected path layout and recovery algorithm only; it does not mean
+an application backup command or multi-process write gate exists.
 
-`QA-004` executes the same prototype again on the integrated toolchain and
-records `recovery prototype: PASS` in its verification output. It must also test
-any implemented application backup/restore surface through the migrated schema
-and real file-reference verifier. Until that surface exists, QA documentation
-must call this a prototype rather than a production backup test.
+`QA-004` executes the same prototype again on an integrated toolchain whose
+in-process gate passes and records `recovery prototype: PASS` in its verification
+output. It must also test any implemented application backup/restore surface
+through the migrated schema and real file-reference verifier. Until that surface
+exists, QA documentation must call this a prototype rather than a production
+backup test.
 
 ## Alternatives considered
 
@@ -646,7 +721,12 @@ workspaces have different semantics, so deletion must respect their categories.
 - The target host has one predictable private root, while tests and development
   can isolate all state with one environment variable.
 - WAL remains an application runtime choice without making sidecar files part of
-  the portable backup format.
+  the portable backup format, but every WAL-capable process now depends on an
+  accepted runtime-linked SQLite build and must fail before opening the database
+  when the version gate rejects it.
+- The current `uv run python` SQLite 3.50.4 build cannot run the WAL prototype or
+  serve a WAL database. Rollback journaling remains available while the
+  toolchain upgrade path is resolved.
 - Backups may briefly pause imports, annotations, and experiment-state changes.
   Read service can continue, but restore requires an exclusive offline window.
 - Durable private data grows until an explicit deletion or backup-rotation policy
@@ -674,6 +754,10 @@ workspaces have different semantics, so deletion must respect their categories.
   mechanism and backup/restore command names while preserving this protocol.
   That implementation depends on the final API/worker process boundary but not
   on the supervisor selected by `DEP-002`.
+- `FND-003` must choose and pin a Python/runtime distribution that links an
+  accepted SQLite version on development, CI, and the target Mac mini. The
+  executable in-process gate remains required after that toolchain choice so a
+  later runtime downgrade cannot silently re-enable vulnerable WAL use.
 - Backup destination, schedule, notification, encryption mechanism, generation
   count, and transient job/log age or size limits remain operator policy. They
   must be selected and tested before recovery is presented as unattended.
@@ -698,19 +782,27 @@ git status --short
 
 Review the complete diff to confirm that it contains no absolute private path,
 credential, prompt, session payload, or raw provider response and that the only
-changed path is `docs/decisions/0002-data-recovery.md`. Execute the disposable
-prototype above and require exactly `recovery prototype: PASS` with a zero exit
-status. This verifies that the proposed commands exercise an active WAL,
-manifest hashes, durable-file restoration, and transient-file exclusion; it
-does not verify unimplemented application behavior.
+changed path is `docs/decisions/0002-data-recovery.md`. Test the version predicate
+with 3.50.4 and 3.51.2 rejected and 3.51.3, 3.50.7, and 3.44.6 accepted. Run the
+prototype preflight against the current environment and require it to report
+`WAL safety gate: BLOCKED` for linked SQLite 3.50.4 with a nonzero status. Confirm
+that no prototype root, database, `-wal`, or `-shm` file was created; do not run
+the WAL portion in that environment.
+
+Once `uv run python` links an accepted SQLite build, execute the whole disposable
+prototype and require exactly `recovery prototype: PASS` with a zero exit status.
+This verifies that the proposed commands exercise an active WAL, manifest hashes,
+durable-file restoration, and transient-file exclusion; it does not verify
+unimplemented application behavior.
 
 ### Later implementation verification
 
 After `DEC-001` accepts the record:
 
 - `FND-003` tests every data-root resolution branch, invalid input, owner-only
-  creation, fixed child paths, and no import-time filesystem mutation, then runs
-  the disposable prototype.
+  creation, fixed child paths, no import-time filesystem mutation, the WAL gate's
+  accepted and rejected version boundaries, and rejection before any SQLite
+  file creation, then runs the disposable prototype on an accepted build.
 - The recovery implementation tests write-gate timeout/failure, a concurrent
   attempted mutation, partial-generation rejection, symlink rejection, corrupt
   database and file hashes, missing and extra files, unsupported formats/schema,
