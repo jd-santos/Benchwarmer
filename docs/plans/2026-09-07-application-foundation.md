@@ -26,29 +26,27 @@ This plan covers `FND-001` through `FND-010`, `UI-001` through `UI-005`, and
 implement a real source adapter, private deployment, annotations, usage
 aggregation, or experiment execution.
 
-The commands below use current Svelte CLI conventions verified through the
-configured `@sveltejs/mcp` server and `npx sv create --help`. `FND-001` and
-`DEP-002` must confirm or amend these recommended defaults before code tasks
-start:
+The commands below implement the foundation decisions accepted by `DEC-001`:
 
 - FastAPI with explicit `/api/v1` routes.
 - SQLAlchemy 2 and Alembic for persistence and migrations.
-- SvelteKit with TypeScript, npm, ESLint, Prettier, Vitest, and Playwright; no
-  CSS framework initially. The scaffold command below assumes adapter-node, but
-  `DEP-002` should prefer adapter-static unless a concrete SSR or Node runtime
-  requirement justifies a second serving process.
+- SvelteKit with TypeScript, npm, ESLint, Prettier, and Vitest; no CSS framework
+  initially. Use `adapter-static` with a `200.html` SPA fallback. Playwright
+  lands with the first browser-test harness in `QA-001`.
 - `web/` for the frontend and `src/benchwarmer/` for Python.
-- A configurable private data root outside the checkout. `DEP-001` decides the
-  configuration interface and default; tests always override it with a
-  temporary directory.
+- A configurable private data root outside the checkout, overridden by
+  `BENCHWARMER_DATA_ROOT`; tests always use a temporary directory.
 - Separate API and future worker processes. Do not add an idle worker stub.
+- WAL mode is prohibited until `ENV-001` proves the runtime includes SQLite
+  `3.51.3+` or an accepted fixed backport.
 
 If a different choice is recorded, update this plan's paths and commands in the
 same commit so later agents do not inherit contradictory instructions.
 
-Commands below use `BENCHWARMER_DATA_ROOT` as the proposed configuration
-interface. `DEC-001` must replace it throughout this plan if the accepted
-data/recovery record chooses another interface.
+See ADRs [0001](../decisions/0001-application-foundation.md),
+[0002](../decisions/0002-data-recovery.md), and
+[0003](../decisions/0003-serving-supervision.md) for rationale and deferred
+deployment checks.
 
 ## API contract for the slice
 
@@ -148,7 +146,7 @@ no deployment or source-capability claim is presented as verified.
    dependencies wait for an implemented feature:
 
    ```bash
-   uv add --dev pytest pytest-asyncio httpx ruff
+   uv add --dev pytest ruff
    ```
 
 2. Configure Ruff's supported Python version, formatting, and a minimal rule
@@ -162,6 +160,47 @@ no deployment or source-capability claim is presented as verified.
 7. Commit with `build: add Python test and lint tooling`.
 
 **Acceptance:** A fresh `uv sync --dev` followed by all four checks succeeds.
+
+### Runtime gate before Task 3 (`ENV-001`)
+
+**Objective:** Provision a development and production Python runtime whose linked
+SQLite contains the WAL-reset fix, and prevent later regressions from opening a
+WAL database.
+
+**Files:**
+
+- Modify: `.python-version` and runtime/container inputs selected by the task
+- Modify: `pyproject.toml`
+- Modify: `uv.lock`
+- Create: `src/benchwarmer/sqlite_runtime.py`
+- Create: `tests/test_sqlite_runtime.py`
+
+**Steps:**
+
+1. Record the current Python executable and `sqlite3.sqlite_version`; the
+   existing project virtual environment's SQLite `3.50.4` is an expected failing
+   precondition, not an acceptable runtime.
+2. Pin one reproducible interpreter/runtime mechanism for development, CI, and
+   the target deployment. Do not rely on whichever system Python happens to be
+   first on `PATH`.
+3. Test the ADR 0002 predicate: reject `3.50.4`, `3.51.2`, and the vulnerable
+   `3.45` through `3.49` lines; accept `3.51.3`, `3.50.7`, `3.44.6`, and newer
+   fixed releases on those branches.
+4. Implement a pre-connection guard using `sqlite3.sqlite_version_info`. Every
+   API, worker, migration, backup, and restore entry point must call it before
+   opening a database whose journal mode may be WAL.
+5. Recreate the project environment from the pinned inputs and require:
+
+   ```bash
+   uv run python -c \
+     'from benchwarmer.sqlite_runtime import require_wal_safe_sqlite; require_wal_safe_sqlite()'
+   ```
+
+6. Run focused and full Python checks. Commit with
+   `build: require a WAL-safe SQLite runtime`.
+
+**Acceptance:** A clean environment resolves a fixed SQLite runtime; vulnerable
+boundary tests fail closed; the live gate passes before Task 3 begins.
 
 ### Task 3: Implement private data-root configuration (`FND-003`)
 
@@ -187,11 +226,15 @@ application data outside the checkout by default.
 3. Run `uv run pytest tests/test_config.py -q` and verify the new tests fail.
 4. Implement a typed settings object that resolves database, artifact,
    snapshot, and job/log paths from one root. Avoid module-import side effects.
-5. Run the focused tests, then all Python checks from Task 2.
-6. Commit with `feat: add private data root configuration`.
+5. Run the focused tests, then execute ADR 0002's complete disposable
+   WAL/recovery prototype without bypassing its preflight. Require
+   `recovery prototype: PASS` and verify it leaves no state in the checkout.
+6. Run all Python checks from Task 2.
+7. Commit with `feat: add private data root configuration`.
 
 **Acceptance:** Tests use `tmp_path`; importing the package creates no files;
-an invalid root fails with an actionable error and no private path enters git.
+an invalid root fails with an actionable error; the recovery fixture passes;
+and no private path or runtime state enters git.
 
 ### Task 4: Establish migration plumbing (`FND-004`)
 
@@ -213,12 +256,14 @@ SQLite database before domain tables exist.
    uv add sqlalchemy alembic
    ```
 
-2. Write failing tests that initialize an empty temporary database, report its
+2. Run the `ENV-001` in-process guard and stop immediately if it fails. Do not
+   create a database or enable WAL on a rejected runtime.
+3. Write failing tests that initialize an empty temporary database, report its
    current Alembic revision, and reject a non-SQLite URL if unsupported.
-3. Implement SQLAlchemy engine/session configuration and Alembic configuration
+4. Implement SQLAlchemy engine/session configuration and Alembic configuration
    using the resolved application database URL, never a checkout-relative
-   production default.
-4. Define exact commands for task verification:
+   production default. Call the WAL-safety guard before the first connection.
+5. Define exact commands for task verification:
 
    ```bash
    root="$(mktemp -d)"
@@ -227,8 +272,8 @@ SQLite database before domain tables exist.
    BENCHWARMER_DATA_ROOT="$root" uv run alembic downgrade base
    ```
 
-5. Run focused tests and all Python checks.
-6. Commit with `build: add database migration plumbing`.
+6. Run focused tests and all Python checks.
+7. Commit with `build: add database migration plumbing`.
 
 **Acceptance:** Alembic can inspect and migrate a temporary database through
 the configured data root; no domain table is required yet.
@@ -250,13 +295,16 @@ reports migration state without pretending `0001` exists.
 
    ```bash
    uv add fastapi 'uvicorn[standard]'
+   uv add --dev httpx
    ```
 
 2. Write a failing FastAPI client test for `/api/v1/health`, including status
    code, content type, exact keys, explicit null `alembic_revision`, and
    data-root writability.
-3. Implement an application factory that accepts settings explicitly in tests
-   and expose the health route through an `/api/v1` router.
+3. Implement an application factory that accepts settings explicitly in tests,
+   expose the health route through an `/api/v1` router, and inspect the applied
+   Alembic revision on every request. Return `null` when the configured database
+   has no Alembic version table; never hard-code a revision.
 4. Start it with the exact command:
 
    ```bash
@@ -324,26 +372,25 @@ provenance without mutating source identity.
 **Acceptance:** Failed, partial, and successful imports are distinct records;
 the latest batch never erases earlier evidence.
 
-### Task 8: Complete health reporting against migrations (`FND-008`)
+### Task 8: Verify health reporting against migrations (`FND-008`)
 
-**Objective:** Make health report the real applied Alembic revision and require
-an explicit migration path before serving fixture records.
+**Objective:** Verify the per-request revision inspection implemented by
+`FND-005` against the completed foundation migrations.
 
 **Files:**
 
-- Modify: `src/benchwarmer/api/app.py`
 - Modify: `tests/api/test_health.py`
 
 **Steps:**
 
 1. Extend health tests so a temporary database reports `"alembic_revision":
    "0002"` after `uv run alembic upgrade head` and `null` before migrations.
-2. Run the focused test and verify failure.
-3. Implement revision inspection against the configured database. Do not cache
-   it at process startup if migrations can change while the process is alive.
-4. Run focused and full Python checks plus the loopback HTTP verification from
+2. Run the focused test and require it to pass against `FND-005`. If it fails,
+   stop and correct the earlier health contract rather than adding a second
+   revision implementation here.
+3. Run full Python checks plus the loopback HTTP verification from
    Task 5.
-5. Commit with `feat: report database revision in health`.
+4. Commit with `test: verify migrated database revision in health`.
 
 **Acceptance:** The response reflects the actual Alembic revision and clearly
 separates migration state from the `/api/v1` contract version.
@@ -409,39 +456,37 @@ hard-coded response; missing coverage never becomes zero or `available`.
 ### Task 11: Scaffold the SvelteKit application (`UI-001`)
 
 **Objective:** Add a reproducible Svelte 5/SvelteKit frontend toolchain with
-tests and the production adapter selected by `DEP-002`.
+unit checks and the accepted static production adapter.
 
 **Files:**
 
 - Create: `web/` using the Svelte CLI
+- Create: `web/src/routes/+layout.ts`
 - Modify: root `.gitignore` if generated output is not fully ignored
 
 **Steps:**
 
-1. Read the exact `sv` version pinned by `DEC-001`; do not resolve `latest` during
-   implementation.
-2. If `DEC-001` selected adapter-node, run the following from the repository
-   root with the pinned version substituted. If it selected adapter-static,
-   substitute `'sveltekit-adapter=adapter:static'`:
+1. Use the exact `sv` version accepted by `DEC-001`; do not resolve `latest`:
 
    ```bash
-   npx -y sv@<recorded-version> create web --template minimal --types ts \
-     --add prettier eslint 'vitest=usages:unit' playwright \
-     'sveltekit-adapter=adapter:node' --install npm
+   npx -y sv@0.17.0 create web --template minimal --types ts \
+     --add prettier eslint 'vitest=usages:unit' \
+     'sveltekit-adapter=adapter:static' --install npm
    ```
 
-3. Review every generated file. Keep the minimal template and remove demo
+2. Review every generated file. Keep the minimal template and remove demo
    content; do not add Tailwind, authentication, an ORM, or experimental remote
    functions.
-4. From `web/`, run `npx playwright install chromium` so browser checks have a
-   real target.
-5. Run `npm run check`, `npm run lint`, `npm run test:unit -- --run`, and
+3. Configure adapter-static with fallback `200.html` and set `ssr = false` in
+   `web/src/routes/+layout.ts`; API and missing-asset paths must not use the SPA
+   fallback when Python serves the production bundle.
+4. Run `npm run check`, `npm run lint`, `npm run test:unit -- --run`, and
    `npm run build` from `web/`.
-6. Commit with `build: scaffold SvelteKit frontend`.
+5. Commit with `build: scaffold SvelteKit frontend`.
 
 **Acceptance:** The committed lockfile reproduces installation; the production
-build uses the adapter recorded by `DEP-002`; generated build/cache directories
-are untracked.
+build produces `web/build/200.html`; Playwright is not yet installed; generated
+build/cache directories are untracked.
 
 ### Task 12: Add the responsive shell (`UI-002`)
 
@@ -554,16 +599,27 @@ loading, process startup, process shutdown, and cleanup.
 
 **Files:**
 
-- Modify: `web/playwright.config.ts`
+- Modify: `web/package.json`
+- Modify: `web/package-lock.json`
+- Create: `web/playwright.config.ts`
 - Create: `web/tests/support/foundation.ts`
 - Create: `web/tests/foundation.spec.ts`
 
 **Steps:**
 
-1. Allocate free loopback ports for the API and frontend and configure a
+1. Add Playwright with the pinned Svelte CLI and install Chromium:
+
+   ```bash
+   npx -y sv@0.17.0 add playwright --cwd web --install npm
+   npm --prefix web exec -- playwright install chromium
+   ```
+
+2. Remove the generated Playwright demo route and example test; retain only the
+   dependency, scripts, and configuration needed by the foundation harness.
+3. Allocate free loopback ports for the API and frontend and configure a
    temporary `BENCHWARMER_DATA_ROOT` for each browser run. Export the API URL as
    `BENCHWARMER_API_ORIGIN` for the Vite process.
-2. Start the API with:
+4. Start the API with:
 
    ```bash
    BENCHWARMER_DATA_ROOT="$test_root" uv run alembic upgrade head
@@ -575,20 +631,20 @@ loading, process startup, process shutdown, and cleanup.
      --host 127.0.0.1 --port "$api_port"
    ```
 
-3. Start the frontend with:
+5. Start the frontend with:
 
    ```bash
    BENCHWARMER_API_ORIGIN="http://127.0.0.1:$api_port" \
      npm --prefix web run dev -- --host 127.0.0.1 --port "$web_port"
    ```
 
-4. Inject the API-error state by intercepting requests with Playwright
+6. Inject the API-error state by intercepting requests with Playwright
    `page.route('/api/**')` in the specific error-state test (or a second
    dev-server proxy target); do not mutate the shared disposable database.
-5. Ensure test teardown stops both processes and removes the temporary data
+7. Ensure test teardown stops both processes and removes the temporary data
    root.
-6. Run `npm run test:e2e` and all frontend checks.
-7. Commit with `test: add foundation browser harness`.
+8. Run `npm run test:e2e` and all frontend checks.
+9. Commit with `test: add foundation browser harness`.
 
 **Acceptance:** Tests allocate their own ports and create, migrate, seed, stop,
 and delete their own state; parallel or repeated runs do not collide or require

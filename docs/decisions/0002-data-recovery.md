@@ -1,6 +1,6 @@
 # ADR 0002: Private data and recovery boundary
 
-- Status: Proposed
+- Status: Accepted by `DEC-001`
 - Task: DEP-001
 - Date: 2026-09-08
 
@@ -740,12 +740,12 @@ print("recovery prototype: PASS")
 PY
 ```
 
-`FND-003` first supplies a runtime linked to an accepted SQLite build. It tests
-the safety predicate against its fixed and vulnerable boundary versions, proves
-that gate failure occurs before database or sidecar creation, executes this
-prototype as a design fixture, including rejection of empty, dot-only, absolute,
-`..` traversal, and noncanonical database file references before file reads. It
-separately tests the accepted resolver behavior, directory creation,
+`ENV-001` first supplies a runtime linked to an accepted SQLite build. It tests
+the safety predicate against fixed and vulnerable boundary versions and proves
+gate failure occurs before database or sidecar creation. `FND-003` then executes
+this prototype as a design fixture, including rejection of empty, dot-only,
+absolute, `..` traversal, and noncanonical database file references before file
+reads. It separately tests the accepted resolver behavior, directory creation,
 permissions, invalid roots, and lack of import-time side effects with `tmp_path`.
 Passing the prototype at that stage validates the selected path layout and
 recovery algorithm only; it does not mean an application backup command or
@@ -834,13 +834,11 @@ workspaces have different semantics, so deletion must respect their categories.
 
 ## Unresolved questions
 
-- `DEC-001` must confirm that the macOS default and Linux/XDG development fallback
-  do not conflict with the other foundation records.
 - A later implementation task must choose the concrete cross-process write-gate
   mechanism and backup/restore command names while preserving this protocol.
   That implementation depends on the final API/worker process boundary but not
   on the supervisor selected by `DEP-002`.
-- `FND-003` must choose and pin a Python/runtime distribution that links an
+- `ENV-001` must choose and pin a Python/runtime distribution that links an
   accepted SQLite version on development, CI, and the target Mac mini. The
   executable in-process gate remains required after that toolchain choice so a
   later runtime downgrade cannot silently re-enable vulnerable WAL use.
@@ -888,10 +886,11 @@ unimplemented application behavior.
 
 After `DEC-001` accepts the record:
 
+- `ENV-001` tests the WAL gate's accepted and rejected version boundaries and
+  rejection before any SQLite file creation.
 - `FND-003` tests every data-root resolution branch, invalid input, owner-only
-  creation, fixed child paths, no import-time filesystem mutation, the WAL gate's
-  accepted and rejected version boundaries, and rejection before any SQLite
-  file creation, then runs the disposable prototype on an accepted build.
+  creation, fixed child paths, and no import-time filesystem mutation, then runs
+  the disposable prototype on the accepted build.
 - The recovery implementation tests write-gate timeout/failure, a concurrent
   attempted mutation, partial-generation rejection, symlink rejection, corrupt
   database and file hashes, missing and extra files, unsupported formats/schema,

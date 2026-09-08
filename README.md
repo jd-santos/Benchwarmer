@@ -35,11 +35,14 @@ Tool-capable simulations run only in disposable fixture workspaces.
   data boundaries and delivery stages.
 - [Experiments](docs/experiments.md): task derivation, harness dimensions and
   system-prompt provenance.
-- [Open decisions](docs/decisions.md): choices needed before implementation.
+- [Design decisions](docs/decisions.md): accepted choices and remaining
+  decisions.
 - [Decision records](docs/decisions/README.md): independent ADR proposals and
   coordinator integration rules.
 - [Source reports](docs/sources/README.md): per-source evidence and privacy
   requirements.
+- [Source coverage](docs/source-coverage.md): cross-source identity, import,
+  usage, economics, prompt, execution, and retention comparison.
 - [Buildout roadmap](docs/roadmap.md): delivery slices, dependencies, acceptance
   gates and agent handoff protocol.
 - [TODO](docs/TODO.md): implementation queue and completed work.

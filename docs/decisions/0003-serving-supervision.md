@@ -1,6 +1,6 @@
 # ADR 0003: Private serving and process supervision
 
-- Status: Proposed
+- Status: Accepted by `DEC-001`
 - Task: DEP-002
 - Date: 2026-09-08
 
@@ -56,7 +56,8 @@ The following official documentation was checked on 2026-09-08:
 
 The current agent container can inspect the Compose, Serve, and s6 shapes, but
 it does not have the Docker Compose plugin. Target-host rendering and live route
-checks therefore remain required before this proposal can be accepted as Done.
+checks therefore remain owned by `DEP-003` before deployment can be called
+operational; they do not block acceptance of this design record.
 
 ## Decision
 
@@ -279,8 +280,8 @@ alerting covers the required behavior with fewer long-running processes.
 
 ## Unresolved questions
 
-- The coordinator must confirm that HTTPS port 8443 is unused on the target
-  Tailscale node and select the private tailnet grant principals.
+- `DEP-003` must confirm that HTTPS port 8443 is unused on the target Tailscale
+  node and select the private tailnet grant principals.
 - The application image and static-file integration must define cache headers:
   immutable hashed assets may be cached long-term, while HTML and `200.html`
   must revalidate so deployments do not strand old asset references.
@@ -293,6 +294,8 @@ alerting covers the required behavior with fewer long-running processes.
 
 ## Verification
 
+### DEP-002 design verification
+
 Run build and static-fallback checks from a clean checkout:
 
 ```sh
@@ -302,26 +305,49 @@ npm --prefix web run build
 test -f web/build/200.html
 ```
 
-On the target host, render the merged configuration before startup and verify
-that `benchwarmer` has no `ports` entry:
+The scaffold/build commands become executable in `UI-001`. Syntax, configuration
+shape, and the absence of a Node/SSR requirement are sufficient to accept this
+record through `DEC-001`.
+
+### DEP-003 target-host verification
+
+After `QA-004`, implement the deployment and render the merged configuration on
+the target host before startup. Verify that `benchwarmer` has no `ports` entry:
 
 ```sh
-docker compose config
-docker compose up -d --build benchwarmer
+set -eu
+docker compose config --format json | python3 -c '
+import json, sys
+service = json.load(sys.stdin)["services"]["benchwarmer"]
+assert not service.get("ports"), "benchwarmer must not publish ports"
+assert service.get("network_mode") == "service:tailscale-hermes"
+'
+docker compose up -d --build --wait benchwarmer
 docker compose ps benchwarmer
-docker inspect --format '{{json .HostConfig.PortBindings}}' benchwarmer
-docker inspect --format '{{json .State.Health}}' benchwarmer
+container_id="$(docker compose ps -q benchwarmer)"
+test -n "$container_id"
+docker inspect --format '{{json .HostConfig.PortBindings}}' "$container_id" |
+  python3 -c '
+import json, sys
+assert json.load(sys.stdin) in (None, {}), "container published a host port"
+'
+docker inspect --format '{{json .State.Health}}' "$container_id" |
+  python3 -c '
+import json, sys
+assert json.load(sys.stdin)["Status"] == "healthy"
+'
 ```
 
-The port-binding inspection must return `null` or an empty mapping. Check the
-loopback application and the declarative Serve route without printing identity
-headers or private configuration:
+The rendered-config assertion must pass before startup. The post-start
+port-binding inspection must then return `null` or an empty mapping as defense in
+depth. Check the loopback application and declarative Serve route without
+printing identity headers or private configuration:
 
 ```sh
-docker exec benchwarmer python -c \
+docker compose exec -T benchwarmer python -c \
   "import json,urllib.request; print(json.load(urllib.request.urlopen(\
 'http://127.0.0.1:8000/api/v1/health')))"
-docker exec tailscale-hermes tailscale serve status --json
+docker compose exec -T tailscale-hermes tailscale serve status --json
 curl --fail --show-error \
   https://<node>.<tailnet>.ts.net:8443/api/v1/health
 curl --fail --show-error https://<node>.<tailnet>.ts.net:8443/
@@ -335,16 +361,32 @@ does not list Benchwarmer.
 Exercise process behavior in a maintenance window:
 
 ```sh
-docker inspect --format '{{.RestartCount}}' benchwarmer
-docker kill --signal=KILL benchwarmer
-docker inspect --format '{{.RestartCount}} {{.State.Status}}' benchwarmer
+container_id="$(docker compose ps -q benchwarmer)"
+test -n "$container_id"
+restart_before="$(docker inspect --format '{{.RestartCount}}' "$container_id")"
+docker compose exec -T benchwarmer sh -c 'kill -KILL 1' || true
+attempt=0
+while [ "$attempt" -lt 30 ]; do
+  restart_after="$(docker inspect --format '{{.RestartCount}}' "$container_id")"
+  health="$(docker inspect --format '{{.State.Health.Status}}' "$container_id")"
+  if [ "$restart_after" -gt "$restart_before" ] && [ "$health" = healthy ]; then
+    break
+  fi
+  attempt=$((attempt + 1))
+  sleep 1
+done
+test "$restart_after" -gt "$restart_before"
+test "$health" = healthy
 docker compose stop benchwarmer
-docker inspect --format '{{.State.Status}}' benchwarmer
+test "$(docker inspect --format '{{.State.Status}}' "$container_id")" = exited
+sleep 5
+test "$(docker inspect --format '{{.State.Status}}' "$container_id")" = exited
 docker compose start benchwarmer
 ```
 
-The restart count must increase after the crash, the service must return to
-healthy, and an operator stop must remain stopped. Finally, make the health
-probe fail in a disposable deployment and confirm Docker reports `unhealthy`
-without claiming it automatically restarted; restore the configuration, inspect
-logs, and verify HTTPS recovery.
+Killing PID 1 from an exec process simulates an application crash rather than a
+Docker stop operation. The restart count must increase after that crash and the
+service must return to healthy. An operator stop must remain stopped through the
+explicit delay. Finally, make the health probe fail in a disposable deployment
+and confirm Docker reports `unhealthy` without claiming it automatically
+restarted; restore the configuration, inspect logs, and verify HTTPS recovery.

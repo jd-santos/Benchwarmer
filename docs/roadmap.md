@@ -30,10 +30,11 @@ four source inspections
   └─► SRC-001 coverage matrix ──► SRC-002 first adapter choice ─────────┐
                                                                         │
 three decision proposals ──► DEC-001 decision integration               │
-  ├─► FND-002..FND-010 Python foundation                                │
+  ├─► FND-002 ──► ENV-001 ──► FND-003..FND-010                         │
   └─► UI-001..UI-005                                                     ┼─► QA
                                                                         │
 QA-001..QA-004 foundation verification ─────────────────────────────────┘
+  └─► DEP-003 target-host deployment and verification
 
 ACT-001 first import ──► ACT-002 activity UI ──► REV-001 annotations
           │
@@ -75,6 +76,11 @@ process boundaries, or storage locations.
   `docs/decisions/0003-serving-supervision.md` before deployment work.
 - `DEC-001`: reconcile those three proposals, update `docs/decisions.md`, and
   apply their TODO status transitions in a coordinator-owned commit.
+- `ENV-001`: pin a Python/runtime mechanism with a fixed SQLite library and an
+  executable pre-connection WAL gate before migration plumbing begins.
+- `DEP-003`: execute ADR 0003's deployment checks on the target host after the
+  foundation is verified; this blocks operational rollout, not fixture-backed
+  implementation.
 
 **Gate:** Every selected capability has evidence, unknowns remain labeled, and
 the first adapter has stable identifiers plus a viable incremental-import
@@ -97,9 +103,10 @@ It includes Python and frontend checks, truthful health/migration reporting,
 the first source/import migrations, responsive navigation, API error states,
 browser tests, and restart persistence.
 
-**Gate:** A fresh checkout passes all documented checks; no runtime data lands
-in git; stopping and restarting the API preserves fixture-backed records. The
-stateless frontend may restart independently and has no persistence role.
+**Gate:** A fresh checkout resolves a WAL-safe SQLite runtime and passes all
+documented checks; no runtime data lands in git; stopping and restarting the API
+preserves fixture-backed records. The stateless frontend may restart
+independently and has no persistence role.
 
 ### M2 — First useful activity slice
 

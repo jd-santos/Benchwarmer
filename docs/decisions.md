@@ -11,11 +11,25 @@ API execution is a harness.
 
 ## Confirmed starting choices
 
-- **Access:** Plan for private hosting over Tailscale from the Mac mini. The UI
-  must be mobile friendly. Exact serving and access configuration remains open.
-- **Session storage:** Keep private snapshots of imported session content plus
-  normalized metadata. The app should not depend on original logs remaining
-  available. Retention, deletion and backup details remain open.
+- **Application foundation:** Use FastAPI/Uvicorn, synchronous SQLAlchemy 2 with
+  explicit Alembic migrations, and a TypeScript SvelteKit client under `web/`.
+  JSON routes live under `/api/v1`; Python remains authoritative for domain
+  rules and persistence. Pin Svelte CLI `0.17.0` and npm's lockfile. See
+  [ADR 0001](decisions/0001-application-foundation.md).
+- **Access:** Build the frontend with `adapter-static` and a `200.html` fallback,
+  then serve it and `/api/v1` from one loopback-only Python process. Use private
+  Tailscale Serve HTTPS and Docker Compose restart supervision. Live target-host
+  checks remain `DEP-003`. See
+  [ADR 0003](decisions/0003-serving-supervision.md).
+- **Session storage:** Keep private source snapshots plus normalized metadata
+  beneath a configurable root outside the checkout. The database, artifacts,
+  and snapshots are durable; jobs, logs, and locks are transient. Back up SQLite
+  through its Online Backup API under an application write gate, with manifested
+  artifacts and staged restore. See
+  [ADR 0002](decisions/0002-data-recovery.md).
+- **SQLite safety:** WAL is prohibited unless the process-linked SQLite includes
+  the WAL-reset fix: `3.51.3+`, `3.50.7+` on the 3.50 branch, or `3.44.6+` on the
+  3.44 branch. `ENV-001` provisions and pins a passing runtime.
 - **Experiments:** Start with native harness configurations, capturing accessible
   system prompts, tools, skills and differences. Controlled comparisons remain
   a later capability, rather than an initial requirement.
@@ -29,23 +43,18 @@ API execution is a harness.
 - **Proposed starting point:** Inspect Pi, Hermes, Codex, and provider coverage,
   then choose the richest accessible session source.
 
-### Tailscale serving and access
+### WAL-safe runtime
 
-- **Why it matters:** Determines binding, authentication, and deployment work.
-- **Proposed starting point:** Keep access private to the Mac mini and choose the
-  serving mechanism and access configuration before deployment.
+- **Why it matters:** At M0 review on 2026-09-08, the project virtual
+  environment linked vulnerable SQLite `3.50.4`; opening a multi-connection WAL
+  database would risk the upstream WAL-reset corruption race.
+- **Required next step:** `ENV-001` pins a fixed runtime and implements an
+  in-process, pre-connection gate before database migration work begins.
 
-### Data location and recovery
-
-- **Why it matters:** Database records and artifact files must remain
-  consistent.
-- **Proposed starting point:** Use a configurable root outside the checkout,
-  migrations, and coordinated backup/restore.
-
-Source inspection should establish stable IDs, incremental imports, token/cost
-granularity, classifiers, historical coverage, prompt visibility and request IDs
-for reconciliation. Verify installed versions and account access. Do not assume
-OpenRouter classification access or Codex history is complete.
+The completed [source coverage matrix](source-coverage.md) records stable IDs,
+incremental-import options, token/cost granularity, prompt visibility, execution
+surfaces, retention uncertainty, and reconciliation limits. `SRC-002` must choose
+from that evidence without converting unavailable or unknown coverage into zero.
 
 ## Before the first simulation
 
@@ -86,7 +95,6 @@ it, even when both are represented through the same experiment interface.
 ## Can wait until the relevant feature
 
 - Initial external evaluation sources and their APIs, exports or permitted snapshots.
-- Backend framework, Svelte versus SvelteKit integration, and worker supervision.
 - Annotation scales, blind comparison and review ordering.
 - Controlled comparison support: prompt overrides, tool/capability alignment,
   fixed variables and disclosure of remaining differences between harnesses.

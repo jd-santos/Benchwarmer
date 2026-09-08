@@ -24,126 +24,14 @@ task:
 
 ## In Progress
 
-- [ ] **SRC-PI-001 — Inspect Pi capabilities**
-  - Claim: owner `agent:dev-dip`, branch `task/src-pi-001`, started
-    `2026-09-08T06:39:00Z`
-  - Dependencies: none
-  - Output: create `docs/sources/pi.md`
-  - Ownership: edit only that report; do not edit this queue or the coverage
-    matrix
-  - Cover: observed version, local session format, stable IDs, incremental
-    cursor, usage fields, prompt visibility, automation/execution support,
-    retention, and known overlap with provider records
-  - Acceptance: every claim cites an observed command, schema, API document, or
-    explicit unavailable/unknown result; private payloads and credentials remain
-    outside git
-  - Verify: `git diff --check`; manually check that no private session content,
-    prompt text, tokens, or credentials are present
-
-- [ ] **SRC-HERMES-001 — Inspect Hermes capabilities**
-  - Claim: owner `agent:dev-dip`, branch `task/src-hermes-001`, started
-    `2026-09-08T06:39:00Z`
-  - Dependencies: none
-  - Output: create `docs/sources/hermes.md`
-  - Ownership: edit only that report; do not edit this queue or the coverage
-    matrix
-  - Cover and acceptance: same evidence/field/privacy contract as
-    `SRC-PI-001`, including profile/session stores and supported automation
-    surfaces
-  - Verify: `git diff --check`; privacy review of the complete diff
-
-- [ ] **SRC-CODEX-001 — Inspect Codex capabilities**
-  - Claim: owner `agent:dev-dip`, branch `task/src-codex-001`, started
-    `2026-09-08T06:39:00Z`
-  - Dependencies: none
-  - Output: create `docs/sources/codex.md`
-  - Ownership: edit only that report; do not edit this queue or the coverage
-    matrix
-  - Cover and acceptance: same evidence/field/privacy contract as
-    `SRC-PI-001`, plus installed support for history, `account/usage/read`,
-    rate limits, active thread usage, and accessible prompt metadata
-  - Verify: `git diff --check`; privacy review of the complete diff
-
-- [ ] **SRC-OPENROUTER-001 — Inspect OpenRouter capabilities**
-  - Claim: owner `agent:dev-dip`, branch `task/src-openrouter-001`, started
-    `2026-09-08T06:39:00Z`
-  - Dependencies: none
-  - Output: create `docs/sources/openrouter.md`
-  - Ownership: edit only that report; do not edit this queue or the coverage
-    matrix
-  - Cover and acceptance: same evidence/field/privacy contract as
-    `SRC-PI-001`, plus usage, actual charges, classifications, retention, and
-    request IDs needed to reconcile provider and harness observations
-  - Verify: `git diff --check`; privacy review of the complete diff
-
-- [ ] **FND-001 — Record application foundation defaults**
-  - Claim: owner `agent:dev-dip`, branch `task/fnd-001`, started
-    `2026-09-08T06:39:00Z`
-  - Dependencies: none
-  - Plan: Task 1 in the
-    [foundation plan](plans/2026-09-07-application-foundation.md)
-  - Output: create `docs/decisions/0001-application-foundation.md` with
-    the selected backend, ORM/migrations, SvelteKit/npm tooling, API version
-    boundary, exact `sv` scaffold version, and API/future-worker processes
-  - Ownership: edit only that ADR; do not edit the plan, this queue, or
-    `docs/decisions.md`
-  - Acceptance: all later foundation tasks have one unambiguous toolchain and
-    path layout; data/recovery decisions remain in `DEP-001` and serving
-    decisions in `DEP-002`
-  - Verify: `git diff --check`
-
-- [ ] **DEP-001 — Decide the private data and recovery boundary**
-  - Claim: owner `agent:dev-dip`, branch `task/dep-001`, started
-    `2026-09-08T06:39:00Z`
-  - Dependencies: none
-  - Output: create `docs/decisions/0002-data-recovery.md` with the
-    data-root default/override, `BENCHWARMER_DATA_ROOT` behavior, retention
-    boundary, and coordinated database/artifact backup and restore
-  - Ownership: edit only that ADR; do not edit this queue or
-    `docs/decisions.md`
-  - Acceptance: recovery preserves database/artifact consistency and secrets
-    stay external
-  - Verify: `git diff --check`; the ADR specifies the disposable prototype
-    (temporary SQLite file + temporary artifact directory plus exact
-    backup/restore/verify commands) that `FND-003` and `QA-004` implement and
-    execute
-
-- [ ] **DEP-002 — Decide private serving and supervision**
-  - Claim: owner `agent:dev-dip`, branch `task/dep-002`, started
-    `2026-09-08T06:39:00Z`
-  - Dependencies: none
-  - Output: create `docs/decisions/0003-serving-supervision.md` with
-    loopback bindings, Tailscale routing, frontend deployment adapter, process
-    supervision, and trusted-proxy assumptions
-  - Ownership: edit only that ADR; do not edit this queue or
-    `docs/decisions.md`
-  - Compare: `adapter-static` behind the chosen static/proxy boundary versus
-    `adapter-node`; prefer the static build unless a concrete SSR or Node
-    runtime requirement justifies another supervised process
-  - Acceptance: the design exposes no unauthenticated non-loopback service and
-    names real health/restart behavior for each process
-  - Verify: `git diff --check`; validate proposed Tailscale and supervisor
-    commands on the target host before marking Done
+_No active tasks._
 
 ## Up Next
 
-The four source inspections can run in parallel because each writes a distinct
-`docs/sources/<name>.md` file. Foundation decision proposals may also run in
-parallel because each writes one assigned ADR. A coordinator integrates source
-reports into `docs/source-coverage.md`, decision records into
-`docs/decisions.md`, and all status changes into this queue after review.
-
-- [ ] **SRC-001 — Synthesize the source coverage matrix**
-  - Dependencies: `SRC-PI-001`, `SRC-HERMES-001`, `SRC-CODEX-001`,
-    `SRC-OPENROUTER-001`
-  - Output: create `docs/source-coverage.md` comparing observed coverage,
-    overlap, missing fields, execution support, and reconciliation identifiers
-  - Coordinator: review all four reports, create the matrix, and apply their
-    status transitions to this queue in one integration change
-  - Acceptance: the matrix links to source reports, preserves
-    conflicting/unknown evidence, and does not choose an adapter
-  - Verify: `git diff --check`; cross-check every matrix cell against its
-    report
+M0 source inspection and decision integration are complete. `SRC-002` may now
+select the first adapter while `FND-002` and `UI-001` begin the fixture-backed
+foundation on separate file scopes. Later tasks remain ordered by their explicit
+dependencies; `DEP-003` stays blocked through `QA-004`.
 
 - [ ] **SRC-002 — Select the first import adapter**
   - Dependencies: `SRC-001`
@@ -155,26 +43,27 @@ reports into `docs/source-coverage.md`, decision records into
   - Verify: trace the proposed cursor and duplicate key against sanitized
     examples
 
-- [ ] **DEC-001 — Integrate the initial decision records**
-  - Dependencies: `FND-001`, `DEP-001`, `DEP-002`
-  - Output: review the three ADRs together, resolve contradictions, update
-    `docs/decisions.md`, update the foundation plan where accepted choices
-    differ from its proposed defaults, and apply TODO transitions in one
-    coordinator commit
-  - Acceptance: each accepted choice links to its ADR; conflicts are resolved
-    explicitly rather than hidden in implementation
-  - Verify: `git diff --check`; verify all ADR links resolve
-
 - [ ] **FND-002 — Add Python test and lint tooling**
   - Dependencies: `DEC-001`
   - Plan: Task 2 in the foundation plan
   - Verify: `uv sync --dev`; `uv run pytest`; `uv run ruff check .`;
     `uv run ruff format --check .`; `uv run python -m compileall src`
 
+- [ ] **ENV-001 — Provision a WAL-safe SQLite runtime**
+  - Dependencies: `FND-002`
+  - Output: pin the development and production Python/runtime mechanism and add
+    an executable SQLite gate
+  - Acceptance: runtime SQLite is `3.51.3+`, or a fixed `3.50.7+`/`3.44.6+`
+    backport within those release branches; vulnerable versions fail before WAL
+    is enabled
+  - Verify: print Python and SQLite versions; test accepted and rejected version
+    tuples; require the live project environment to pass
+
 - [ ] **FND-003 — Implement private data-root configuration**
-  - Dependencies: `FND-002`, `DEC-001`
+  - Dependencies: `FND-002`, `DEC-001`, `ENV-001`
   - Plan: Task 3 in the foundation plan
-  - Verify: focused config tests plus all `FND-002` checks
+  - Verify: focused config tests, ADR 0002's disposable recovery prototype, and
+    all `FND-002` checks
 
 - [ ] **FND-004 — Add database migration plumbing**
   - Dependencies: `FND-003`
@@ -197,7 +86,7 @@ reports into `docs/source-coverage.md`, decision records into
   - Plan: Task 7 in the foundation plan
   - Verify: migration round-trip and focused model tests
 
-- [ ] **FND-008 — Report the real database revision in health**
+- [ ] **FND-008 — Verify the real database revision in health**
   - Dependencies: `FND-005`, `FND-007`
   - Plan: Task 8 in the foundation plan
   - Verify: health tests for unmigrated and migrated temporary databases
@@ -264,6 +153,16 @@ reports into `docs/source-coverage.md`, decision records into
     processes, and pass desktop/mobile/restart flows with no private or
     generated artifacts tracked
 
+- [ ] **DEP-003 — Implement and validate private deployment**
+  - Dependencies: `DEC-001`, `QA-004`
+  - Output: implement the application container and declarative Tailscale Serve
+    route, then record a sanitized deployment verification in the same PR
+  - Verify: render Compose, confirm no published app port, test
+    authorized/unauthorized reachability, compare Alembic head, and exercise
+    crash restart, operator stop, and unhealthy alert
+  - Acceptance: all checks in ADR 0003 pass on the Mac mini before deployment is
+    called operational
+
 ## Backlog
 
 Items remain milestone-sized until their prerequisites make exact
@@ -326,3 +225,25 @@ implementation.
 - [x] **PLAN-002 — Create the buildout roadmap and first agent handoff plan**
   - Milestone dependencies, acceptance gates, task IDs, exact foundation
     paths, and verification commands documented
+
+- [x] **SRC-PI-001 — Inspect Pi capabilities**
+  - Added and independently reviewed [Pi evidence](sources/pi.md)
+- [x] **SRC-HERMES-001 — Inspect Hermes capabilities**
+  - Added and independently reviewed [Hermes evidence](sources/hermes.md)
+- [x] **SRC-CODEX-001 — Inspect Codex capabilities**
+  - Added and independently reviewed [Codex evidence](sources/codex.md)
+- [x] **SRC-OPENROUTER-001 — Inspect OpenRouter capabilities**
+  - Added and independently reviewed [OpenRouter evidence](sources/openrouter.md)
+- [x] **SRC-001 — Synthesize the source coverage matrix**
+  - Compared source identity, imports, usage, economics, classification, prompt,
+    execution, retention, and reconciliation without choosing an adapter
+- [x] **FND-001 — Record application foundation defaults**
+  - Accepted [ADR 0001](decisions/0001-application-foundation.md)
+- [x] **DEP-001 — Decide the private data and recovery boundary**
+  - Accepted [ADR 0002](decisions/0002-data-recovery.md) with WAL and restored-path
+    safety gates
+- [x] **DEP-002 — Decide private serving and supervision**
+  - Accepted [ADR 0003](decisions/0003-serving-supervision.md); live deployment
+    remains gated by `DEP-003`
+- [x] **DEC-001 — Integrate the initial decision records**
+  - Reconciled all three ADRs, the foundation plan, `ENV-001`, and `DEP-003`

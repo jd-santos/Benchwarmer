@@ -1,6 +1,6 @@
 # ADR 0001: Application foundation
 
-- Status: Proposed
+- Status: Accepted by `DEC-001`
 - Task: FND-001
 - Date: 2026-09-08
 
@@ -105,26 +105,23 @@ generator until a concrete feature consumes it. Initial API types remain the
 small, explicit TypeScript types required by the implemented endpoints.
 
 Pin the one-time scaffold generator exactly to `sv@0.17.0`; never resolve
-`sv@latest` during `UI-001`. After `DEP-002` accepts either `static` or `node`,
-the scaffold command is:
+`sv@latest` during `UI-001`. ADR 0003 accepts `adapter-static`, so the scaffold
+command is:
 
 ```bash
-: "${DEP_002_ADAPTER:?set it to DEP-002's accepted adapter}"
-case "$DEP_002_ADAPTER" in static|node) ;; *) exit 2 ;; esac
 npx -y sv@0.17.0 create web \
   --template minimal \
   --types ts \
   --add prettier eslint 'vitest=usages:unit' \
-  "sveltekit-adapter=adapter:${DEP_002_ADAPTER}" \
+  'sveltekit-adapter=adapter:static' \
   --install npm
 ```
 
-`DEP_002_ADAPTER` above is a temporary scaffold-command variable, not a runtime
-configuration interface. `UI-001` must substitute the literal accepted by
-`DEP-002`, review every generated file, and remove demo content. Playwright is
-added with the same pinned CLI only in `QA-001`, alongside its first retained
-browser test and process harness. This keeps the selected testing direction
-without adding an unused dependency in `UI-001`.
+`UI-001` reviews every generated file, configures the accepted `200.html`
+fallback, and removes demo content. Playwright is added with the same pinned CLI
+only in `QA-001`, alongside its first retained browser test and process harness.
+This keeps the selected testing direction without adding an unused dependency
+in `UI-001`.
 
 The Svelte MCP may be used for current documentation and autofixer review, but
 the required checks remain `npm run check`, `npm run lint`, focused tests, and
@@ -135,7 +132,7 @@ the required checks remain `npm run check`, `npm run lint`, focused tests, and
 All application JSON endpoints use `/api/v1/*`; there is no unversioned alias.
 The browser and any SvelteKit server-side presentation code call relative,
 same-origin `/api/v1/*` paths. In development, Vite may proxy `/api` to the
-Python process. Production routing is deferred to `DEP-002`.
+Python process. ADR 0003 defines production routing through the Python service.
 
 `v1` versions the HTTP contract. It is unrelated to the package version,
 Alembic revision, source schema version, or serialized task/result schema.
@@ -283,24 +280,19 @@ boundary without selecting unused machinery.
   migration state rather than creating or claiming schema implicitly.
 - `/api/v1` makes future incompatible contracts visible, but a future `v2`
   would carry an explicit compatibility and migration cost.
-- `UI-001` remains blocked on the adapter accepted through `DEP-002`. This is an
-  intentional dependency, not a default hidden in the scaffold.
+- `UI-001` uses the static adapter accepted through `DEP-002`; a later Node/SSR
+  requirement needs a replacement decision rather than a silent scaffold change.
 - Deferring unused dependencies reduces the initial attack and maintenance
   surface but requires each later task to add and lock its first real consumer.
 
 ## Unresolved questions
 
-- `DEP-001` must supply the private data-root and recovery contract before
-  configuration and migration work is accepted.
-- `DEP-002` must choose the frontend adapter and all serving and supervision
-  details before the scaffold or deployment commands are finalized.
 - The first source decision determines which adapter package is created first;
   this ADR does not claim source capabilities.
 - The first background job must define claim/lease, transaction, cancellation,
   concurrency, and restart behavior before the worker process is implemented.
-- A target-host check must confirm the accepted Node/npm runtime and all
-  `DEP-002` commands; the observed scaffold validation ran only in the research
-  environment.
+- `DEP-003` must validate the accepted npm/static build and all production
+  serving and supervision commands on the target host after `QA-004`.
 
 ## Verification
 
@@ -312,9 +304,9 @@ npm view sv version dist-tags --json
 npx -y sv@0.17.0 create --help
 ```
 
-The pinned CLI also completed the proposed command shape in a disposable
-`/tmp` directory with `--no-install` and an example static adapter. That check
-must not be treated as acceptance of `adapter-static`.
+The pinned CLI completed the static command shape in a disposable directory.
+`DEC-001` accepts that adapter through ADR 0003; the scaffold probe is syntax
+evidence rather than deployment verification.
 
 Validate this record with:
 
@@ -329,7 +321,7 @@ After coordinated acceptance, implementation verifies the selected boundaries
 through migration round trips, FastAPI contract tests, relative `/api/v1`
 frontend requests, npm's committed lockfile, browser tests, and API restart
 persistence. Target-host serving and supervisor checks remain owned by
-`DEP-002`.
+`DEP-003`.
 
 [alembic]: https://alembic.sqlalchemy.org/en/latest/
 [fastapi-features]: https://fastapi.tiangolo.com/features/
