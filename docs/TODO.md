@@ -24,15 +24,9 @@ task:
 
 ## In Progress
 
-## Up Next
-
-The four source inspections can run in parallel because each writes a distinct
-`docs/sources/<name>.md` file. Foundation decision proposals may also run in
-parallel because each writes one assigned ADR. A coordinator integrates source
-reports into `docs/source-coverage.md`, decision records into
-`docs/decisions.md`, and all status changes into this queue after review.
-
 - [ ] **SRC-PI-001 — Inspect Pi capabilities**
+  - Claim: owner `agent:dev-dip`, branch `task/src-pi-001`, started
+    `2026-09-08T06:39:00Z`
   - Dependencies: none
   - Output: create `docs/sources/pi.md`
   - Ownership: edit only that report; do not edit this queue or the coverage
@@ -47,6 +41,8 @@ reports into `docs/source-coverage.md`, decision records into
     prompt text, tokens, or credentials are present
 
 - [ ] **SRC-HERMES-001 — Inspect Hermes capabilities**
+  - Claim: owner `agent:dev-dip`, branch `task/src-hermes-001`, started
+    `2026-09-08T06:39:00Z`
   - Dependencies: none
   - Output: create `docs/sources/hermes.md`
   - Ownership: edit only that report; do not edit this queue or the coverage
@@ -57,6 +53,8 @@ reports into `docs/source-coverage.md`, decision records into
   - Verify: `git diff --check`; privacy review of the complete diff
 
 - [ ] **SRC-CODEX-001 — Inspect Codex capabilities**
+  - Claim: owner `agent:dev-dip`, branch `task/src-codex-001`, started
+    `2026-09-08T06:39:00Z`
   - Dependencies: none
   - Output: create `docs/sources/codex.md`
   - Ownership: edit only that report; do not edit this queue or the coverage
@@ -67,6 +65,8 @@ reports into `docs/source-coverage.md`, decision records into
   - Verify: `git diff --check`; privacy review of the complete diff
 
 - [ ] **SRC-OPENROUTER-001 — Inspect OpenRouter capabilities**
+  - Claim: owner `agent:dev-dip`, branch `task/src-openrouter-001`, started
+    `2026-09-08T06:39:00Z`
   - Dependencies: none
   - Output: create `docs/sources/openrouter.md`
   - Ownership: edit only that report; do not edit this queue or the coverage
@@ -77,6 +77,8 @@ reports into `docs/source-coverage.md`, decision records into
   - Verify: `git diff --check`; privacy review of the complete diff
 
 - [ ] **FND-001 — Record application foundation defaults**
+  - Claim: owner `agent:dev-dip`, branch `task/fnd-001`, started
+    `2026-09-08T06:39:00Z`
   - Dependencies: none
   - Plan: Task 1 in the
     [foundation plan](plans/2026-09-07-application-foundation.md)
@@ -91,6 +93,8 @@ reports into `docs/source-coverage.md`, decision records into
   - Verify: `git diff --check`
 
 - [ ] **DEP-001 — Decide the private data and recovery boundary**
+  - Claim: owner `agent:dev-dip`, branch `task/dep-001`, started
+    `2026-09-08T06:39:00Z`
   - Dependencies: none
   - Output: create `docs/decisions/0002-data-recovery.md` with the
     data-root default/override, `BENCHWARMER_DATA_ROOT` behavior, retention
@@ -105,6 +109,8 @@ reports into `docs/source-coverage.md`, decision records into
     execute
 
 - [ ] **DEP-002 — Decide private serving and supervision**
+  - Claim: owner `agent:dev-dip`, branch `task/dep-002`, started
+    `2026-09-08T06:39:00Z`
   - Dependencies: none
   - Output: create `docs/decisions/0003-serving-supervision.md` with
     loopback bindings, Tailscale routing, frontend deployment adapter, process
@@ -118,6 +124,14 @@ reports into `docs/source-coverage.md`, decision records into
     names real health/restart behavior for each process
   - Verify: `git diff --check`; validate proposed Tailscale and supervisor
     commands on the target host before marking Done
+
+## Up Next
+
+The four source inspections can run in parallel because each writes a distinct
+`docs/sources/<name>.md` file. Foundation decision proposals may also run in
+parallel because each writes one assigned ADR. A coordinator integrates source
+reports into `docs/source-coverage.md`, decision records into
+`docs/decisions.md`, and all status changes into this queue after review.
 
 - [ ] **SRC-001 — Synthesize the source coverage matrix**
   - Dependencies: `SRC-PI-001`, `SRC-HERMES-001`, `SRC-CODEX-001`,
