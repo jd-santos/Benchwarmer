@@ -24,16 +24,9 @@ task:
 
 ## In Progress
 
-_No active tasks._
-
-## Up Next
-
-M0 source inspection and decision integration are complete. `SRC-002` may now
-select the first adapter while `FND-002` and `UI-001` begin the fixture-backed
-foundation on separate file scopes. Later tasks remain ordered by their explicit
-dependencies; `DEP-003` stays blocked through `QA-004`.
-
 - [ ] **SRC-002 — Select the first import adapter**
+  - Claim: owner `agent:dev-dip`, branch `task/src-002-first-adapter`, started
+    `2026-09-09T22:42:32Z`
   - Dependencies: `SRC-001`
   - Output: create `docs/decisions/0004-first-import-adapter.md` with the
     selected source and evidence-based rationale; add adapter-specific
@@ -44,10 +37,27 @@ dependencies; `DEP-003` stays blocked through `QA-004`.
     examples
 
 - [ ] **FND-002 — Add Python test and lint tooling**
+  - Claim: owner `agent:dev-dip`, branch `task/fnd-002-python-quality`, started
+    `2026-09-09T22:42:32Z`
   - Dependencies: `DEC-001`
   - Plan: Task 2 in the foundation plan
   - Verify: `uv sync --dev`; `uv run pytest`; `uv run ruff check .`;
     `uv run ruff format --check .`; `uv run python -m compileall src`
+
+- [ ] **UI-001 — Scaffold SvelteKit with the selected adapter and checks**
+  - Claim: owner `agent:dev-dip`, branch `task/ui-001-sveltekit-scaffold`,
+    started `2026-09-09T22:42:32Z`
+  - Dependencies: `DEC-001`
+  - Plan: Task 11 in the foundation plan
+  - Verify from `web/`: `npm run check`; `npm run lint`;
+    `npm run test:unit -- --run`; `npm run build`
+
+## Up Next
+
+M0 source inspection and decision integration are complete. The first adapter,
+Python quality tooling, and frontend scaffold are in progress on separate file
+scopes. Later tasks remain ordered by their explicit dependencies; `DEP-003`
+stays blocked through `QA-004`.
 
 - [ ] **ENV-001 — Provision a WAL-safe SQLite runtime**
   - Dependencies: `FND-002`
@@ -100,12 +110,6 @@ dependencies; `DEP-003` stays blocked through `QA-004`.
   - Dependencies: `FND-008`, `FND-009`
   - Plan: Task 10 in the foundation plan
   - Verify: service/API contract tests plus all Python checks
-
-- [ ] **UI-001 — Scaffold SvelteKit with the selected adapter and checks**
-  - Dependencies: `DEC-001`
-  - Plan: Task 11 in the foundation plan
-  - Verify from `web/`: `npm run check`; `npm run lint`;
-    `npm run test:unit -- --run`; `npm run build`
 
 - [ ] **UI-002 — Build the responsive application shell**
   - Dependencies: `UI-001`
