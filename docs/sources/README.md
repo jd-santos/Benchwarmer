@@ -13,6 +13,14 @@ without sharing an output file.
   `docs/source-coverage.md`, and records status transitions in `docs/TODO.md`.
 - Reports describe observed capability; they do not select the first adapter.
 
+## Completed reports
+
+- [Pi](pi.md)
+- [Hermes](hermes.md)
+- [Codex](codex.md)
+- [OpenRouter](openrouter.md)
+- [Cross-source coverage matrix](../source-coverage.md)
+
 ## Required report shape
 
 ```markdown

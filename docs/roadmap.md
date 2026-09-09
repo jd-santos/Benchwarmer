@@ -30,10 +30,11 @@ four source inspections
   └─► SRC-001 coverage matrix ──► SRC-002 first adapter choice ─────────┐
                                                                         │
 three decision proposals ──► DEC-001 decision integration               │
-  ├─► FND-002..FND-010 Python foundation                                │
+  ├─► FND-002 ──► ENV-001 ──► FND-003..FND-010                         │
   └─► UI-001..UI-005                                                     ┼─► QA
                                                                         │
 QA-001..QA-004 foundation verification ─────────────────────────────────┘
+  └─► DEP-003 target-host deployment and verification
 
 ACT-001 first import ──► ACT-002 activity UI ──► REV-001 annotations
           │
@@ -97,9 +98,16 @@ It includes Python and frontend checks, truthful health/migration reporting,
 the first source/import migrations, responsive navigation, API error states,
 browser tests, and restart persistence.
 
-**Gate:** A fresh checkout passes all documented checks; no runtime data lands
-in git; stopping and restarting the API preserves fixture-backed records. The
-stateless frontend may restart independently and has no persistence role.
+- `ENV-001`: pin a Python/runtime mechanism with a fixed SQLite library and an
+  executable pre-connection WAL gate after `FND-002` and before `FND-003`.
+- `DEP-003`: implement the private deployment and execute ADR 0003's target-host
+  checks after `QA-004`; this blocks operational rollout, not fixture-backed
+  implementation.
+
+**Gate:** A fresh checkout resolves a WAL-safe SQLite runtime and passes all
+documented checks; no runtime data lands in git; stopping and restarting the API
+preserves fixture-backed records. The stateless frontend may restart
+independently and has no persistence role.
 
 ### M2 — First useful activity slice
 
