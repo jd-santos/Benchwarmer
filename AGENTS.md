@@ -48,10 +48,10 @@
 
 ## Commands
 
-- **Install**: `uv sync`
+- **Install**: `uv sync --dev`
 - **Package check**: `uv run python -m compileall src`
-- **Tests**: Not configured yet. Add pytest with the first executable feature.
-- **Lint**: Not configured yet. Add Ruff with the first executable feature.
+- **Tests**: `uv run pytest`
+- **Lint**: `uv run ruff check .`; `uv run ruff format --check .`
 
 ## Documentation Index
 
