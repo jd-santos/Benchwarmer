@@ -129,6 +129,8 @@ Use these source-native duplicate keys:
   against the stored session relationship.
 - Model/task usage: `(source_scope_id, session_id, model, billing_provider,
   billing_base_url, billing_mode, task)`.
+  An empty source-native task remains `task=""` in this key; normalized display
+  metadata is not a key component.
 - Gateway route, if a later task imports it: `(source_scope_id, scope,
   session_key)`.
 
@@ -153,9 +155,23 @@ value:
   IDs are unavailable in the observed canonical Hermes session schema.
 - Per-request usage and cost are unavailable; Hermes usage is aggregated at
   session and model/provider/task scopes.
-- Currency beyond the USD-named cost fields, reporting time zone, batch discount,
-  quota, credits, remaining capacity, subscription period, and subscription
-  payment are unavailable or unknown in the inspected tables.
+- For the following economics semantics, no dedicated canonical column was
+  observed. That column-coverage finding does not establish that the semantic is
+  unavailable or unsupported. Each value remains unknown:
+
+  | Semantic | Observed canonical column | Value classification |
+  | --- | --- | --- |
+  | Currency beyond USD-named cost fields | None observed | Unknown |
+  | Reporting time zone | None observed | Unknown |
+  | Batch discount | None observed | Unknown |
+  | Quota | None observed | Unknown |
+  | Credits | None observed | Unknown |
+  | Remaining capacity | None observed | Unknown |
+  | Subscription period | None observed | Unknown |
+  | Subscription payment | None observed | Unknown |
+
+  `billing_mode` is present, but it does not establish batch-discount or
+  subscription semantics.
 - A dedicated semantic classification, classifier identity/version, confidence,
   and user-label schema was not observed.
 - Complete effective prompts, hidden provider instructions, exact historical
@@ -190,41 +206,48 @@ initial private source shape:
 ```text
 session: sess-a
 messages: (101, sess-a), (102, sess-a)
-usage key: (sess-a, model-a, provider-a, https://example.invalid,
-            fixture-mode, main)
+source usage primary key: (sess-a, model-a, provider-a,
+                           https://example.invalid, fixture-mode, task="")
+import duplicate key: (fixture-hermes-profile-a, sess-a, model-a, provider-a,
+                       https://example.invalid, fixture-mode, task="")
+normalized display metadata: task_display=main
 usage values: input=10, output=4, actual_cost_usd=0,
               cost_status=unknown
 ```
 
-`main` above represents the synthetic fixture's normalized display for the
-source's empty main-agent task value. It is not a new Hermes enum.
+`main` is only the synthetic fixture's normalized display for the source's empty
+main-agent task value. The source-native key component remains `task=""`; `main`
+is not a Hermes enum or a duplicate-key component.
 
 ### Initial import
 
 The stored cursor is absent. The adapter reads message IDs 101 and 102, upserts
 session key `(fixture-hermes-profile-a, sess-a)`, message keys
 `(fixture-hermes-profile-a, 101)` and
-`(fixture-hermes-profile-a, 102)`, and the full usage composite key. After the
-private snapshot and normalized rows commit, the cursor becomes 102. There is
-one session, two messages, and one usage aggregate. The zero actual-cost value
-is retained but not reported as a confirmed zero charge.
+`(fixture-hermes-profile-a, 102)`, and usage key
+`(fixture-hermes-profile-a, sess-a, model-a, provider-a,
+https://example.invalid, fixture-mode, task="")`. After the private snapshot and
+normalized rows commit, the cursor becomes 102. There is one session, two
+messages, and one usage aggregate. The zero actual-cost value is retained but
+not reported as a confirmed zero charge.
 
 ### Unchanged re-import
 
 The source maximum is still 102, so `id > 102` returns no messages. The session
-and usage scans upsert the same keys with the same values. The cursor stays 102;
-there is still one session, two messages, and one usage aggregate. A no-change
-import batch may be recorded, but no source subject or unchanged snapshot is
-duplicated.
+scan and usage scan with `task=""` upsert the same keys with the same values. The
+cursor stays 102; there is still one session, two messages, and one usage
+aggregate. A no-change import batch may be recorded, but no source subject or
+unchanged snapshot is duplicated.
 
 ### Appended data
 
 Hermes appends synthetic message `(103, sess-a)` and updates the existing usage
-row to `input=16, output=7` without changing its composite primary key. The next
-consistent snapshot returns only message 103 from `id > 102`. Its key is new;
-the session key is unchanged; and the usage upsert updates the existing logical
-aggregate instead of inserting a second one. After commit, the cursor advances
-to 103. The result is one session, three messages, and one usage aggregate.
+row with `task=""` to `input=16, output=7` without changing its composite primary
+key. The next consistent snapshot returns only message 103 from `id > 102`. Its
+key is new; the session key is unchanged; and the usage upsert uses the same
+empty-task duplicate key to update the existing logical aggregate instead of
+inserting a second one. After commit, the cursor advances to 103. The result is
+one session, three messages, and one usage aggregate.
 
 A metadata-only rename would similarly update the existing session key while the
 message cursor remains 103. A later full reconciliation that cannot find message
@@ -316,8 +339,9 @@ appended:  cursor 102    -> 103; sessions=1; messages=3; usage=1
 ```
 
 The appended run inserts only message key 103 and updates the pre-existing usage
-composite key. Cursor advancement happens after commit; a retry before advancement
-replays the still-uncommitted key 103 safely through the same upsert.
+composite key whose final component is `task=""`. Cursor advancement happens
+after commit; a retry before advancement replays the still-uncommitted key 103
+safely through the same upsert.
 
 Validate this record with:
 
