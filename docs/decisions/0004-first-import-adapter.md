@@ -1,6 +1,6 @@
 # ADR 0004: Select Hermes as the first import adapter
 
-- Status: Proposed
+- Status: Accepted by `SRC-002` coordinator review
 - Task: SRC-002
 - Date: 2026-09-09
 

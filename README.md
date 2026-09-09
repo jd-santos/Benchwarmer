@@ -6,10 +6,10 @@ usage across Pi, Nous Research's Hermes Agent, and Codex where accessible into
 one place, then helps compare whether alternative models can do everyday work
 better or more cheaply.
 
-The project is a design scaffold. The planned application uses a Python backend,
-SQLite database and mobile-friendly Svelte frontend on an always-on Mac mini,
-with private access over Tailscale. Importers, the UI and experiment execution
-are not implemented yet.
+The project has Python quality tooling and a minimal SvelteKit scaffold. The
+planned application uses a Python backend, SQLite database and mobile-friendly
+frontend on an always-on Mac mini, with private access over Tailscale. Importers,
+the application UI and experiment execution are not implemented yet.
 
 ## Scope
 
@@ -49,10 +49,26 @@ Tool-capable simulations run only in disposable fixture workspaces.
 
 ## Project setup
 
-The Python scaffold uses Python 3.12 or newer and [uv](https://docs.astral.sh/uv/).
+The Python scaffold uses Python 3.12 or newer and [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv sync
+uv sync --dev
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+uv run python -m compileall src
 ```
 
-There are no runtime dependencies, application commands or frontend setup yet.
+The frontend uses npm and the committed lockfile:
+
+```bash
+cd web
+npm ci
+npm run check
+npm run lint
+npm run test:unit -- --run
+npm run build
+```
+
+The static build writes `web/build/200.html`. There are no backend runtime
+dependencies or application start commands yet.
