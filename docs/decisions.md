@@ -30,31 +30,25 @@ API execution is a harness.
 - **SQLite safety:** WAL is prohibited unless the process-linked SQLite includes
   the WAL-reset fix: `3.51.3+`, `3.50.7+` on the 3.50 branch, or `3.44.6+` on the
   3.44 branch. `ENV-001` provisions and pins a passing runtime.
+- **First import adapter:** Use a schema-gated, read-only Hermes SQLite adapter.
+  Namespace source-native session, message, and usage keys by installation and
+  profile; combine a committed message watermark with mutable-row rereads and
+  full reconciliation. Keep source payloads private and preserve unavailable and
+  unknown fields explicitly. See
+  [ADR 0004](decisions/0004-first-import-adapter.md).
 - **Experiments:** Start with native harness configurations, capturing accessible
   system prompts, tools, skills and differences. Controlled comparisons remain
   a later capability, rather than an initial requirement.
 
-## Before the first implementation slice
-
-### Initial import source
-
-- **Why it matters:** Determines the first usable slice and real schema
-  constraints.
-- **Proposed starting point:** Inspect Pi, Hermes, Codex, and provider coverage,
-  then choose the richest accessible session source.
+## Before database persistence work
 
 ### WAL-safe runtime
 
 - **Why it matters:** At M0 review on 2026-09-08, the project virtual
   environment linked vulnerable SQLite `3.50.4`; opening a multi-connection WAL
   database would risk the upstream WAL-reset corruption race.
-- **Required next step:** `ENV-001` pins a fixed runtime and implements an
+- **Required next step:** `ENV-001` must pin a fixed runtime and implement an
   in-process, pre-connection gate before database migration work begins.
-
-The completed [source coverage matrix](source-coverage.md) records stable IDs,
-incremental-import options, token/cost granularity, prompt visibility, execution
-surfaces, retention uncertainty, and reconciliation limits. `SRC-002` must choose
-from that evidence without converting unavailable or unknown coverage into zero.
 
 ## Before the first simulation
 

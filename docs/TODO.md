@@ -28,26 +28,10 @@ _No active tasks._
 
 ## Up Next
 
-M0 source inspection and decision integration are complete. `SRC-002` may now
-select the first adapter while `FND-002` and `UI-001` begin the fixture-backed
-foundation on separate file scopes. Later tasks remain ordered by their explicit
+Hermes is selected as the first adapter, and the Python quality tooling and
+frontend scaffold are complete. `ENV-001`, `UI-002`, and `UI-004` may now begin
+on separate file scopes. Later tasks remain ordered by their explicit
 dependencies; `DEP-003` stays blocked through `QA-004`.
-
-- [ ] **SRC-002 — Select the first import adapter**
-  - Dependencies: `SRC-001`
-  - Output: create `docs/decisions/0004-first-import-adapter.md` with the
-    selected source and evidence-based rationale; add adapter-specific
-    implementation tasks through the coordinator
-  - Acceptance: source exposes stable identity and an incremental/idempotent
-    import strategy; unsupported fields remain explicit
-  - Verify: trace the proposed cursor and duplicate key against sanitized
-    examples
-
-- [ ] **FND-002 — Add Python test and lint tooling**
-  - Dependencies: `DEC-001`
-  - Plan: Task 2 in the foundation plan
-  - Verify: `uv sync --dev`; `uv run pytest`; `uv run ruff check .`;
-    `uv run ruff format --check .`; `uv run python -m compileall src`
 
 - [ ] **ENV-001 — Provision a WAL-safe SQLite runtime**
   - Dependencies: `FND-002`
@@ -100,12 +84,6 @@ dependencies; `DEP-003` stays blocked through `QA-004`.
   - Dependencies: `FND-008`, `FND-009`
   - Plan: Task 10 in the foundation plan
   - Verify: service/API contract tests plus all Python checks
-
-- [ ] **UI-001 — Scaffold SvelteKit with the selected adapter and checks**
-  - Dependencies: `DEC-001`
-  - Plan: Task 11 in the foundation plan
-  - Verify from `web/`: `npm run check`; `npm run lint`;
-    `npm run test:unit -- --run`; `npm run build`
 
 - [ ] **UI-002 — Build the responsive application shell**
   - Dependencies: `UI-001`
@@ -170,7 +148,38 @@ decomposition possible. Decompose one into handoff-ready IDs before
 implementation.
 
 - [ ] **ACT-001 — Implement the first idempotent incremental importer**
+  - Dependencies: `ACT-HERMES-003`
+  - Decomposition: `ACT-HERMES-001` through `ACT-HERMES-003`; close this
+    milestone item only after all three pass
+- [ ] **ACT-HERMES-001 — Add the schema-gated read-only Hermes source reader**
   - Dependencies: `SRC-002`, `FND-010`, `QA-004`
+  - Output: create `src/benchwarmer/adapters/hermes/{__init__,capabilities,reader}.py`,
+    `tests/fixtures/hermes/schema-30/`, and
+    `tests/adapters/hermes/test_reader.py`
+  - Acceptance: open a configured profile database read-only, record application
+    and schema versions separately, validate the schema-30 capability manifest,
+    read a consistent WAL-aware snapshot, and fail closed on unsupported schemas
+    or missing identity columns; commit only synthetic fixtures
+  - Verify: focused reader tests plus all Python checks
+- [ ] **ACT-HERMES-002 — Implement transactional incremental Hermes imports**
+  - Dependencies: `ACT-HERMES-001`
+  - Output: create `src/benchwarmer/adapters/hermes/importer.py`, importer tests,
+    and migrations for Hermes session, message, usage, snapshot-provenance,
+    coverage, and cursor state
+  - Acceptance: source-native upserts and post-commit watermark advancement make
+    initial, unchanged, appended, mutable-usage, and interrupted imports
+    idempotent without erasing prior evidence
+  - Verify: focused importer fixtures, migration round trip, and all Python checks
+- [ ] **ACT-HERMES-003 — Add Hermes reconciliation and private-source validation**
+  - Dependencies: `ACT-HERMES-002`
+  - Output: create `src/benchwarmer/adapters/hermes/reconcile.py`, reconciliation
+    tests, and `docs/verification/hermes-import.md` with sanitized results only
+  - Acceptance: detect edits, disappearance, metadata and usage changes,
+    source-side deletion, missing watermarks, schema changes, and source
+    replacement without deleting retained private snapshots or exposing private
+    identifiers and content
+  - Verify: focused reconciliation scenarios, sanitized private-source checks,
+    and all Python checks
 - [ ] **ACT-002 — Deliver activity totals, filters, freshness, and session
   detail**
   - Dependencies: `ACT-001`
@@ -247,3 +256,12 @@ implementation.
     remains gated by `DEP-003`
 - [x] **DEC-001 — Integrate the initial decision records**
   - Reconciled all three ADRs, the foundation plan, `ENV-001`, and `DEP-003`
+- [x] **SRC-002 — Select the first import adapter**
+  - Accepted [ADR 0004](decisions/0004-first-import-adapter.md), selecting a
+    schema-gated read-only Hermes adapter with explicit reconciliation
+- [x] **FND-002 — Add Python test and lint tooling**
+  - Added pytest, Ruff, a package smoke test, locked development dependencies,
+    and executable repository commands
+- [x] **UI-001 — Scaffold SvelteKit with the selected adapter and checks**
+  - Added the pinned SvelteKit TypeScript scaffold, static `200.html` fallback,
+    client-side rendering configuration, lint, formatting, and unit checks
