@@ -24,16 +24,9 @@ task:
 
 ## In Progress
 
-_No active tasks._
-
-## Up Next
-
-Hermes is selected as the first adapter, and the Python quality tooling and
-frontend scaffold are complete. `ENV-001`, `UI-002`, and `UI-004` may now begin
-on separate file scopes. Later tasks remain ordered by their explicit
-dependencies; `DEP-003` stays blocked through `QA-004`.
-
 - [ ] **ENV-001 — Provision a WAL-safe SQLite runtime**
+  - Claim: owner `agent:dev-dip`, branch `task/env-001-wal-safe-runtime`, started
+    `2026-09-13T21:33:48Z`
   - Dependencies: `FND-002`
   - Output: pin the development and production Python/runtime mechanism and add
     an executable SQLite gate
@@ -42,6 +35,26 @@ dependencies; `DEP-003` stays blocked through `QA-004`.
     is enabled
   - Verify: print Python and SQLite versions; test accepted and rejected version
     tuples; require the live project environment to pass
+
+- [ ] **UI-002 — Build the responsive application shell**
+  - Claim: owner `agent:dev-dip`, branch `task/ui-002-responsive-shell`, started
+    `2026-09-13T21:33:48Z`
+  - Dependencies: `UI-001`
+  - Plan: Task 12 in the foundation plan
+  - Verify: frontend checks, 375px/desktop inspection, and keyboard navigation
+
+- [ ] **UI-004 — Add the typed API client and `/api` proxy**
+  - Claim: owner `agent:dev-dip`, branch `task/ui-004-api-client-proxy`, started
+    `2026-09-13T21:33:48Z`
+  - Dependencies: `UI-001`
+  - Plan: Task 13 in the foundation plan
+  - Verify: client tests, frontend checks, and a development-proxy inspection
+
+## Up Next
+
+The WAL-safe runtime, responsive application shell, and typed API client are in
+progress on separate file scopes. Later tasks remain ordered by their explicit
+dependencies; `DEP-003` stays blocked through `QA-004`.
 
 - [ ] **FND-003 — Implement private data-root configuration**
   - Dependencies: `FND-002`, `DEC-001`, `ENV-001`
@@ -85,20 +98,10 @@ dependencies; `DEP-003` stays blocked through `QA-004`.
   - Plan: Task 10 in the foundation plan
   - Verify: service/API contract tests plus all Python checks
 
-- [ ] **UI-002 — Build the responsive application shell**
-  - Dependencies: `UI-001`
-  - Plan: Task 12 in the foundation plan
-  - Verify: frontend checks, 375px/desktop inspection, and keyboard navigation
-
 - [ ] **UI-003 — Add the first useful home page**
   - Dependencies: `UI-002`, `UI-004`
   - Plan: Task 14 in the foundation plan
   - Verify: loading/healthy/unmigrated/error UI tests and frontend checks
-
-- [ ] **UI-004 — Add the typed API client and `/api` proxy**
-  - Dependencies: `UI-001`
-  - Plan: Task 13 in the foundation plan
-  - Verify: client tests, frontend checks, and a development-proxy inspection
 
 - [ ] **UI-005 — Connect the source status page**
   - Dependencies: `FND-010`, `UI-003`, `UI-004`
