@@ -24,37 +24,14 @@ task:
 
 ## In Progress
 
-- [ ] **ENV-001 — Provision a WAL-safe SQLite runtime**
-  - Claim: owner `agent:dev-dip`, branch `task/env-001-wal-safe-runtime`, started
-    `2026-09-13T21:33:48Z`
-  - Dependencies: `FND-002`
-  - Output: pin the development and production Python/runtime mechanism and add
-    an executable SQLite gate
-  - Acceptance: runtime SQLite is `3.51.3+`, or a fixed `3.50.7+`/`3.44.6+`
-    backport within those release branches; vulnerable versions fail before WAL
-    is enabled
-  - Verify: print Python and SQLite versions; test accepted and rejected version
-    tuples; require the live project environment to pass
-
-- [ ] **UI-002 — Build the responsive application shell**
-  - Claim: owner `agent:dev-dip`, branch `task/ui-002-responsive-shell`, started
-    `2026-09-13T21:33:48Z`
-  - Dependencies: `UI-001`
-  - Plan: Task 12 in the foundation plan
-  - Verify: frontend checks, 375px/desktop inspection, and keyboard navigation
-
-- [ ] **UI-004 — Add the typed API client and `/api` proxy**
-  - Claim: owner `agent:dev-dip`, branch `task/ui-004-api-client-proxy`, started
-    `2026-09-13T21:33:48Z`
-  - Dependencies: `UI-001`
-  - Plan: Task 13 in the foundation plan
-  - Verify: client tests, frontend checks, and a development-proxy inspection
+_No active tasks._
 
 ## Up Next
 
-The WAL-safe runtime, responsive application shell, and typed API client are in
-progress on separate file scopes. Later tasks remain ordered by their explicit
-dependencies; `DEP-003` stays blocked through `QA-004`.
+The WAL-safe runtime, responsive shell, and typed API client are complete.
+`FND-003` and `UI-003` may now begin on separate file scopes. Later tasks remain
+ordered by their explicit dependencies; `DEP-003` stays blocked through
+`QA-004`.
 
 - [ ] **FND-003 — Implement private data-root configuration**
   - Dependencies: `FND-002`, `DEC-001`, `ENV-001`
@@ -268,3 +245,12 @@ implementation.
 - [x] **UI-001 — Scaffold SvelteKit with the selected adapter and checks**
   - Added the pinned SvelteKit TypeScript scaffold, static `200.html` fallback,
     client-side rendering configuration, lint, formatting, and unit checks
+- [x] **ENV-001 — Provision a WAL-safe SQLite runtime**
+  - Added the immutable source-built Python 3.13.15 and SQLite 3.53.4 runtime,
+    pre-connection WAL gate, fail-closed provisioning, and recovery guidance
+- [x] **UI-002 — Build the responsive application shell**
+  - Added task-focused navigation, responsive layout, keyboard and touch
+    behavior, visible focus, reduced motion, and component tests
+- [x] **UI-004 — Add the typed API client and `/api` proxy**
+  - Added validated health/source contracts, same-origin requests, typed failure
+    states, cancellation, and the server-configured development proxy
