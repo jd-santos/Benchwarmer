@@ -751,7 +751,8 @@ verification instead.
 Before moving all foundation task IDs to **Done**:
 
 ```bash
-uv sync --dev
+scripts/build-python-runtime.sh
+uv sync --locked --dev
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .

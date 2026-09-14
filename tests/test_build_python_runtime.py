@@ -13,6 +13,8 @@ VALIDATOR = PROJECT_ROOT / "scripts/validate-python-runtime.py"
 RENAME_NOREPLACE = PROJECT_ROOT / "scripts/rename-noreplace.c"
 README = PROJECT_ROOT / "README.md"
 RECOVERY_DOC = PROJECT_ROOT / "docs/runtime-recovery.md"
+ARCHITECTURE_DOC = PROJECT_ROOT / "docs/architecture.md"
+FOUNDATION_PLAN = PROJECT_ROOT / "docs/plans/2026-09-07-application-foundation.md"
 PYTHON_VERSION = "3.13.15"
 PYTHON_SHA256 = "1e66a7945a48390ee4c2a4268a0e4185884059a13c4aab6d148aa208deea4a76"
 SQLITE_VERSION = "3.53.4"
@@ -300,6 +302,81 @@ def test_valid_owned_runtime_is_an_untouched_fast_path(tmp_path: Path) -> None:
     assert snapshot(runtime) == before
     assert (project / ".venv/keep").read_text() == "keep"
     assert not log.exists()
+
+
+@pytest.mark.parametrize(
+    ("configured_root", "relative_root"),
+    [("custom'root", "custom'root"), ("{absolute}", "absolute-runtime")],
+)
+def test_custom_root_prints_shell_safe_canonical_uv_python_guidance(
+    tmp_path: Path, configured_root: str, relative_root: str
+) -> None:
+    project, _root, _runtime, _log, env = prepared_build(tmp_path)
+    root = project / relative_root
+    runtime = root / RUNTIME_NAME
+    write_fake_runtime(runtime)
+    if configured_root == "{absolute}":
+        configured_root = str(root)
+
+    result = run_bootstrap(project, configured_root, env)
+
+    assert result.returncode == 0, result.stderr
+    instruction = next(
+        line.strip()
+        for line in result.stdout.splitlines()
+        if line.strip().startswith("export UV_PYTHON=")
+    )
+    expected_python = runtime.resolve() / "bin/python3.13"
+    selected = subprocess.run(
+        ["sh", "-c", f'{instruction}; printf "%s" "$UV_PYTHON"'],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert selected.stdout == str(expected_python)
+    assert "Every subsequent uv command using this custom root" in result.stdout
+
+
+def test_default_root_does_not_print_uv_python_override(tmp_path: Path) -> None:
+    project, _root, runtime, _log, env = prepared_build(tmp_path)
+    write_fake_runtime(runtime)
+
+    result = run_bootstrap(project, None, env)
+
+    assert result.returncode == 0, result.stderr
+    assert "UV_PYTHON" not in result.stdout
+
+
+def test_uv_python_selects_the_requested_runtime_without_downloads(
+    tmp_path: Path,
+) -> None:
+    uv = shutil.which("uv")
+    runtime_python = PROJECT_ROOT / ".benchwarmer" / RUNTIME_NAME / "bin/python3.13"
+    if uv is None or not runtime_python.is_file():
+        pytest.skip("the provisioned runtime and uv are required for selection check")
+    assert uv is not None
+    custom_runtime = tmp_path / RUNTIME_NAME
+    custom_runtime.symlink_to(runtime_python.parents[1], target_is_directory=True)
+    requested_python = custom_runtime / "bin/python3.13"
+    env = os.environ.copy()
+    env.update(
+        {
+            "UV_PYTHON": str(requested_python),
+            "UV_PYTHON_DOWNLOADS": "never",
+        }
+    )
+
+    result = subprocess.run(
+        [uv, "python", "find", "--no-project", "--resolve-links"],
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert Path(result.stdout.strip()) == runtime_python.resolve()
 
 
 @pytest.mark.parametrize(
@@ -625,3 +702,29 @@ def test_recovery_document_matches_create_only_model() -> None:
     assert "rename-noreplace" in recovery
     for obsolete in ("prior-runtime", "failed-candidate", "quarantine", "rollback"):
         assert obsolete not in recovery
+
+
+def test_custom_runtime_uv_guidance_is_documented() -> None:
+    required_assignment = (
+        'UV_PYTHON="$ROOT/python-3.13.15-sqlite-3.53.4/bin/python3.13"'
+    )
+    assert required_assignment in README.read_text()
+    assert required_assignment in RECOVERY_DOC.read_text()
+
+
+def test_final_integration_bootstraps_before_uv_sync() -> None:
+    plan = FOUNDATION_PLAN.read_text()
+    gate = plan.split("## Final integration gate", maxsplit=1)[1]
+    assert gate.index("scripts/build-python-runtime.sh") < gate.index(
+        "uv sync --locked --dev"
+    )
+
+
+def test_architecture_records_accepted_application_tooling() -> None:
+    architecture = ARCHITECTURE_DOC.read_text()
+    application_shape = architecture.split("## Application shape", maxsplit=1)[1].split(
+        "## Interface design principles", maxsplit=1
+    )[0]
+    for accepted_tool in ("FastAPI", "SQLAlchemy", "Alembic", "SvelteKit"):
+        assert accepted_tool in application_shape
+    assert "framework and Svelte tooling remain open" not in application_shape

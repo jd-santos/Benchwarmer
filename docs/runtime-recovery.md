@@ -25,6 +25,18 @@ cc -std=c11 -Wall -Wextra -Werror \
   "$PROJECT_ROOT/scripts/rename-noreplace.c" -o "$HELPER"
 ```
 
+`.python-version` points to the checkout's default runtime. If
+`BENCHWARMER_RUNTIME_ROOT` sets a custom root, every later `uv` command that uses
+the recovered or rebuilt runtime also needs the canonical interpreter override:
+
+```bash
+export UV_PYTHON="$ROOT/python-3.13.15-sqlite-3.53.4/bin/python3.13"
+```
+
+Keep it exported through validation and `uv sync`, or prefix each `uv` command
+with the same assignment. A successful provisioner run also prints an exact,
+shell-safe `export UV_PYTHON=...` instruction for its canonical runtime path.
+
 Set `STAGE` only to one exact path reported by the provisioner. Choose unique,
 absent archive paths without shell metacharacters:
 

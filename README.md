@@ -112,13 +112,32 @@ word-splitting semantics. `CPPFLAGS`, `CFLAGS`, and `LDFLAGS` may contain
 conventional space-separated flag words, but individual flag values containing
 whitespace are unsupported.
 
+`.python-version` points to the default runtime inside the checkout. When
+`BENCHWARMER_RUNTIME_ROOT` selects a different root, set `UV_PYTHON` for every
+`uv` command that should use that runtime. The provisioner prints a shell-safe
+`export` command with the canonical interpreter path after a successful build or
+valid-runtime check. The equivalent explicit setup is:
+
+```bash
+RUNTIME_ROOT_INPUT=$BENCHWARMER_RUNTIME_ROOT
+scripts/build-python-runtime.sh
+ROOT=$(CDPATH= cd -- "$RUNTIME_ROOT_INPUT" && pwd)
+export UV_PYTHON="$ROOT/python-3.13.15-sqlite-3.53.4/bin/python3.13"
+uv sync --locked --dev
+```
+
+Keep `UV_PYTHON` exported for all later `uv run`, `uv add`, `uv sync`, and other
+`uv` commands that use the custom root. Alternatively, prefix each command with
+the same `UV_PYTHON="$ROOT/python-3.13.15-sqlite-3.53.4/bin/python3.13"`
+assignment.
+
 A fresh successful publication removes an existing project virtual environment.
 The valid-runtime fast path leaves `.venv` unchanged. Production image,
 deployment, serving, and target-host verification remain deferred to `DEP-003`.
-The relative interpreter path in `.python-version` makes `uv` stop if the runtime
-has not been provisioned instead of downloading a Python build with an unknown
-SQLite version. Run project `uv` commands from the repository root. Use the same
-bootstrap in development and CI:
+For the default runtime root, the relative interpreter path in `.python-version`
+makes `uv` stop if the runtime has not been provisioned instead of downloading a
+Python build with an unknown SQLite version. Run project `uv` commands from the
+repository root. Use the same bootstrap in development and CI:
 
 ```bash
 scripts/build-python-runtime.sh

@@ -26,9 +26,11 @@ preserved trials, and separate quality and economics remain core.
 
 ## Application shape
 
-Use SQLite for structured data, a Svelte frontend, and a Python 3.12+ backend
-managed with uv. Large private artifacts live in local files referenced by the
-database. The exact backend framework and Svelte tooling remain open.
+Use SQLite for structured data and a Python 3.12+ FastAPI backend managed with
+uv. SQLAlchemy 2 provides persistence and Alembic manages migrations. The
+SvelteKit frontend uses TypeScript, npm, ESLint, Prettier, Vitest, and a static
+adapter with a `200.html` SPA fallback. Large private artifacts live in local
+files referenced by the database.
 
 The intended runtime has a local API and a background execution worker. Import
 and experiment state persist independently of the browser. Start with one local

@@ -10,6 +10,10 @@ SQLITE_SHA256=0e9483900e92cd5de8fd48d16bf9200145a61f7fd5be542a5ac81d8a9516eb9c
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 runtime_validator="$project_root/scripts/validate-python-runtime.py"
 rename_noreplace_source="$project_root/scripts/rename-noreplace.c"
+custom_runtime_root=false
+if [ -n "${BENCHWARMER_RUNTIME_ROOT:-}" ]; then
+    custom_runtime_root=true
+fi
 runtime_root=${BENCHWARMER_RUNTIME_ROOT:-"$project_root/.benchwarmer"}
 tmp_root=${TMPDIR:-/tmp}
 
@@ -42,6 +46,21 @@ lock_owned=false
 build_dir=
 staging_dir=
 publication_started=false
+
+shell_quote() {
+    quoted=$(printf '%s' "$1" | sed "s/'/'\\\\''/g")
+    printf "'%s'" "$quoted"
+}
+
+print_uv_python_guidance() {
+    if [ "$custom_runtime_root" = true ]; then
+        printf '%s\n' \
+            'Every subsequent uv command using this custom root needs this interpreter:'
+        printf '  export UV_PYTHON='
+        shell_quote "$python"
+        printf '\n'
+    fi
+}
 
 has_exact_marker() {
     marker=$1
@@ -146,6 +165,7 @@ if [ -e "$runtime" ] || [ -L "$runtime" ]; then
     if validate_runtime "$python"; then
         printf 'WAL-safe runtime already provisioned: Python %s, SQLite %s\n' \
             "$PYTHON_VERSION" "$SQLITE_VERSION"
+        print_uv_python_guidance
         exit 0
     fi
     printf 'owned final runtime is invalid; left untouched. Archive it manually using docs/runtime-recovery.md: %s\n' \
@@ -352,3 +372,4 @@ rm -rf "$project_root/.venv"
 publication_started=false
 printf 'Published WAL-safe runtime: Python %s, SQLite %s\n' \
     "$PYTHON_VERSION" "$SQLITE_VERSION"
+print_uv_python_guidance
