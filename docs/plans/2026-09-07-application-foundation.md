@@ -39,6 +39,11 @@ The commands below implement the foundation decisions accepted by `DEC-001`:
 - Separate API and future worker processes. Do not add an idle worker stub.
 - WAL mode is prohibited until `ENV-001` proves the runtime includes SQLite
   `3.51.3+` or an accepted fixed backport.
+- UI tasks follow the
+  [interface design principles](../architecture.md#interface-design-principles)
+  and the linked UI design skill. Start from task hierarchy, use the least visual
+  structure needed, preserve distinct application states, and include responsive
+  and accessibility behavior in the initial implementation.
 
 If a different choice is recorded, update this plan's paths and commands in the
 same commit so later agents do not inherit contradictory instructions.

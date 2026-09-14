@@ -57,6 +57,43 @@ This is a design, not an implemented service. Add dependencies when an implement
 feature needs them. Choose job scheduling and SQLite concurrency details during
 implementation; interrupted jobs must never silently rerun paid work.
 
+## Interface design principles
+
+Benchwarmer is software for repeated daily use, not a landing page. Its interface
+should provide high information clarity with low visual overhead.
+
+- Design each route around its primary task. Establish hierarchy, reading order,
+  alignment, and spacing before adding visual containers.
+- Use the least visual structure that communicates the relationship. Prefer
+  sections, rows, lists, tables, definition grids, and subtle dividers over a
+  collection of cards.
+- Use cards only for content that is independently interactive, selectable,
+  movable, or meaningfully separate. Keep radius and shadow scales restrained,
+  and reserve pills for tags, filters, statuses, tokens, and segmented controls.
+- Keep visible copy concise. Put secondary explanations, edge cases, and advanced
+  controls behind progressive disclosure unless they affect safety or immediate
+  consequences.
+- Use conventional controls with visible labels and predictable keyboard order.
+  Structured comparisons should remain tables when a table is the clearest
+  representation.
+- Assign color semantic roles such as action, neutral, success, warning, error,
+  and information. Status always needs a non-color indicator.
+- Preserve domain distinctions in every state. Unknown, zero, none, loading,
+  partial, unavailable, offline, read-only, and error are not interchangeable.
+- On narrow screens, reconsider priority and disclosure instead of only stacking
+  desktop columns. On wider screens, use available width without turning the
+  interface into a stretched phone layout.
+- Accessibility is part of the initial structure: semantic landmarks and
+  controls, visible focus, sufficient contrast, usable touch targets, sensible
+  headings, functional zoom and text scaling, reduced motion, and
+  screen-reader-friendly state changes.
+
+Before finishing a screen, remove decoration and copy that do not add meaning,
+confirm the primary task is obvious, check for generic generated-UI patterns,
+and verify that simplification did not remove an affordance or accessible state.
+The detailed workflow is in the
+[UI design skill](https://github.com/jd-santos/Skills/blob/main/skills/ui-design/SKILL.md).
+
 ## Application areas
 
 ### Activity and usage

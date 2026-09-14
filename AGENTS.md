@@ -46,6 +46,33 @@
 - Version serialized task and result schemas when their meaning changes.
 - Avoid adding dependencies until an implemented feature needs them.
 
+## UI Design Rules
+
+For frontend work, follow the
+[UI design skill](https://github.com/jd-santos/Skills/blob/main/skills/ui-design/SKILL.md)
+and the interface principles in [docs/architecture.md](docs/architecture.md).
+
+- Start with the user's primary task, information hierarchy, and reading order.
+  Add styling only after the structure is clear.
+- Prefer proximity, alignment, typography, whitespace, and subtle dividers over
+  borders, cards, and strong containers. A component does not need a visible box.
+- Avoid generic generated-UI patterns: card grids for ordinary content, large
+  radii, pill-shaped buttons, gradients, decorative blobs, repeated eyebrow
+  labels, oversized spacing, and marketing copy.
+- Use familiar controls and information shapes. Prefer tables for comparison,
+  lists for list-shaped data, and visible labels for form fields.
+- Keep copy concise and information-dense without crowding. Give one primary task
+  clear emphasis and keep supporting information quiet.
+- Give color a specific semantic job. Never rely on color alone for status, and
+  keep focus indicators and important text at accessible contrast.
+- Treat loading, empty, partial, unknown, zero, none, offline, disabled,
+  read-only, success, and error as distinct states where the domain distinguishes
+  them.
+- Reconsider hierarchy on small screens instead of only stacking columns. Use
+  desktop width effectively rather than stretching a mobile layout.
+- Before finishing UI work, check subtraction, hierarchy, generated-UI patterns,
+  and accessibility as defined by the UI design skill.
+
 ## Commands
 
 - **Install**: `uv sync --dev`
