@@ -3,6 +3,34 @@ import { defineConfig } from 'vitest/config';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 
+const defaultApiOrigin = 'http://127.0.0.1:8000';
+
+function resolveApiOrigin(value: string): string {
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		throw new Error('BENCHWARMER_API_ORIGIN must be a valid absolute URL.');
+	}
+
+	if (
+		!['http:', 'https:'].includes(url.protocol) ||
+		url.username !== '' ||
+		url.password !== '' ||
+		url.pathname !== '/' ||
+		url.search !== '' ||
+		url.hash !== ''
+	) {
+		throw new Error(
+			'BENCHWARMER_API_ORIGIN must be an HTTP(S) origin without credentials or a path.'
+		);
+	}
+
+	return url.origin;
+}
+
+const apiOrigin = resolveApiOrigin(process.env.BENCHWARMER_API_ORIGIN ?? defaultApiOrigin);
+
 export default defineConfig({
 	plugins: [
 		sveltekit({
@@ -15,6 +43,14 @@ export default defineConfig({
 		}),
 		svelteTesting()
 	],
+	server: {
+		proxy: {
+			'/api': {
+				target: apiOrigin,
+				changeOrigin: true
+			}
+		}
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
