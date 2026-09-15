@@ -28,8 +28,12 @@ task:
 
 - [ ] **LIB-001: Add shared conversation records and synthetic source examples**
   - Claim: owner `agent:library-contract`, branch `task/conversation-library`, started `2026-09-15T01:14:12Z`
-  - Status: read-only contract review; implementation blocked on the signed plan
-    commit (1Password signing failed). No code worker launched yet.
+  - Status: awaiting model handoff; plan signed in `4ed9a45`. Depth setting is now
+    `1` on disk with user approval, but the current extension still uses `0`.
+    Reload/restart Pi before retrying. No reviewer or code worker has run.
+  - [x] Handoff prepared at ~51% context
+  - Resume: [conversation handoff](plans/2026-09-15-conversation-handoff.md);
+    resolve stale config and the remaining worktree change before implementation
   - Execution: planned isolated managed worktree; return patch to the claim branch
   - Type: Subsystem or file cluster `[context: medium]`
   - Dependencies: `PLAN-003`, `FND-002`
@@ -42,8 +46,12 @@ task:
 
 - [ ] **ENR-001: Add bounded model-work plans and exact approval validation**
   - Claim: owner `agent:model-work-contract`, branch `task/conversation-library`, started `2026-09-15T01:14:12Z`
-  - Status: read-only contract review; implementation blocked on the signed plan
-    commit (1Password signing failed). No code worker launched yet.
+  - Status: awaiting model handoff; plan signed in `4ed9a45`. Depth setting is now
+    `1` on disk with user approval, but the current extension still uses `0`.
+    Reload/restart Pi before retrying. No reviewer or code worker has run.
+  - [x] Handoff prepared at ~51% context
+  - Resume: [conversation handoff](plans/2026-09-15-conversation-handoff.md);
+    review the approval contract before starting its isolated implementation lane
   - Execution: planned isolated managed worktree; return patch to the claim branch
   - Type: Focused change `[context: medium]`
   - Dependencies: `PLAN-003`, `FND-002`
