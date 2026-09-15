@@ -37,12 +37,6 @@ The WAL-safe Python 3.13.15 and SQLite 3.53.4 runtime is now present in the
 ignored local data root. All focused and repository-wide pytest, Ruff, format,
 compile, and runtime checks pass.
 
-- [ ] **FND-003 — Implement private data-root configuration**
-  - Dependencies: `FND-002`, `DEC-001`, `ENV-001`
-  - Plan: Task 3 in the foundation plan
-  - Verify: focused config tests, ADR 0002's disposable recovery prototype, and
-    all `FND-002` checks
-
 - [ ] **FND-004 — Add database migration plumbing**
   - Dependencies: `FND-003`
   - Plan: Task 4 in the foundation plan
@@ -280,6 +274,9 @@ implementation.
 
 ## Done
 
+- [x] **FND-003 — Implement private data-root configuration**
+  - Added side-effect-free platform/environment resolution, typed private paths,
+    owner-only initialization, symlink rejection, and actionable failures
 - [x] **LIB-001: Add shared conversation records and synthetic source examples**
   - Added strict versioned conversation validation, stable JSON, branch-local
     tool linkage, private-value-safe errors, and synthetic Pi/Hermes/Codex cases
