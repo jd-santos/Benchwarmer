@@ -37,12 +37,6 @@ The WAL-safe Python 3.13.15 and SQLite 3.53.4 runtime is now present in the
 ignored local data root. All focused and repository-wide pytest, Ruff, format,
 compile, and runtime checks pass.
 
-- [ ] **FND-004 — Add database migration plumbing**
-  - Dependencies: `FND-003`
-  - Plan: Task 4 in the foundation plan
-  - Verify: temporary-database Alembic current/upgrade/downgrade commands and
-    focused tests
-
 - [ ] **FND-005 — Add truthful unmigrated API health**
   - Dependencies: `FND-004`
   - Plan: Task 5 in the foundation plan
@@ -274,6 +268,10 @@ implementation.
 
 ## Done
 
+- [x] **FND-004 — Add database migration plumbing**
+  - Added synchronous SQLAlchemy engine/session plumbing, an empty Alembic
+    environment, revision inspection, repeated WAL guards, exact private-path
+    handling, and owner-only database-file validation
 - [x] **FND-003 — Implement private data-root configuration**
   - Added side-effect-free platform/environment resolution, typed private paths,
     owner-only initialization, symlink rejection, and actionable failures
