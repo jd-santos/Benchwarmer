@@ -75,7 +75,8 @@ and the interface principles in [docs/architecture.md](docs/architecture.md).
 
 ## Commands
 
-- **Install**: `uv sync --dev`
+- **Runtime**: `scripts/build-python-runtime.sh` from the repository root
+- **Install**: `uv sync --locked --dev`
 - **Package check**: `uv run python -m compileall src`
 - **Tests**: `uv run pytest`
 - **Lint**: `uv run ruff check .`; `uv run ruff format --check .`
@@ -90,6 +91,7 @@ design: {architecture.md,experiments.md,decisions.md}
 delivery: {roadmap.md,plans/}
 evidence: {sources/,source-coverage.md}
 decisions: {decisions.md,decisions/}
+operations: {runtime-recovery.md}
 tasks: {TODO.md}
 
 ## File-Specific Notes
@@ -108,6 +110,9 @@ tasks: {TODO.md}
   acceptance criteria and verification steps. Follow the plan linked by a TODO
   task rather than inventing missing implementation details.
 - **`docs/TODO.md`**: Tracks work using In Progress, Up Next, Backlog and Done.
+- **`docs/runtime-recovery.md`**: Fail-closed operator recovery for interrupted
+  runtime provisioning. Use exact paths and ownership checks; never improvise
+  deletion or replacement commands.
 - **`src/benchwarmer/`**: Keep domain models independent from provider and
   harness adapters.
 - **Generated reports**: Write to `reports/`; this directory is gitignored.
