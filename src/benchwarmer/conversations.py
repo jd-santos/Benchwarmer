@@ -185,7 +185,10 @@ def _validate_relationships(value: object) -> None:
     for index, item in enumerate(relationships):
         path = f"relationships[{index}]"
         relationship = _strict_object(item, path, required)
-        if not isinstance(relationship["kind"], str) or relationship["kind"] not in kinds:
+        if (
+            not isinstance(relationship["kind"], str)
+            or relationship["kind"] not in kinds
+        ):
             _invalid(f"{path}.kind")
         for key in ("target_source_kind", "target_source_scope_id", "target_native_id"):
             _nonempty_string(relationship[key], f"{path}.{key}")
@@ -194,7 +197,15 @@ def _validate_relationships(value: object) -> None:
 
 def _validate_metadata(value: object) -> None:
     metadata = _list(value, "metadata")
-    required = {"name", "value", "origin", "producer", "producer_version", "input_revision", "extensions"}
+    required = {
+        "name",
+        "value",
+        "origin",
+        "producer",
+        "producer_version",
+        "input_revision",
+        "extensions",
+    }
     origins = {"imported", "calculated", "generated", "human"}
     for index, item in enumerate(metadata):
         path = f"metadata[{index}]"
@@ -209,9 +220,21 @@ def _validate_metadata(value: object) -> None:
         _extensions(entry["extensions"], f"{path}.extensions")
 
 
-def _validate_events(value: object, artifact_ids: set[str], coverage: dict[str, object]) -> None:
+def _validate_events(
+    value: object, artifact_ids: set[str], coverage: dict[str, object]
+) -> None:
     events = _list(value, "events")
-    required = {"id", "native_id", "ordinal", "parent_id", "kind", "role", "occurred_at", "content", "extensions"}
+    required = {
+        "id",
+        "native_id",
+        "ordinal",
+        "parent_id",
+        "kind",
+        "role",
+        "occurred_at",
+        "content",
+        "extensions",
+    }
     event_ids: set[str] = set()
     native_ids: set[str] = set()
     ordinals: set[int] = set()
@@ -258,7 +281,9 @@ def _validate_events(value: object, artifact_ids: set[str], coverage: dict[str, 
         parent_id = event["parent_id"]
         if parent_id is not None:
             parent = by_id.get(cast(str, parent_id))
-            if parent is None or cast(int, parent["ordinal"]) >= cast(int, event["ordinal"]):
+            if parent is None or cast(int, parent["ordinal"]) >= cast(
+                int, event["ordinal"]
+            ):
                 _invalid(f"{path}.parent_id")
 
     # Parent ordinals are strictly lower, so following parents always terminates.
@@ -287,26 +312,50 @@ def _validate_events(value: object, artifact_ids: set[str], coverage: dict[str, 
         content = _list(event["content"], f"{path}.content")
         for block_index, item in enumerate(content):
             block_path = f"{path}.content[{block_index}]"
-            block = _strict_object(item, block_path, {"id", "kind", "text", "tool_call_id", "artifact_id", "extensions"})
+            block = _strict_object(
+                item,
+                block_path,
+                {"id", "kind", "text", "tool_call_id", "artifact_id", "extensions"},
+            )
             block_id = _nonempty_string(block["id"], f"{block_path}.id")
             if block_id in block_ids:
                 _invalid(f"{block_path}.id")
             block_ids.add(block_id)
-            if not isinstance(block["kind"], str) or block["kind"] not in {"text", "reasoning", "tool_call", "tool_result", "attachment", "unknown"}:
+            if not isinstance(block["kind"], str) or block["kind"] not in {
+                "text",
+                "reasoning",
+                "tool_call",
+                "tool_result",
+                "attachment",
+                "unknown",
+            }:
                 _invalid(f"{block_path}.kind")
             if block["text"] is not None and not isinstance(block["text"], str):
                 _invalid(f"{block_path}.text")
-            _nullable_nonempty_string(block["tool_call_id"], f"{block_path}.tool_call_id")
+            _nullable_nonempty_string(
+                block["tool_call_id"], f"{block_path}.tool_call_id"
+            )
             _nullable_nonempty_string(block["artifact_id"], f"{block_path}.artifact_id")
             _extensions(block["extensions"], f"{block_path}.extensions")
-            if block["kind"] in {"tool_call", "tool_result"} and block["tool_call_id"] is None:
+            if (
+                block["kind"] in {"tool_call", "tool_result"}
+                and block["tool_call_id"] is None
+            ):
                 _invalid(f"{block_path}.tool_call_id")
-            if block["artifact_id"] is not None and block["artifact_id"] not in artifact_ids:
+            if (
+                block["artifact_id"] is not None
+                and block["artifact_id"] not in artifact_ids
+            ):
                 _invalid(f"{block_path}.artifact_id")
             if block["kind"] == "attachment" and block["artifact_id"] is None:
                 _invalid(f"{block_path}.artifact_id")
             if block["kind"] == "tool_result" and block["tool_call_id"] not in calls:
-                if coverage.get("tool_calls") not in {"partial", "unknown", "unavailable", "redacted"}:
+                if coverage.get("tool_calls") not in {
+                    "partial",
+                    "unknown",
+                    "unavailable",
+                    "redacted",
+                }:
                     _invalid(f"{block_path}.tool_call_id")
             if block["kind"] == "tool_call":
                 call_id = cast(str, block["tool_call_id"])
@@ -321,7 +370,18 @@ def validate_conversation(document: object) -> None:
     envelope = _strict_object(
         document,
         "document",
-        {"schema_version", "id", "revision", "source", "events", "artifacts", "relationships", "metadata", "coverage", "extensions"},
+        {
+            "schema_version",
+            "id",
+            "revision",
+            "source",
+            "events",
+            "artifacts",
+            "relationships",
+            "metadata",
+            "coverage",
+            "extensions",
+        },
     )
     _integer(envelope["schema_version"], "schema_version")
     if envelope["schema_version"] != 1:
@@ -355,7 +415,9 @@ def load_conversation_json(text: str) -> dict[str, object]:
     if not isinstance(text, str):
         _invalid("json")
     try:
-        document = json.loads(text, object_pairs_hook=_no_duplicate_keys, parse_constant=_reject_constant)
+        document = json.loads(
+            text, object_pairs_hook=_no_duplicate_keys, parse_constant=_reject_constant
+        )
     except (json.JSONDecodeError, RecursionError, TypeError, ValueError) as error:
         if isinstance(error, ConversationValidationError):
             raise
@@ -370,6 +432,8 @@ def dump_conversation_json(document: object) -> str:
     """Validate and serialize one conversation with stable strict JSON."""
     validate_conversation(document)
     try:
-        return json.dumps(document, allow_nan=False, sort_keys=True, separators=(",", ":"))
+        return json.dumps(
+            document, allow_nan=False, sort_keys=True, separators=(",", ":")
+        )
     except (TypeError, ValueError, RecursionError):
         _invalid("document")

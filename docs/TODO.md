@@ -26,45 +26,6 @@ task:
 
 ## In Progress
 
-- [ ] **LIB-001: Add shared conversation records and synthetic source examples**
-  - Claim: owner `agent:library-contract`, branch `task/conversation-library`,
-    started `2026-09-15T01:14:12Z`
-  - Status: implementation integrated and final review clean. All 14 focused
-    supplemental tests pass on Python 3.14.7. Canonical pytest, Ruff, format, and
-    compile checks each exit 2 because the pinned runtime is absent; retain In
-    Progress until that validation blocker is resolved.
-  - [x] Handoff prepared at ~51% context
-  - Resume: [conversation handoff](plans/2026-09-15-conversation-handoff.md);
-    delegation smoke test passed after reload
-  - Execution: isolated managed-worktree patch integrated into the claim branch
-  - Type: Subsystem or file cluster `[context: medium]`
-  - Dependencies: `PLAN-003`, `FND-002`
-  - Plan: LIB-001 in the conversation-contracts plan
-  - Output: `src/benchwarmer/conversations.py`, `tests/test_conversations.py`,
-    `tests/fixtures/conversations/`
-  - Acceptance: versioned strict JSON round trips, source provenance, branches,
-    tool/artifact linkage and explicit gaps; synthetic inputs only
-  - Verify: plan's focused tests, Python checks, and documented runtime blockers
-
-- [ ] **ENR-001: Add bounded model-work plans and exact approval validation**
-  - Claim: owner `agent:model-work-contract`, branch `task/conversation-library`,
-    started `2026-09-15T01:14:12Z`
-  - Status: implementation integrated and final review clean. All 14 focused
-    supplemental tests pass on Python 3.14.7. Canonical pytest, Ruff, format, and
-    compile checks each exit 2 because the pinned runtime is absent; retain In
-    Progress until that validation blocker is resolved.
-  - [x] Handoff prepared at ~51% context
-  - Resume: [conversation handoff](plans/2026-09-15-conversation-handoff.md);
-    delegation smoke test passed after reload
-  - Execution: isolated managed-worktree patch integrated into the claim branch
-  - Type: Focused change `[context: medium]`
-  - Dependencies: `PLAN-003`, `FND-002`
-  - Plan: ENR-001 in the conversation-contracts plan
-  - Output: `src/benchwarmer/model_work.py`, `tests/test_model_work.py`
-  - Acceptance: immutable input/stage/limit plans; stale or missing approval fails;
-    no provider calls, scheduler, or durable-budget guarantee
-  - Verify: plan's focused tests, Python checks, and documented runtime blockers
-
 ## Up Next
 
 Prioritize the conversation library over usage reporting. `COL-001` accepted the
@@ -72,9 +33,9 @@ manual-first push topology in ADR 0005. `COL-002` remains blocked on the first
 importer and foundation gates. The remaining foundation supports real
 persistence/API delivery, and `DEP-003` stays blocked through `QA-004`.
 
-The WAL-safe provisioner is implemented, but its pinned runtime was absent from
-this checkout at the contract-slice baseline. Canonical `uv run` checks could not
-start. The user authorized rebuilding it to validate `LIB-001` and `ENR-001`.
+The WAL-safe Python 3.13.15 and SQLite 3.53.4 runtime is now present in the
+ignored local data root. All focused and repository-wide pytest, Ruff, format,
+compile, and runtime checks pass.
 
 - [ ] **FND-003 — Implement private data-root configuration**
   - Dependencies: `FND-002`, `DEC-001`, `ENV-001`
@@ -319,6 +280,12 @@ implementation.
 
 ## Done
 
+- [x] **LIB-001: Add shared conversation records and synthetic source examples**
+  - Added strict versioned conversation validation, stable JSON, branch-local
+    tool linkage, private-value-safe errors, and synthetic Pi/Hermes/Codex cases
+- [x] **ENR-001: Add bounded model-work plans and exact approval validation**
+  - Added immutable work contracts, exact digest approval, bounded Decimal
+    handling, and stale-plan rejection without provider or scheduler claims
 - [x] **COL-001: Plan collection from the user's other machines**
   - Accepted [ADR 0005](decisions/0005-cross-machine-collection.md): one
     manual-first push collector per Mac, durable private spooling and central

@@ -73,7 +73,9 @@ class ModelWorkTests(unittest.TestCase):
             replace(plan, stages=(replace(plan.stages[0], model="other-model"),)),
             replace(
                 plan,
-                stages=(replace(plan.stages[0], configuration_digest="configuration-2"),),
+                stages=(
+                    replace(plan.stages[0], configuration_digest="configuration-2"),
+                ),
             ),
             replace(
                 plan,
@@ -146,9 +148,10 @@ class ModelWorkTests(unittest.TestCase):
             (lambda: valid_plan(max_concurrency=0), "max_concurrency"),
         )
         for construct, field in cases:
-            with self.subTest(field=field), self.assertRaises(
-                ModelWorkValidationError
-            ) as raised:
+            with (
+                self.subTest(field=field),
+                self.assertRaises(ModelWorkValidationError) as raised,
+            ):
                 construct()
             self.assertEqual(str(raised.exception), field)
 
@@ -199,8 +202,9 @@ class ModelWorkTests(unittest.TestCase):
             (lambda: WorkApprovalSubtype("digest", "actor"), "approval"),
         )
         for construct, field in cases:
-            with self.subTest(field=field), self.assertRaisesRegex(
-                ModelWorkValidationError, rf"^{field}$"
+            with (
+                self.subTest(field=field),
+                self.assertRaisesRegex(ModelWorkValidationError, rf"^{field}$"),
             ):
                 construct()
 
@@ -214,7 +218,9 @@ class ModelWorkTests(unittest.TestCase):
 
     def test_request_and_cost_limits_allow_exact_exhaustion_only(self) -> None:
         first = valid_stage(stage_id="first", max_requests=2, max_cost=Decimal("0.10"))
-        second = valid_stage(stage_id="second", max_requests=3, max_cost=Decimal("0.20"))
+        second = valid_stage(
+            stage_id="second", max_requests=3, max_cost=Decimal("0.20")
+        )
         exact = valid_plan(
             stages=(first, second),
             max_total_requests=5,
@@ -230,13 +236,19 @@ class ModelWorkTests(unittest.TestCase):
             replace(exact, max_total_cost=Decimal("0.299"))
 
     def test_decimal_canonicalization_is_context_independent(self) -> None:
-        precise_stage = valid_stage(max_cost=Decimal("123456789012345678901234567890.1200"))
+        precise_stage = valid_stage(
+            max_cost=Decimal("123456789012345678901234567890.1200")
+        )
         precise_plan = valid_plan(
             stages=(precise_stage,),
             max_total_cost=Decimal("123456789012345678901234567890.12000"),
         )
         equivalent = valid_plan(
-            stages=(replace(precise_stage, max_cost=Decimal("123456789012345678901234567890.12")),),
+            stages=(
+                replace(
+                    precise_stage, max_cost=Decimal("123456789012345678901234567890.12")
+                ),
+            ),
             max_total_cost=Decimal("123456789012345678901234567890.12"),
         )
         with localcontext() as context:
@@ -256,8 +268,9 @@ class ModelWorkTests(unittest.TestCase):
             Decimal("1E-1001"),
             Decimal("1" * 1001),
         ):
-            with self.subTest(value=value), self.assertRaisesRegex(
-                ModelWorkValidationError, "^max_cost$"
+            with (
+                self.subTest(value=value),
+                self.assertRaisesRegex(ModelWorkValidationError, "^max_cost$"),
             ):
                 valid_stage(max_cost=value)
 

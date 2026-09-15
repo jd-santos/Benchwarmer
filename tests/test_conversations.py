@@ -31,7 +31,9 @@ class ConversationFixturesTests(unittest.TestCase):
                 validate_conversation(document)
                 encoded = dump_conversation_json(document)
                 self.assertEqual(load_conversation_json(encoded), document)
-                self.assertEqual(dump_conversation_json(load_conversation_json(encoded)), encoded)
+                self.assertEqual(
+                    dump_conversation_json(load_conversation_json(encoded)), encoded
+                )
 
     def test_validation_and_serialization_do_not_mutate_input(self) -> None:
         document = fixture("pi-branch.json")
@@ -53,7 +55,13 @@ class ConversationFixturesTests(unittest.TestCase):
         relationship = document["relationships"][0]
         self.assertEqual(
             set(relationship),
-            {"kind", "target_source_kind", "target_source_scope_id", "target_native_id", "extensions"},
+            {
+                "kind",
+                "target_source_kind",
+                "target_source_scope_id",
+                "target_native_id",
+                "extensions",
+            },
         )
         del relationship["target_source_kind"]
         with self.assertRaises(ConversationValidationError):
@@ -94,7 +102,9 @@ class ConversationFixturesTests(unittest.TestCase):
         with self.assertRaises(ConversationValidationError):
             validate_conversation(invalid)
 
-    def test_partial_coverage_permits_missing_tool_call_but_available_does_not(self) -> None:
+    def test_partial_coverage_permits_missing_tool_call_but_available_does_not(
+        self,
+    ) -> None:
         document = fixture("codex-tools.json")
         validate_conversation(document)
         document["coverage"]["tool_calls"] = "available"
@@ -107,7 +117,9 @@ class ConversationValidationTests(unittest.TestCase):
         with self.assertRaises(ConversationValidationError):
             validate_conversation(document)
 
-    def test_rejects_unknown_structural_keys_references_and_unordered_events(self) -> None:
+    def test_rejects_unknown_structural_keys_references_and_unordered_events(
+        self,
+    ) -> None:
         document = fixture("pi-branch.json")
         document["unrecognized"] = None
         self.assert_invalid(document)
@@ -166,7 +178,9 @@ class ConversationValidationTests(unittest.TestCase):
                 ):
                     function(document)
 
-    def test_errors_do_not_echo_private_sentinel_values_from_any_public_function(self) -> None:
+    def test_errors_do_not_echo_private_sentinel_values_from_any_public_function(
+        self,
+    ) -> None:
         sentinel = "PRIVATE-SENTINEL-DO-NOT-ECHO"
         invalid = fixture("pi-branch.json")
         invalid["id"] = sentinel
