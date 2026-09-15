@@ -209,11 +209,14 @@ retries; their sum must not exceed `max_total_cost`. Validation and hashing must
 not depend on the active Decimal context. Derive each value from `Decimal.as_tuple()`.
 For canonical JSON, remove trailing coefficient zeros while adjusting the exponent,
 then encode the nonnegative value as an object with string `coefficient` and
-integer `exponent`; encode every zero as coefficient `0`, exponent `0`. For cost
-sums and comparisons, convert operands to integer coefficients at their least
-common decimal exponent and use integer arithmetic rather than Decimal addition.
-This preserves precision and avoids context rounding. Test equivalent exponents
-and values beyond the default Decimal precision. This validates supplied ceilings,
+integer `exponent`; encode every zero as coefficient `0`, exponent `0`. Reject a
+canonical coefficient longer than 1,000 digits or a canonical exponent whose
+absolute value exceeds 1,000. These are representation-safety limits, not default
+spend limits. For cost sums and comparisons, convert operands to integer
+coefficients at their least common decimal exponent and use integer arithmetic
+rather than Decimal addition. This preserves precision and avoids context rounding.
+Test equivalent exponents, values beyond the default Decimal precision, and both
+representation limits. This validates supplied ceilings,
 not provider prices or the probability of completing the batch. Unknown
 pricing/non-monetary approval is a future policy decision, not an unbounded
 fallback. Zero cost still requires approval and bounded requests/resources.

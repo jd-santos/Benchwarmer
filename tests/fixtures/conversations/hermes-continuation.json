@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "normalized-hermes-continuation",
+  "revision": "revision-hermes-1",
+  "source": {"kind": "hermes", "scope_id": "synthetic-device-a", "native_id": "native-session-1", "adapter_version": "fixture-1", "source_version": "source-revision-1", "captured_at": "2026-09-15T12:01:00Z", "snapshot_id": "snapshot-hermes-1", "extensions": {}},
+  "events": [
+    {"id": "event-1", "native_id": "native-event-1", "ordinal": 10, "parent_id": null, "kind": "message", "role": "system", "occurred_at": "2026-09-15T12:01:00+00:00", "content": [{"id": "block-1", "kind": "text", "text": "Synthetic configuration.", "tool_call_id": null, "artifact_id": null, "extensions": {}}], "extensions": {}},
+    {"id": "event-2", "native_id": "native-event-2", "ordinal": 20, "parent_id": "event-1", "kind": "message", "role": "assistant", "occurred_at": "2026-09-15T12:02:00+00:00", "content": [{"id": "block-2", "kind": "text", "text": "Synthetic continuation point.", "tool_call_id": null, "artifact_id": null, "extensions": {}}], "extensions": {}}
+  ],
+  "artifacts": [],
+  "relationships": [{"kind": "continuation", "target_source_kind": "hermes", "target_source_scope_id": "synthetic-device-b", "target_native_id": "native-session-1", "extensions": {}}],
+  "metadata": [{"name": "summary", "value": "Synthetic imported summary.", "origin": "imported", "producer": "fixture", "producer_version": "1", "input_revision": "revision-hermes-1", "extensions": {}}],
+  "coverage": {"messages": "available"},
+  "extensions": {}
+}

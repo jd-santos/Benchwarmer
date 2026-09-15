@@ -27,14 +27,16 @@ task:
 ## In Progress
 
 - [ ] **LIB-001: Add shared conversation records and synthetic source examples**
-  - Claim: owner `agent:library-contract`, branch `task/conversation-library`, started `2026-09-15T01:14:12Z`
-  - Status: pre-implementation review complete. The coordinator accepted
-    source-kind relationship identity, branch-local tool-call uniqueness, and
-    private-value-safe error tests into the plan. Ready for isolated implementation.
+  - Claim: owner `agent:library-contract`, branch `task/conversation-library`,
+    started `2026-09-15T01:14:12Z`
+  - Status: implementation integrated and final review clean. All 14 focused
+    supplemental tests pass on Python 3.14.7. Canonical pytest, Ruff, format, and
+    compile checks each exit 2 because the pinned runtime is absent; retain In
+    Progress until that validation blocker is resolved.
   - [x] Handoff prepared at ~51% context
   - Resume: [conversation handoff](plans/2026-09-15-conversation-handoff.md);
     delegation smoke test passed after reload
-  - Execution: planned isolated managed worktree; return patch to the claim branch
+  - Execution: isolated managed-worktree patch integrated into the claim branch
   - Type: Subsystem or file cluster `[context: medium]`
   - Dependencies: `PLAN-003`, `FND-002`
   - Plan: LIB-001 in the conversation-contracts plan
@@ -45,14 +47,16 @@ task:
   - Verify: plan's focused tests, Python checks, and documented runtime blockers
 
 - [ ] **ENR-001: Add bounded model-work plans and exact approval validation**
-  - Claim: owner `agent:model-work-contract`, branch `task/conversation-library`, started `2026-09-15T01:14:12Z`
-  - Status: pre-implementation review complete. The coordinator accepted exact
-    Decimal canonicalization/arithmetic and digest-bound stage input manifests
-    into the plan. Ready for isolated implementation.
+  - Claim: owner `agent:model-work-contract`, branch `task/conversation-library`,
+    started `2026-09-15T01:14:12Z`
+  - Status: implementation integrated and final review clean. All 14 focused
+    supplemental tests pass on Python 3.14.7. Canonical pytest, Ruff, format, and
+    compile checks each exit 2 because the pinned runtime is absent; retain In
+    Progress until that validation blocker is resolved.
   - [x] Handoff prepared at ~51% context
   - Resume: [conversation handoff](plans/2026-09-15-conversation-handoff.md);
     delegation smoke test passed after reload
-  - Execution: planned isolated managed worktree; return patch to the claim branch
+  - Execution: isolated managed-worktree patch integrated into the claim branch
   - Type: Focused change `[context: medium]`
   - Dependencies: `PLAN-003`, `FND-002`
   - Plan: ENR-001 in the conversation-contracts plan
