@@ -28,12 +28,12 @@ task:
 
 - [ ] **LIB-001: Add shared conversation records and synthetic source examples**
   - Claim: owner `agent:library-contract`, branch `task/conversation-library`, started `2026-09-15T01:14:12Z`
-  - Status: awaiting model handoff; plan signed in `4ed9a45`. Depth setting is now
-    `1` on disk with user approval, but the current extension still uses `0`.
-    Reload/restart Pi before retrying. No reviewer or code worker has run.
+  - Status: pre-implementation review complete. The coordinator accepted
+    source-kind relationship identity, branch-local tool-call uniqueness, and
+    private-value-safe error tests into the plan. Ready for isolated implementation.
   - [x] Handoff prepared at ~51% context
   - Resume: [conversation handoff](plans/2026-09-15-conversation-handoff.md);
-    resolve stale config and the remaining worktree change before implementation
+    delegation smoke test passed after reload
   - Execution: planned isolated managed worktree; return patch to the claim branch
   - Type: Subsystem or file cluster `[context: medium]`
   - Dependencies: `PLAN-003`, `FND-002`
@@ -46,12 +46,12 @@ task:
 
 - [ ] **ENR-001: Add bounded model-work plans and exact approval validation**
   - Claim: owner `agent:model-work-contract`, branch `task/conversation-library`, started `2026-09-15T01:14:12Z`
-  - Status: awaiting model handoff; plan signed in `4ed9a45`. Depth setting is now
-    `1` on disk with user approval, but the current extension still uses `0`.
-    Reload/restart Pi before retrying. No reviewer or code worker has run.
+  - Status: pre-implementation review complete. The coordinator accepted exact
+    Decimal canonicalization/arithmetic and digest-bound stage input manifests
+    into the plan. Ready for isolated implementation.
   - [x] Handoff prepared at ~51% context
   - Resume: [conversation handoff](plans/2026-09-15-conversation-handoff.md);
-    review the approval contract before starting its isolated implementation lane
+    delegation smoke test passed after reload
   - Execution: planned isolated managed worktree; return patch to the claim branch
   - Type: Focused change `[context: medium]`
   - Dependencies: `PLAN-003`, `FND-002`

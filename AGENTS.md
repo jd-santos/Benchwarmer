@@ -100,7 +100,6 @@ and the interface principles in [docs/architecture.md](docs/architecture.md).
 > Read the file below before changing architecture, scope, or evaluation
 > semantics.
 
-[Root]: ./docs/
 design: {architecture.md,conversation-library.md,experiments.md,decisions.md}
 delivery: {roadmap.md,plans/}
 evidence: {sources/,source-coverage.md}

@@ -95,9 +95,11 @@ require a call ID. Attachment blocks require a resolvable artifact ID. Any
 non-null artifact ID must resolve. Tool arguments/results can remain structured
 JSON in block extensions; never execute them. A result whose call is absent is
 permitted only when `coverage.tool_calls` is `partial`, `unknown`, `unavailable`,
-or `redacted`; `available` requires a matching call on its ancestor path (including
-earlier blocks in the same event). The same native call ID may occur on different
-branches, so do not impose global call-ID uniqueness.
+or `redacted`; `available` requires exactly one matching prior call on its
+ancestor path, including earlier blocks in the same event. A tool-call ID must
+not appear on two call blocks along the same root-to-leaf event path. The same
+native call ID may occur on diverging branches, so do not impose global call-ID
+uniqueness.
 
 Artifact object: `id`, `kind` (nonempty strings), `media_type` (nonempty string or
 null), `availability` (the coverage states above), `locator` (opaque nonempty
@@ -106,16 +108,20 @@ a locator; partial/redacted/unavailable/unknown do not imply a local file exists
 This code never reads a locator.
 
 Relationship object: `kind` (`branch`, `continuation`, `derived_from`, or
-`unknown`), `target_source_scope_id`, `target_native_id` (nonempty strings), and
-`extensions`. Targets may be outside this document; retain the reference without
-inventing or loading their content.
+`unknown`), `target_source_kind`, `target_source_scope_id`, `target_native_id`
+(nonempty strings), and `extensions`. The three target fields form the complete
+source-scoped native identity. Targets may be outside this document; retain the
+reference without inventing or loading their content.
 
 Metadata object: `name` (nonempty string), `value` (any finite JSON), `origin`
 (`imported`, `calculated`, `generated`, or `human`), `producer` (nonempty string),
 `producer_version` (nonempty string or null), `input_revision` (nonempty string),
-`extensions`. This supports provenance, not automatic enrichment. It does not
-claim arbitrary metadata has validated usage/cost semantics. Preserve original
-short summaries as imported rather than rewriting their origin as generated.
+`extensions`. `input_revision` is the required v1 evidence anchor. Exact source
+spans, generation time, usage, cost, and richer coverage remain extension data
+until an enrichment schema promotes them to shared queryable fields. This slice
+does not claim complete enrichment provenance or validated usage/cost semantics.
+Preserve original short summaries as imported rather than rewriting their origin
+as generated.
 
 ### Serialization and tests
 
@@ -129,15 +135,20 @@ Create synthetic normalized fixtures under `tests/fixtures/conversations/`:
 
 - `pi-branch.json`: one common ancestor and two diverging branches, tool linkage.
 - `hermes-continuation.json`: ordered messages and external continuation reference.
-- `codex-tools.json`: tool call/result, artifact, unknown field, partial capture.
+- `codex-tools.json`: tool call/result, artifact, a native unknown field inside
+  `extensions`, and partial capture.
 - `README.md`: explain synthetic origin and what each fixture exercises. These
   are normalized examples, not proof of live source-adapter compatibility.
 
 Tests cover all three, same native session ID in different source scopes without
-identity merging, extension round trips, metadata origins, explicit missing
-coverage, branch-local tool linkage, invalid references/order, and malformed
-JSON. Tests must not read private logs or write artifacts outside temporary test
-state. Synthetic examples use no real usernames, paths, prompts, or account IDs.
+identity merging, fully source-scoped relationship targets, extension round trips,
+metadata origins and evidence anchors, explicit missing coverage, valid
+branch-local call-ID reuse, invalid same-path reuse, invalid structural keys,
+invalid references/order, and malformed JSON. Negative tests pass synthetic
+sentinel values through every public function and assert that no exception echoes
+them, including duplicate-key and malformed-JSON failures. Tests must not read
+private logs or write artifacts outside temporary test state. Synthetic examples
+use no real usernames, paths, prompts, or account IDs.
 
 **Acceptance:** Every fixture validates and round trips; negative cases fail with
 bounded field-only errors. No filesystem, network, SQLite, harness SDK, inference,
@@ -157,7 +168,8 @@ Public seam:
 
 - `WorkItem`: `input_id`, `input_revision` as nonempty strings.
 - `WorkStage`: `stage_id`, `operation`, `provider`, `model`, `configuration_digest`,
-  `max_requests`, `max_input_tokens`, `max_output_tokens`, `max_cost`.
+  `input_manifest_digest`, `max_requests`, `max_input_tokens`,
+  `max_output_tokens`, `max_cost`.
 - `WorkPlan`: `schema_version`, `items`, `stages`, `currency`, `max_total_cost`,
   `max_total_requests`, `max_concurrency`, `pricing_basis`, `disclosure_scope`.
 - `WorkApproval`: `plan_digest` and `approved_by`, both nonempty strings.
@@ -178,7 +190,10 @@ negative allowances, missing approvals, and stale approval digests.
 stage is not implementation or approval of an adaptive user adapter. The other
 identity/configuration fields are nonempty strings. `configuration_digest` pins
 prompt, rubric, model settings, retry/escalation policy, and other effective
-configuration upstream; this module does not construct or verify that content.
+configuration upstream. `input_manifest_digest` pins the stage-specific item
+selection, exact input revisions, selected content, and payload-construction
+rules. This module constructs or resolves neither referenced manifest; the later
+dispatch service must do so before execution.
 
 `max_requests` is a stage-wide ceiling, including every item, retry, and
 escalation, not a per-item count. Input/output allowances are per request and
@@ -190,25 +205,35 @@ For this initial contract, priced work only: `currency` is a three-letter
 uppercase code; costs are finite nonnegative `Decimal` values, not binary floats;
 `pricing_basis` is a nonempty reference to the price evidence used in the preview.
 Stage `max_cost` values are whole-stage allowances in that currency, including
-retries; their sum must not exceed `max_total_cost`. Validate without rounding
-away precision. Canonicalize Decimal values so equivalent numeric values hash
-identically. This validates supplied ceilings, not provider prices or the
-probability of completing the batch. Unknown pricing/non-monetary approval is a
-future policy decision, not an unbounded fallback. Zero cost still requires
-approval and bounded requests/resources.
+retries; their sum must not exceed `max_total_cost`. Validation and hashing must
+not depend on the active Decimal context. Derive each value from `Decimal.as_tuple()`.
+For canonical JSON, remove trailing coefficient zeros while adjusting the exponent,
+then encode the nonnegative value as an object with string `coefficient` and
+integer `exponent`; encode every zero as coefficient `0`, exponent `0`. For cost
+sums and comparisons, convert operands to integer coefficients at their least
+common decimal exponent and use integer arithmetic rather than Decimal addition.
+This preserves precision and avoids context rounding. Test equivalent exponents
+and values beyond the default Decimal precision. This validates supplied ceilings,
+not provider prices or the probability of completing the batch. Unknown
+pricing/non-monetary approval is a future policy decision, not an unbounded
+fallback. Zero cost still requires approval and bounded requests/resources.
 
 `disclosure_scope` is a nonempty reference to separately approved content/provider
 permissions. Include it in the digest; a supplied string does not prove the
 permission exists. The eventual service must resolve and enforce that permission
-before dispatch. `approved_by` is an authenticated actor reference supplied by
-that service, not authentication implemented here. Digests are not credentials,
-signatures, or proof of authorization by themselves.
+and the referenced pricing basis immediately before dispatch. In this slice,
+"stale approval" means a digest mismatch; approval expiry and revocation policy
+remain service concerns rather than hidden clock behavior in this pure function.
+`approved_by` is an authenticated actor reference supplied by that service, not
+authentication implemented here. Digests are not credentials, signatures, or
+proof of authorization by themselves.
 
 Tests cover exact approval, changed input revisions, stage models/configuration,
-judges, limits, pricing, and disclosure scope invalidating approval; mutable input
-rejection; Decimal edge cases; no-op or empty plans; duplicate records; exhausted
-request/cost allocations; zero-cost work still needing approval; and missing
-approval. No automatic provider escalation or network call is possible.
+input-manifest digests, judges, limits, pricing, and disclosure scope invalidating
+approval; mutable input rejection; context-independent Decimal edge cases; no-op
+or empty plans; duplicate records; exhausted request/cost allocations; zero-cost
+work still needing approval; and missing approval. No automatic provider
+escalation or network call is possible.
 
 **Acceptance:** Valid frozen plans bind all consequential fields to explicit
 approval; malformed/stale/unapproved plans fail. State clearly in docstrings that
