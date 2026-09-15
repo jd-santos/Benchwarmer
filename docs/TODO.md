@@ -37,11 +37,6 @@ The WAL-safe Python 3.13.15 and SQLite 3.53.4 runtime is now present in the
 ignored local data root. All focused and repository-wide pytest, Ruff, format,
 compile, and runtime checks pass.
 
-- [ ] **FND-006 — Add source records and migration**
-  - Dependencies: `FND-004`
-  - Plan: Task 6 in the foundation plan
-  - Verify: migration round-trip and focused model tests
-
 - [ ] **FND-007 — Add import-batch records and migration**
   - Dependencies: `FND-006`
   - Plan: Task 7 in the foundation plan
@@ -263,6 +258,10 @@ implementation.
 
 ## Done
 
+- [x] **FND-006 — Add source records and migration**
+  - Added durable configured source identity, immutable versioned coverage,
+    UTC-aware timestamps, database-enforced integrity, and Alembic revision
+    `0001`
 - [x] **FND-005 — Add truthful unmigrated API health**
   - Added the FastAPI application factory, request-scoped migration and
     writability inspection, strict health response contract, generated API

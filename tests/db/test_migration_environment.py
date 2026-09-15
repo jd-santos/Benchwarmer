@@ -74,7 +74,9 @@ def test_database_path_with_question_mark_connects_without_a_truncated_sibling(
     assert not truncated_database.exists()
 
 
-def test_empty_migration_commands_leave_revision_absent(tmp_path: Path) -> None:
+def test_migration_commands_report_and_remove_the_first_revision(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "private"
 
     current = _run_alembic(root, "current")
@@ -83,7 +85,7 @@ def test_empty_migration_commands_leave_revision_absent(tmp_path: Path) -> None:
 
     upgrade = _run_alembic(root, "upgrade", "head")
     assert upgrade.returncode == 0, upgrade.stderr
-    assert _current_revision(BenchwarmerSettings(data_root=root)) is None
+    assert _current_revision(BenchwarmerSettings(data_root=root)) == "0001"
 
     downgrade = _run_alembic(root, "downgrade", "base")
     assert downgrade.returncode == 0, downgrade.stderr

@@ -6,10 +6,11 @@ from alembic import context
 
 from benchwarmer.config import BenchwarmerSettings
 from benchwarmer.db import create_engine, database_url
+from benchwarmer.models import Base
 
 
 config = context.config
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
