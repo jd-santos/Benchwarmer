@@ -67,26 +67,14 @@ task:
 
 ## Up Next
 
-Prioritize the conversation library over usage reporting. `LIB-001` and `ENR-001`
-are independent pure-code lanes; `COL-001` needs user planning before transport
-work. The remaining foundation still supports real persistence/API delivery.
-`DEP-003` stays blocked through `QA-004`.
+Prioritize the conversation library over usage reporting. `COL-001` accepted the
+manual-first push topology in ADR 0005. `COL-002` remains blocked on the first
+importer and foundation gates. The remaining foundation supports real
+persistence/API delivery, and `DEP-003` stays blocked through `QA-004`.
 
 The WAL-safe provisioner is implemented, but its pinned runtime was absent from
 this checkout at the contract-slice baseline. Canonical `uv run` checks could not
-start. Do not turn either contract lane into runtime provisioning work.
-
-- [ ] **COL-001: Plan collection from the user's other machines**
-  - Type: Exploratory research `[context: small]`
-  - Dependencies: `PLAN-003`, user clarification
-  - Output: accepted collection design in `docs/decisions/0005-cross-machine-collection.md`,
-    reconciled into `docs/decisions.md` by the coordinator
-  - Questions: device/OS inventory, sleep/offline behavior, installation/update
-    permissions, freshness/backfill size, push/pull/transfer, enrollment, source
-    allowlists, secret exclusion, spooling, acknowledgment, retention/revocation
-  - Acceptance: user selects an approach and private-data boundary before code;
-    no public hostnames, personal paths, or private inventory in the design
-  - Verify: compare ADR against the collection planning gate, `git diff --check`
+start. The user authorized rebuilding it to validate `LIB-001` and `ENR-001`.
 
 - [ ] **FND-003 — Implement private data-root configuration**
   - Dependencies: `FND-002`, `DEC-001`, `ENV-001`
@@ -225,10 +213,13 @@ implementation.
 - [ ] **COL-002: Implement approved cross-machine collection**
   - Type: Subsystem or file cluster `[context: large]`; decompose before launch
   - Dependencies: `COL-001`, `LIB-001`, `ACT-001`, `QA-004`
-  - Scope: enrollment, read-only capture, bounded backfill, offline catch-up,
-    durable acknowledgment, duplicate delivery and revocation tests
-  - Gate: exact files/transport/tests follow the accepted ADR; operational
-    rollout also requires `DEP-003`
+  - Scope: manual push collector first, versioned enrollment and upload protocol,
+    source allowlists, bounded private spool/backfill, durable acknowledgment,
+    duplicate delivery and revocation tests; add optional `launchd` scheduling
+    only after the manual path is reliable
+  - Gate: exact files, limits, transport, packaging, and tests must follow
+    [ADR 0005](decisions/0005-cross-machine-collection.md); operational rollout
+    also requires `DEP-003`
 - [ ] **ENR-002: Implement durable approved model-work execution**
   - Type: Subsystem or file cluster `[context: large]`; decompose before launch
   - Dependencies: `ENR-001`, `ACT-002`
@@ -327,6 +318,11 @@ implementation.
     review task IDs before implementation
 
 ## Done
+
+- [x] **COL-001: Plan collection from the user's other machines**
+  - Accepted [ADR 0005](decisions/0005-cross-machine-collection.md): one
+    manual-first push collector per Mac, durable private spooling and central
+    acknowledgment, optional scheduled runs, and no desktop/cloud sync
 
 - [x] **PLAN-003: Prioritize the conversation library and bounded evaluations**
   - Captured cross-machine collection planning, shared evidence, enrichment,

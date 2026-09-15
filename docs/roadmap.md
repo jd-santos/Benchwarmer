@@ -12,8 +12,9 @@ in [TODO.md](TODO.md).
   [conversation-library.md](conversation-library.md) defines the approved scope.
 - Keep automatic source import separate from explicitly approved model work,
   including embeddings and judges. Collection growth never expands an approval.
-- Resolve cross-machine collection through `COL-001`; do not assume local source
-  availability. Shared contracts and synthetic fixtures can proceed meanwhile.
+- Follow `COL-001`'s accepted push topology for cross-machine collection; do not
+  assume local source availability. Shared contracts and synthetic fixtures can
+  proceed before live transport.
 
 - Deliver vertical slices that leave a usable, testable path through storage,
   API, and UI instead of completing every layer in isolation.
@@ -132,8 +133,9 @@ model-work previews require exact bounded approval without executing anything.
   tool/artifact references, and synthetic Pi/Hermes/Codex examples.
 - `ENR-001`: immutable batch plans, request/resource/cost ceilings, and approval
   invalidation when inputs, models, judges, limits, or disclosure scope change.
-- `COL-001`: clarify cross-machine collection with the user and record an accepted
-  design before any transport implementation.
+- `COL-001`: use the accepted manual-first push design in
+  [ADR 0005](decisions/0005-cross-machine-collection.md) before any transport
+  implementation.
 
 The independent contract lanes can run before the remaining database/API work.
 Use [plans/2026-09-15-conversation-contracts.md](plans/2026-09-15-conversation-contracts.md).

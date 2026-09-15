@@ -36,26 +36,34 @@ execute captured commands, or acquire execution credentials. Private spool,
 transport, retention, and deletion behavior need an explicit design. Live SQLite
 sources need a consistent read or backup, not a copy of the database file alone.
 
-### Collection planning gate
+### Approved collection topology
 
-The user has approved this service's scope, not a deployment topology. `COL-001`
-must clarify:
+[ADR 0005](decisions/0005-cross-machine-collection.md) selects one push collector
+per approved Mac, with source adapters for Hermes, Pi, and Codex. Start with a
+manual command. After that path is reliable, the same command may run three or
+four times daily through `launchd`. Source machines expose no collector listener,
+remote shell, Docker socket, or arbitrary filesystem access. Container histories
+must appear through approved read-only host mounts.
 
-- Which operating systems and source locations need collection; which machines
-  sleep or are intermittently connected; desired freshness and backfill scale.
-- Whether software may run on each source machine and how it is updated.
-- Push collectors, central pull, or explicit export/transfer, with tradeoffs for
-  source access, offline spooling, authentication, and ongoing maintenance.
-- Device enrollment, revocation, transport authorization, and source allowlists.
-  Tailscale reachability alone is not a complete ingestion authorization design.
-- Attachment limits, secret exclusion, redaction evidence, local retention, and
-  central acknowledgment semantics. Secret scrubbing is not anonymization.
+Each source location is explicitly configured. Manual device enrollment,
+tailnet policy, a device-scoped application credential, and source-kind/scope
+allowlists protect ingestion. Tailscale reachability alone is insufficient.
+Collectors retain private chunks in an owner-only local spool until the central
+service durably commits native evidence, normalized records, and a receipt.
+Retries are idempotent; source deletion never instructs central deletion.
 
-Do not choose SSH access, shared folders, public ingestion, or a remote daemon by
-implication. Transport and live-source rollout stay blocked on this conversation.
-The first shared-record slice uses synthetic inputs and needs none of these
-choices. Hermes remains the selected first adapter; Pi and Codex are explicit
-library targets, not promised to have identical capabilities.
+Backfill covers all available history through bounded chunks. Accepted central
+history is retained indefinitely by default, while acknowledged local spool data
+is deleted. The first payload boundary includes messages, reasoning, tool data,
+metadata, and provenance. Arbitrary attachments, repositories, workspaces, and
+large artifacts remain explicit coverage gaps. Secret scrubbing is not
+anonymization.
+
+Browsing remains in the central web application over Tailscale. Native desktop
+UI, offline replicas, cloud synchronization, real-time watchers, and a persistent
+source daemon are deferred. `COL-002` must pin protocol and resource limits and
+pass transport/security tests before live rollout. Hermes remains the first
+adapter; Pi and Codex are targets with source-specific capabilities and cursors.
 
 ## Native evidence and shared records
 

@@ -1,8 +1,9 @@
 # Conversation-library handoff
 
-> Resolved on 2026-09-15: the depth-1 smoke test passed after reload, both
-> pre-implementation reviews completed, and their accepted corrections were added
-> to the contract plan. Use [the task ledger](../TODO.md) for current status.
+> Historical handoff, superseded on 2026-09-15. `LIB-001` and `ENR-001` were
+> implemented in commit `d434703`; `COL-001` was resolved by
+> [ADR 0005](../decisions/0005-cross-machine-collection.md). Use
+> [the task ledger](../TODO.md) for current status.
 
 ## Resume here
 

@@ -283,7 +283,8 @@ acceptance evidence; otherwise retain their validation blocker in In Progress.
 No live source, inference, network service, browser, or durable budget protection
 may be claimed from this slice.
 
-Next: resolve `COL-001` with the user, finish necessary data-root/migration/API
-foundation, map the Hermes importer to this shared contract, and deliver retained
-conversations through a real browsing/text-search path. Do not let cost charts or
-external-evidence dashboards become prerequisites for that useful release.
+`COL-001` was later resolved in
+[ADR 0005](../decisions/0005-cross-machine-collection.md). Finish the necessary
+data-root, migration, API, and Hermes importer foundation before decomposing its
+manual collector protocol. Do not let cost charts or external-evidence dashboards
+become prerequisites for the useful browsing and text-search release.

@@ -61,22 +61,28 @@ execution is a harness. The approved workflow is in
   full reconciliation. Keep source payloads private and preserve unavailable and
   unknown fields explicitly. See
   [ADR 0004](decisions/0004-first-import-adapter.md).
+- **Cross-machine collection:** Use one manually invoked push collector per Mac,
+  with source-specific adapters, explicit path allowlists, device enrollment,
+  private spooling, and acknowledgment only after durable central commit. Add an
+  optional three-or-four-times-daily `launchd` schedule after the manual path is
+  reliable. Keep browsing central over Tailscale; desktop sync is deferred. See
+  [ADR 0005](decisions/0005-cross-machine-collection.md).
 - **Experiments:** Start with native harness configurations, capturing accessible
   system prompts, tools, skills and differences. Controlled comparisons remain
   a later capability, rather than an initial requirement.
 
-## Before cross-machine collection
+## Before collector implementation
 
-`COL-001` is a user planning gate, not an implementation decision delegated to an
-agent. The collection service belongs to Benchwarmer, but the device inventory,
-operating systems, intermittent connectivity, installation/update permissions,
-freshness, and history volume still need clarification. Compare source-side push,
-central pull, and explicit transfer before choosing enrollment, transport,
-offline spooling, retention, and acknowledgment behavior. Do not assume all logs
-are present on the Mac mini or silently grant source-machine access.
+`COL-001` selected the topology in ADR 0005. `COL-002` must decompose the manual
+collector, versioned push protocol, enrollment, durable acknowledgment, bounded
+spool, and optional `launchd` schedule before implementation. Pin exact resource
+ceilings, credential rotation, packaging, and source-specific cursor behavior in
+those plans.
 
-The shared-record contract can proceed with synthetic inputs before this gate.
-No live collector or transport rollout is authorized by a schema test.
+No live transport is authorized by the shared-record schema or the accepted ADR.
+Collector rollout still depends on its synthetic security/recovery tests and the
+private deployment gate. Do not assume all histories are on the Mac mini or grant
+it remote shell, Docker, or arbitrary filesystem access to a source machine.
 
 ## Before model-powered enrichment
 
@@ -132,7 +138,8 @@ it, even when both are represented through the same experiment interface.
   fixed variables and disclosure of remaining differences between harnesses.
 - Historical pricing sources and optional API-equivalent subscription estimates.
   Keep actual charges and estimates separate from the beginning.
-- Retention durations, attachment limits and selective raw-content deletion.
+- Exact attachment metadata limits and any future selective raw-content deletion;
+  ADR 0005 retains accepted central history indefinitely by default.
 - Which simulations warrant promotion into named evaluation suites.
 - Specific deterministic graders and judge calibration protocol before the first
   rerun; portable reports and sanitized public exports can follow private access.

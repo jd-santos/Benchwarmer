@@ -22,7 +22,7 @@ dashboards follow the useful library. Everyday sessions supply task units and
 frozen datasets rather than a predetermined benchmark pack. The user's actual
 work continues in their harnesses. See
 [conversation-library.md](conversation-library.md) for the approved workflow,
-collection planning gate, enrichment scope, and spending controls.
+collection topology, enrichment scope, and spending controls.
 
 This direction supersedes the original standalone benchmark-runner MVP. A custom
 agent loop, fixed 20-task pack, fixed named judge model, and self-contained HTML
@@ -42,9 +42,13 @@ The intended runtime has a local API and a background execution worker. Import
 and experiment state persist independently of the browser. Start with one local
 installation; multi-user hosting and bidirectional application synchronization
 are outside the initial scope. Collection from the user's other machines is in
-scope, with transport, enrollment, and offline behavior gated by `COL-001`. Plan for private access over Tailscale from other devices, with a
-mobile-friendly frontend. The serving mechanism, process binding and access
-configuration remain implementation decisions in [decisions.md](decisions.md).
+scope through the push topology in
+[ADR 0005](decisions/0005-cross-machine-collection.md): manual collectors first,
+then optional scheduled runs with durable offline spooling. Private browsing from
+other devices uses the mobile-friendly web interface over Tailscale. Native
+desktop UI, offline application replicas, and cloud synchronization are outside
+the initial scope. Serving and process details are recorded in
+[decisions.md](decisions.md).
 
 Core workflows must work on phone-sized screens: browsing usage, filtering
 sessions, adding ratings and notes, viewing experiment progress and reviewing
@@ -250,11 +254,15 @@ usage reporting a prerequisite for importing useful conversation evidence.
 ## Local data boundary
 
 The central application data root is configurable and defaults outside the
-repository. ADR 0002 defines storage and coordinated backup/restore; retention
-durations and source-side collector storage remain open.
+repository. ADR 0002 defines storage and coordinated backup/restore. ADR 0005
+retains accepted central history indefinitely by default; source deletion does
+not propagate as central deletion. A collector keeps private local spool entries
+until durable acknowledgment, then deletes them. Exact spool ceilings and any
+future explicit central deletion tooling remain open.
+
 Retain private snapshots of imported session content alongside normalized
 metadata, so source-log deletion or changes do not erase comparison evidence.
-Record source identity and capture time; retention and deletion rules remain open.
+Record source identity and capture time.
 
 SQLite databases, journal/WAL files, raw usage, session content, system prompts,
 annotations, fixtures, outputs and logs belong within that private boundary.
@@ -286,8 +294,9 @@ The first useful release retains and normalizes at least one real source without
 duplicates, supports incremental updates, and provides readable conversations,
 text/metadata search, source freshness, and coverage. Ratings and notes survive
 restart. Usage and costs retain provenance without requiring charts. Collection
-from other machines needs its approved transport and enrollment design. Add the
-second and third target sources to test shared structure and capabilities.
+from other machines follows ADR 0005's enrolled push protocol, bounded spool, and
+durable acknowledgment. Add the second and third target sources to test shared
+structure and capabilities.
 
 ### 3. Enrichment and reusable collections
 
@@ -334,8 +343,10 @@ without forcing unlike evidence into a common score.
 - Automatic routing, subscription-cost allocation, a custom agent loop,
   automated source discovery and public sharing are deferred. LLM-simulated
   follow-ups are an intended later capability, not part of the first test mode.
-- Cross-machine transport remains a user-facing planning decision. No model
-  operation, including embeddings or judges, may run without bounded approval.
+- Cross-machine collection uses manual push collectors before optional scheduled
+  runs. Native desktop UI, offline replicas, cloud synchronization, real-time
+  watchers, and central pull remain deferred. No model operation, including
+  embeddings or judges, may run without bounded approval.
 
 See [decisions.md](decisions.md) for unresolved choices and [TODO.md](TODO.md) for
 the implementation queue.

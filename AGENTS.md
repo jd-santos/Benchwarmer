@@ -11,7 +11,7 @@
 - **Tech stack**: Python 3.12+, uv, SQLite and Svelte (planned application)
 - **Architecture**: Central API and worker, private native snapshots and normalized
   conversations, harness-neutral task units, and source/execution adapters.
-  Cross-machine collection is in scope; its topology needs user planning.
+  Cross-machine collection follows ADR 0005's manual-first push topology.
 - **Status**: Design scaffold. Application, importers and execution are not yet
   implemented. Target host is an always-on Mac mini alongside Hermes Agent.
 - **Access and UI**: Private hosting over Tailscale, with a mobile-friendly Svelte
@@ -30,8 +30,9 @@
   failure means unjudged, not a candidate quality failure.
 - Support live collections and frozen revision-pinned datasets. Ad hoc private
   access is distinct from sanitized public export.
-- Cross-machine transport, enrollment, and rollout stay blocked on `COL-001`;
-  never assume source histories all reside on the central host.
+- Cross-machine collection follows ADR 0005's enrolled push topology: manual
+  collectors first, then optional scheduled runs. Rollout stays blocked on
+  `COL-002` and `DEP-003`; never assume histories all reside on the central host.
 - Keep benchmark task definitions independent of Pi or any other agent harness.
 - Do not combine quality and economics into a single winner score. Preserve
   criterion-level and per-trial results.
@@ -112,7 +113,7 @@ tasks: {TODO.md}
 - **`docs/architecture.md`**: Records the chosen design, MVP boundary,
   alternatives, acceptance criteria, and open questions.
 - **`docs/conversation-library.md`**: Defines the approved workflow, collection
-  planning gate, enrichment approvals, search, datasets, and applied judges.
+  topology, enrichment approvals, search, datasets, and applied judges.
 - **`docs/experiments.md`**: Defines task units, simulation, harness, prompt, and
   judge semantics.
 - **`docs/decisions.md`**: Records unresolved choices and proposed defaults.

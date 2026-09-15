@@ -55,6 +55,7 @@ Use stable numbered filenames. The initial records are:
 - [0002 — Private data and recovery](0002-data-recovery.md) — Accepted
 - [0003 — Private serving and supervision](0003-serving-supervision.md) — Accepted
 - [0004 — First import adapter](0004-first-import-adapter.md) — Accepted
+- [0005 — Cross-machine collection](0005-cross-machine-collection.md) — Accepted
 
 When a decision is superseded, preserve the old record and link the replacement.
 Do not rewrite prior rationale as though the earlier decision never existed.
