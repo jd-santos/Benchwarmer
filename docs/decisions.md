@@ -4,12 +4,35 @@ Independently authored proposals live under [decisions/](decisions/README.md).
 This document remains the canonical summary after a coordinating task reviews
 and integrates those records.
 
-The product direction is agreed: a local SQLite/Svelte app with a Python backend,
-personal session review, consolidated usage, trusted external evidence and task
-simulations. Harness and system prompts are explicit dimensions; direct Python
-API execution is a harness.
+The product direction is agreed: a private conversation library with a Python
+backend, SQLite/Svelte application, cross-machine collection, normalized evidence,
+search, collections, and model evaluations. Usage/cost are shared metadata;
+detailed reporting and trusted external evidence follow the useful library.
+Harness and system prompts remain explicit dimensions; direct Python API
+execution is a harness. The approved workflow is in
+[conversation-library.md](conversation-library.md).
 
 ## Confirmed starting choices
+
+- **Library priority:** Retain native snapshots plus versioned shared conversation
+  structure, including messages, tool activity, branches, and artifact references.
+  Build browsing and text/metadata search before detailed usage reports; semantic
+  search and the wider enrichment field set remain explicit planned capabilities.
+- **Enrichment:** Separate imported, calculated, generated, and human evidence.
+  Use task-appropriate configurable model tiers, with provenance and revisions.
+  Compute cost estimates from price evidence, not model judgments.
+- **Model-work approval:** Import does not authorize inference. Preview and
+  explicitly approve frozen batches with request/resource/cost limits. Include
+  embeddings, query embeddings, reruns, applied judges, retries, and escalations.
+  No automatic work from growing collections; no default numeric spend limit.
+  Content/provider disclosure permission is separate from spending approval.
+- **Collections:** Support live saved queries and frozen datasets, plus versioned
+  private read/query/export access for ad hoc projects. Runs pin input revisions.
+- **Evaluation units:** Meaningful one-to-few-exchange segments with sufficient
+  context. Single-response/action and applicable fixed follow-ups precede later
+  adaptive user continuation. Preserve correlated lineage and leakage boundaries.
+- **Applied judges:** Judging runs automatically within an explicitly approved
+  rerun plan. Expose rubric/model/configuration and cost; unjudged is not failure.
 
 - **Application foundation:** Use FastAPI/Uvicorn, synchronous SQLAlchemy 2 with
   explicit Alembic migrations, and a TypeScript SvelteKit client under `web/`.
@@ -42,6 +65,28 @@ API execution is a harness.
   system prompts, tools, skills and differences. Controlled comparisons remain
   a later capability, rather than an initial requirement.
 
+## Before cross-machine collection
+
+`COL-001` is a user planning gate, not an implementation decision delegated to an
+agent. The collection service belongs to Benchwarmer, but the device inventory,
+operating systems, intermittent connectivity, installation/update permissions,
+freshness, and history volume still need clarification. Compare source-side push,
+central pull, and explicit transfer before choosing enrollment, transport,
+offline spooling, retention, and acknowledgment behavior. Do not assume all logs
+are present on the Mac mini or silently grant source-machine access.
+
+The shared-record contract can proceed with synthetic inputs before this gate.
+No live collector or transport rollout is authorized by a schema test.
+
+## Before model-powered enrichment
+
+Choose the first field set, configured small/large model tiers, explicit batch
+limits, price evidence, and permitted content/provider scope. Unknown pricing
+requires a separately agreed non-monetary policy, not unbounded execution.
+Durable budget reservations, cancellation, and outcome-unknown recovery must
+exist before any paid stage is dispatched. A pure preview/approval validator is
+only a prerequisite, not that execution service.
+
 ## Before the first simulation
 
 ### First task family
@@ -72,8 +117,9 @@ API execution is a harness.
 ### Meaning of good enough
 
 - **Why it matters:** Enables useful comparison without a universal score.
-- **Proposed starting point:** Use task-specific human criteria and notes, then
-  verifiable checks.
+- **Proposed starting point:** Pin task-specific criteria before a run; apply
+  selected model judges and verifiable checks inside its approved budget. Human
+  notes and calibration provide a reliability check, not a mandatory per-run step.
 
 A direct API baseline cannot replace a tool-using harness on tasks that require
 it, even when both are represented through the same experiment interface.
@@ -88,7 +134,10 @@ it, even when both are represented through the same experiment interface.
   Keep actual charges and estimates separate from the beginning.
 - Retention durations, attachment limits and selective raw-content deletion.
 - Which simulations warrant promotion into named evaluation suites.
-- Deterministic graders, judge calibration, portable reports and sanitized exports.
+- Specific deterministic graders and judge calibration protocol before the first
+  rerun; portable reports and sanitized public exports can follow private access.
+- Adaptive-continuation simulator policy, allowed knowledge, and validation after
+  single-unit and applicable fixed-sequence tests.
 - Repository visibility/license verification before distributing third-party
   fixtures or source material. Public code does not make personal data public.
 

@@ -6,18 +6,32 @@
 
 ## Project Context
 
-- **Project**: Benchwarmer, a local app for personal model evaluations, task
-  simulations, trusted external evidence, and consolidated usage economics
+- **Project**: Benchwarmer, a private conversation library and model evaluation
+  app: collect, normalize, enrich, discover, select, and evaluate
 - **Tech stack**: Python 3.12+, uv, SQLite and Svelte (planned application)
-- **Architecture**: Local API and worker, private artifact storage, harness-neutral
-  tasks, and adapters for harnesses, providers, pricing and published evaluations
+- **Architecture**: Central API and worker, private native snapshots and normalized
+  conversations, harness-neutral task units, and source/execution adapters.
+  Cross-machine collection is in scope; its topology needs user planning.
 - **Status**: Design scaffold. Application, importers and execution are not yet
   implemented. Target host is an always-on Mac mini alongside Hermes Agent.
 - **Access and UI**: Private hosting over Tailscale, with a mobile-friendly Svelte
-  interface. Exact serving configuration remains open.
+  interface. Central serving follows ADR 0003; live deployment remains pending.
 
 ## Critical Rules
 
+- Prioritize the conversation library and search over detailed usage reporting.
+  Cost is metadata; preserve imported, calculated, generated, and human origins.
+- Keep native snapshots alongside versioned normalized conversation structure.
+  Preserve branches, continuations, tool linkage, and explicit capture gaps.
+- Imports, searches, and growing collections must not silently launch model work.
+  Require exact bounded approval for enrichment, embeddings, reruns, judges, and
+  later simulators. Content/provider permission is separate from spend approval.
+- Applied judges run automatically inside the approved rerun budget. Judge
+  failure means unjudged, not a candidate quality failure.
+- Support live collections and frozen revision-pinned datasets. Ad hoc private
+  access is distinct from sanitized public export.
+- Cross-machine transport, enrollment, and rollout stay blocked on `COL-001`;
+  never assume source histories all reside on the central host.
 - Keep benchmark task definitions independent of Pi or any other agent harness.
 - Do not combine quality and economics into a single winner score. Preserve
   criterion-level and per-trial results.
@@ -87,7 +101,7 @@ and the interface principles in [docs/architecture.md](docs/architecture.md).
 > semantics.
 
 [Root]: ./docs/
-design: {architecture.md,experiments.md,decisions.md}
+design: {architecture.md,conversation-library.md,experiments.md,decisions.md}
 delivery: {roadmap.md,plans/}
 evidence: {sources/,source-coverage.md}
 decisions: {decisions.md,decisions/}
@@ -98,7 +112,10 @@ tasks: {TODO.md}
 
 - **`docs/architecture.md`**: Records the chosen design, MVP boundary,
   alternatives, acceptance criteria, and open questions.
-- **`docs/experiments.md`**: Defines simulation, harness and prompt semantics.
+- **`docs/conversation-library.md`**: Defines the approved workflow, collection
+  planning gate, enrichment approvals, search, datasets, and applied judges.
+- **`docs/experiments.md`**: Defines task units, simulation, harness, prompt, and
+  judge semantics.
 - **`docs/decisions.md`**: Records unresolved choices and proposed defaults.
 - **`docs/decisions/`**: Stores independently authored ADR proposals and their
   index. A coordinator reconciles accepted records into `docs/decisions.md`.

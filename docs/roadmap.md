@@ -7,6 +7,14 @@ in [TODO.md](TODO.md).
 
 ## Delivery principles
 
+- Prioritize collect → normalize → enrich → discover → select → evaluate. The
+  first useful release is a conversation library, not a usage dashboard.
+  [conversation-library.md](conversation-library.md) defines the approved scope.
+- Keep automatic source import separate from explicitly approved model work,
+  including embeddings and judges. Collection growth never expands an approval.
+- Resolve cross-machine collection through `COL-001`; do not assume local source
+  availability. Shared contracts and synthetic fixtures can proceed meanwhile.
+
 - Deliver vertical slices that leave a usable, testable path through storage,
   API, and UI instead of completing every layer in isolation.
 - Keep the Python service authoritative for domain rules, persistence, imports,
@@ -36,13 +44,19 @@ three decision proposals ──► DEC-001 decision integration               �
 QA-001..QA-004 foundation verification ─────────────────────────────────┘
   └─► DEP-003 target-host deployment and verification
 
-ACT-001 first import ──► ACT-002 activity UI ──► REV-001 annotations
-          │
-          └────────────► ACT-003 second source + reconciliation
+PLAN-003 ──► LIB-001 shared conversations + ENR-001 approval contract
+COL-001 user planning ──► COL-002 cross-machine collection
+LIB-001 + foundation ──► ACT-001 Hermes import ──► ACT-002 browse/text search
+                                             ├─► REV-001 annotations
+                                             ├─► ACT-003 second source
+                                             └─► ACT-004 remaining target source
 
-ACT/REV usable ──► EVD-001 trusted evidence ──► MOD-001 model views
-ACT/REV usable ──► TSK-001 task preparation ──► EXP-001 safety substrate
-                                                    └─► EXP-002 trials
+ACT-002 + ENR-001 ──► ENR-002 durable bounded model work ──► ENR-003 enrichment
+                                                          └─► SEARCH-001 semantic
+ACT-002 ──► DATA-001 collections/datasets ──► DATA-002 private query/export
+                    └─► TSK-001 units ──► EXP-001 safety ──► EXP-002 judged trials
+
+Useful library/evaluations ──► RPT-001 reporting + EVD-001 evidence + MOD-001 views
 ```
 
 The four source inspections can run in parallel because each writes a distinct
@@ -109,27 +123,54 @@ documented checks; no runtime data lands in git; stopping and restarting the API
 preserves fixture-backed records. The stateless frontend may restart
 independently and has no persistence role.
 
-### M2 — First useful activity slice
+### M1a: Conversation and approval contracts
 
-**Outcome:** One real source imports incrementally without duplicates and is
-useful from a phone or desktop.
+**Outcome:** Synthetic conversations retain shared structure across sources;
+model-work previews require exact bounded approval without executing anything.
 
-- `ACT-001`: implement the first source adapter against sanitized fixtures,
-  then validate it against a private local source.
-- `ACT-002`: add activity totals, filters, source freshness, session list, and
-  session detail with explicit coverage gaps.
-- `REV-001`: add durable ratings, labels, notes, and revision history.
+- `LIB-001`: shared conversation v1, strict serialization, provenance, branches,
+  tool/artifact references, and synthetic Pi/Hermes/Codex examples.
+- `ENR-001`: immutable batch plans, request/resource/cost ceilings, and approval
+  invalidation when inputs, models, judges, limits, or disclosure scope change.
+- `COL-001`: clarify cross-machine collection with the user and record an accepted
+  design before any transport implementation.
 
-**Gate:** Re-importing unchanged data creates no duplicate sessions or usage;
-ratings survive restart; costs cite a price snapshot or state that no estimate
-is available.
+The independent contract lanes can run before the remaining database/API work.
+Use [plans/2026-09-15-conversation-contracts.md](plans/2026-09-15-conversation-contracts.md).
+
+**Gate:** Positive/negative synthetic tests pass; no private source reads, model
+calls, live transport, or durable-execution claims. This is a prerequisite slice,
+not the first operational service.
+
+### M2: First useful conversation library
+
+**Outcome:** One real source imports incrementally without duplicates and its
+conversations can be found and read from phone or desktop.
+
+- `ACT-001`: map the first adapter into the shared conversation contract and
+  retained native snapshots, then validate against an approved private source.
+- `ACT-002`: readable transcripts, branches/continuations, filters, keyword and
+  metadata search, source freshness, and explicit coverage gaps. Usage/cost
+  metadata is available without detailed reporting.
+- `REV-001`: durable ratings, labels, notes, and revision history.
+- `COL-002`: implement the cross-machine collection path after `COL-001`, with
+  enrollment, bounded backfill, offline catch-up, and durable acknowledgments.
+
+**Gate:** Re-import/re-delivery does not duplicate conversations; source-native
+snapshots and normalized branches survive restart; search opens relevant evidence;
+ratings survive restart; costs cite price evidence or state unavailability. The
+cross-machine service is operational only after its own transport/security tests
+and `DEP-003`, not because a local importer works.
 
 ### M3 — Consolidation proof
 
-**Outcome:** A second source proves that aggregation and reconciliation are
-real, not assumptions embedded in the first adapter.
+**Outcome:** A second source proves the normalized conversation contract is not
+Hermes-specific; the remaining target adapter brings Pi, Codex, and Hermes into
+the library with explicitly different coverage.
 
-- `ACT-003`: import a second source while preserving its raw observations.
+- `ACT-003`: import a second source while preserving its native structure.
+- `ACT-004`: import the remaining Pi/Codex/Hermes source after refreshed evidence.
+  The source inspection reports are dated observations, not current inventory.
 - `REC-001`: link overlapping harness/provider observations without deleting
   either source record.
 - `REC-002`: expose unmatched records, overlap decisions, and reconciliation
@@ -138,26 +179,32 @@ real, not assumptions embedded in the first adapter.
 **Gate:** Consolidated totals exclude known overlap, account-only totals are
 not invented at session scope, and reconciliation is inspectable.
 
-### M4 — Trusted evidence and model views
+### M4: Enrichment, discovery and reusable datasets
 
-**Outcome:** Saved external evaluations and personal evidence can be reviewed
-without forcing unlike measurements into one ranking.
+**Outcome:** Approved model work improves discovery; selected conversations are
+usable in ad hoc evaluation projects without UI automation.
 
-- `EVD-001`: save links, provenance, dates, notes, revisions, and permitted
-  structured results.
-- `MOD-001`: connect activity, personal review, trials, and saved evidence for
-  a model/configuration while preserving identity uncertainty.
+- `ENR-002`: durable bounded model-work service with approval previews, disclosure
+  checks, spend/request reservations, cancellation, and uncertain-outcome recovery.
+- `ENR-003`: first description/classification batch with task-specific model tiers,
+  revisions, evidence, and cost. Wider metadata stays in explicit bounded follow-ups.
+- `SEARCH-001`: approved semantic indexing/query actions alongside text/filter
+  fallback; visible stale, incomplete, pending, and unsupported content states.
+- `DATA-001`: projects, live saved queries, and frozen revision-pinned datasets.
+- `DATA-002`: versioned private read/query/export access for scripts and notebooks.
 
-**Gate:** Revisions are immutable, missing configuration remains unknown, and
-no cross-benchmark winner score is produced.
+**Gate:** Imports/search never silently call a model; changed plans need new
+approval; dataset membership and revisions reproduce a selection; search hits
+link to evidence. Private export is not mislabeled as sanitized public data.
 
 ### M5 — Task preparation and safe experiments
 
 **Outcome:** A reviewed task derived from actual work cannot enter a paid or
 tool-capable trial until its execution safety substrate exists.
 
-- `TSK-001`: derive and version tasks without leaking original answers or later
-  workspace state.
+- `TSK-001`: derive meaningful single-response/action or short fixed-sequence units
+  from frozen datasets without leaking original answers or later workspace state.
+  Preserve segmentation provenance and correlated source lineage.
 - `EXP-001`: add disposable workspaces, fixed scripts, capability checks,
   credential/network policy, budgets, cancellation, durable progress, attempt
   reservation, outcome-unknown reconciliation, and duplicate-paid-work
@@ -165,11 +212,25 @@ tool-capable trial until its execution safety substrate exists.
 - `EXP-002`: implement one native harness adapter and direct Python API
   execution where the task capability permits it. Real and paid trials are
   blocked until `EXP-001` is complete.
-- `EXP-003`: add criterion-level review and per-trial comparison.
+- `JDG-001`: configure applied judges, pin rubrics, reserve judgment budget, and
+  distinguish judge failure from candidate failure. `EXP-002` includes automatic
+  judging under the same approval rather than making it a later optional add-on.
+- `EXP-003`: criterion-level review, judge disagreements, and per-trial comparison.
 
 **Gate:** Requested and observed configurations are distinguishable; every
 attempt is retained; tool-capable trials use disposable fixtures; recovery
 never silently repeats a paid attempt.
+
+### M6: Deeper evaluation and supporting reports
+
+- `SIM-001`: later adaptive user continuation, with allowed knowledge, simulator
+  provenance/cost, leakage checks, and separately labeled results.
+- `SUITE-001`: reusable evaluation suites built from useful task units.
+- `RPT-001`: detailed usage/economics reporting over reconciled metadata.
+- `EVD-001` and `MOD-001`: trusted external evaluations and model views, preserving
+  dates, revisions, identity uncertainty, and unlike measurements.
+
+These capabilities do not block the useful library. No combined winner score.
 
 ## Application map
 
@@ -178,12 +239,14 @@ Routes land with the milestone that makes them useful.
 
 | Route | Milestone | Purpose |
 | --- | --- | --- |
-| `/` | M1/M2 | Activity summary and source freshness |
+| `/` | M1/M2 | Source status initially, then recent conversations and discovery |
 | `/sources` | M1 | Source coverage and import status |
-| `/sessions` | M2 | Filterable session and usage list |
-| `/sessions/[id]` | M2 | Session evidence and review |
-| `/evidence` | M4 | Trusted external evaluations and revisions |
-| `/models/[id]` | M4 | Model/configuration evidence |
+| `/sessions` | M2/M4 | Conversation list, text/metadata and later semantic search |
+| `/sessions/[id]` | M2 | Readable transcript, branches, source evidence and review |
+| `/projects` | M4 | Questions, live collections and frozen datasets |
+| `/enrichment` | M4 | Bounded previews, approvals, progress and metadata coverage |
+| `/evidence` | M6 | Trusted external evaluations and revisions |
+| `/models/[id]` | M6 | Model/configuration evidence |
 | `/tasks` | M5 | Reviewable task drafts and versions |
 | `/experiments` | M5 | Experiment queue, progress, and budgets |
 | `/experiments/[id]` | M5 | Trial review and economics |

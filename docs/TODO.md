@@ -1,8 +1,10 @@
 # TODO
 
 Use [roadmap.md](roadmap.md) for milestone order and dependency gates. The
-first executable build plan is
+foundation build plan is
 [plans/2026-09-07-application-foundation.md](plans/2026-09-07-application-foundation.md).
+The first conversation-library slice follows
+[plans/2026-09-15-conversation-contracts.md](plans/2026-09-15-conversation-contracts.md).
 Architecture rationale belongs in the design docs, not in this queue.
 
 A handoff-ready item has a unique ID, dependencies, exact output or files,
@@ -24,14 +26,55 @@ task:
 
 ## In Progress
 
-_No active tasks._
+- [ ] **LIB-001: Add shared conversation records and synthetic source examples**
+  - Claim: owner `agent:library-contract`, branch `task/conversation-library`, started `2026-09-15T01:14:12Z`
+  - Status: read-only contract review; implementation blocked on the signed plan
+    commit (1Password signing failed). No code worker launched yet.
+  - Execution: planned isolated managed worktree; return patch to the claim branch
+  - Type: Subsystem or file cluster `[context: medium]`
+  - Dependencies: `PLAN-003`, `FND-002`
+  - Plan: LIB-001 in the conversation-contracts plan
+  - Output: `src/benchwarmer/conversations.py`, `tests/test_conversations.py`,
+    `tests/fixtures/conversations/`
+  - Acceptance: versioned strict JSON round trips, source provenance, branches,
+    tool/artifact linkage and explicit gaps; synthetic inputs only
+  - Verify: plan's focused tests, Python checks, and documented runtime blockers
+
+- [ ] **ENR-001: Add bounded model-work plans and exact approval validation**
+  - Claim: owner `agent:model-work-contract`, branch `task/conversation-library`, started `2026-09-15T01:14:12Z`
+  - Status: read-only contract review; implementation blocked on the signed plan
+    commit (1Password signing failed). No code worker launched yet.
+  - Execution: planned isolated managed worktree; return patch to the claim branch
+  - Type: Focused change `[context: medium]`
+  - Dependencies: `PLAN-003`, `FND-002`
+  - Plan: ENR-001 in the conversation-contracts plan
+  - Output: `src/benchwarmer/model_work.py`, `tests/test_model_work.py`
+  - Acceptance: immutable input/stage/limit plans; stale or missing approval fails;
+    no provider calls, scheduler, or durable-budget guarantee
+  - Verify: plan's focused tests, Python checks, and documented runtime blockers
 
 ## Up Next
 
-The WAL-safe runtime, responsive shell, and typed API client are complete.
-`FND-003` and `UI-003` may now begin on separate file scopes. Later tasks remain
-ordered by their explicit dependencies; `DEP-003` stays blocked through
-`QA-004`.
+Prioritize the conversation library over usage reporting. `LIB-001` and `ENR-001`
+are independent pure-code lanes; `COL-001` needs user planning before transport
+work. The remaining foundation still supports real persistence/API delivery.
+`DEP-003` stays blocked through `QA-004`.
+
+The WAL-safe provisioner is implemented, but its pinned runtime was absent from
+this checkout at the contract-slice baseline. Canonical `uv run` checks could not
+start. Do not turn either contract lane into runtime provisioning work.
+
+- [ ] **COL-001: Plan collection from the user's other machines**
+  - Type: Exploratory research `[context: small]`
+  - Dependencies: `PLAN-003`, user clarification
+  - Output: accepted collection design in `docs/decisions/0005-cross-machine-collection.md`,
+    reconciled into `docs/decisions.md` by the coordinator
+  - Questions: device/OS inventory, sleep/offline behavior, installation/update
+    permissions, freshness/backfill size, push/pull/transfer, enrollment, source
+    allowlists, secret exclusion, spooling, acknowledgment, retention/revocation
+  - Acceptance: user selects an approach and private-data boundary before code;
+    no public hostnames, personal paths, or private inventory in the design
+  - Verify: compare ADR against the collection planning gate, `git diff --check`
 
 - [ ] **FND-003 — Implement private data-root configuration**
   - Dependencies: `FND-002`, `DEC-001`, `ENV-001`
@@ -142,13 +185,14 @@ implementation.
     or missing identity columns; commit only synthetic fixtures
   - Verify: focused reader tests plus all Python checks
 - [ ] **ACT-HERMES-002 — Implement transactional incremental Hermes imports**
-  - Dependencies: `ACT-HERMES-001`
+  - Dependencies: `ACT-HERMES-001`, `LIB-001`
   - Output: create `src/benchwarmer/adapters/hermes/importer.py`, importer tests,
     and migrations for Hermes session, message, usage, snapshot-provenance,
     coverage, and cursor state
   - Acceptance: source-native upserts and post-commit watermark advancement make
     initial, unchanged, appended, mutable-usage, and interrupted imports
-    idempotent without erasing prior evidence
+    idempotent without erasing prior evidence; map messages and continuation links
+    to the shared conversation contract without losing native snapshots
   - Verify: focused importer fixtures, migration round trip, and all Python checks
 - [ ] **ACT-HERMES-003 — Add Hermes reconciliation and private-source validation**
   - Dependencies: `ACT-HERMES-002`
@@ -160,37 +204,96 @@ implementation.
     identifiers and content
   - Verify: focused reconciliation scenarios, sanitized private-source checks,
     and all Python checks
-- [ ] **ACT-002 — Deliver activity totals, filters, freshness, and session
-  detail**
+- [ ] **ACT-002: Deliver conversation browsing and text/metadata search**
+  - Type: Subsystem or file cluster `[context: large]`; decompose before launch
   - Dependencies: `ACT-001`
+  - Scope: readable transcripts, branches/continuations, source freshness,
+    coverage, filters and evidence-linked keyword search; usage/cost as metadata,
+    no chart dependency
+- [ ] **COL-002: Implement approved cross-machine collection**
+  - Type: Subsystem or file cluster `[context: large]`; decompose before launch
+  - Dependencies: `COL-001`, `LIB-001`, `ACT-001`, `QA-004`
+  - Scope: enrollment, read-only capture, bounded backfill, offline catch-up,
+    durable acknowledgment, duplicate delivery and revocation tests
+  - Gate: exact files/transport/tests follow the accepted ADR; operational
+    rollout also requires `DEP-003`
+- [ ] **ENR-002: Implement durable approved model-work execution**
+  - Type: Subsystem or file cluster `[context: large]`; decompose before launch
+  - Dependencies: `ENR-001`, `ACT-002`
+  - Scope: preview/approval UI, disclosure checks, durable request/cost reservations,
+    cancellation, bounded retries and outcome-unknown recovery
+  - Gate: no model stage dispatch before its durable safety tests pass
+- [ ] **ENR-003: Add approved description and classification enrichment**
+  - Type: Subsystem or file cluster `[context: medium]`
+  - Dependencies: `ENR-002`
+  - Scope: choose first fields and small/large model tiers using approved samples;
+    preserve source short summaries, generated revisions, evidence, usage/cost
+- [ ] **ENR-004: Expand task-aware enrichment fields and segmentation**
+  - Type: Subsystem or file cluster `[context: large]`; decompose before launch
+  - Dependencies: `ENR-003`
+  - Scope: topics, task types, projects, technologies, entities, outcomes,
+    interventions/retries, quality signals, segmentation and suggested criteria;
+    measured model-tier routing, no unapproved automatic escalation
+- [ ] **SEARCH-001: Add semantic discovery alongside text/filter search**
+  - Type: Subsystem or file cluster `[context: medium]`
+  - Dependencies: `ENR-002`, `ACT-002`
+  - Scope: approved embeddings/query actions; message, description, tool and
+    extracted artifact search; visible index coverage and source-passage links
+- [ ] **DATA-001: Add projects, live collections and frozen datasets**
+  - Type: Subsystem or file cluster `[context: medium]`
+  - Dependencies: `ACT-002`, `LIB-001`
+  - Scope: saved queries and exact pinned membership/source/enrichment revisions;
+    collection growth never triggers model work
+- [ ] **DATA-002: Provide versioned private query and dataset export access**
+  - Type: Focused change `[context: medium]`
+  - Dependencies: `DATA-001`
+  - Scope: local read/query API and private export for scripts/notebooks; no
+    dependency on UI automation or unstable internal database tables
 - [ ] **REV-001 — Add ratings, labels, notes, and annotation revision history**
   - Dependencies: `ACT-002`
 - [ ] **ACT-003 — Add a second source adapter**
   - Dependencies: `ACT-001`
   - Promotion requirement: the coordinator names the exact second-source task
     ID and inspection report dependency before implementation
+- [ ] **ACT-004: Add the remaining Pi/Codex/Hermes source adapter**
+  - Type: Subsystem or file cluster `[context: medium]`
+  - Dependencies: `ACT-003`
+  - Gate: refresh source evidence and name exact adapter tasks before launch
 - [ ] **REC-001 — Reconcile overlapping harness/provider observations**
   - Dependencies: `ACT-003`
 - [ ] **REC-002 — Expose gaps and reconciliation decisions in API and UI**
   - Dependencies: `REC-001`
+- [ ] **RPT-001: Add detailed usage and economics reporting**
+  - Type: Subsystem or file cluster `[context: medium]`
+  - Dependencies: `ACT-002`, `REC-002`
+  - Priority: follows useful conversation discovery; never a library gate
 - [ ] **EVD-001 — Add trusted external evidence with immutable revisions**
   - Dependencies: `ACT-002`, `REV-001`
+  - Priority: deferred behind conversation discovery and reusable datasets
 - [ ] **MOD-001 — Add model/configuration evidence views**
   - Dependencies: `ACT-002`, `EVD-001`
-- [ ] **TSK-001 — Prepare and version tasks from imported sessions**
-  - Dependencies: `REV-001`
+- [ ] **TSK-001: Prepare meaningful task units from frozen datasets**
+  - Dependencies: `DATA-001`
+  - Scope: one-to-few-exchange units, sufficient context, segmentation provenance,
+    correlated source lineage, reconstruction gaps and leakage checks
   - Promotion requirement: the coordinator names the first task-family and
     reconstruction decision IDs before implementation
 - [ ] **EXP-001 — Build the experiment safety substrate**
-  - Dependencies: `TSK-001`
+  - Dependencies: `TSK-001`, `ENR-002`
   - Scope: disposable workspaces, fixed scripts, capability checks, credential
     and network policy, budgets, cancellation, durable progress, attempt
     reservation, outcome-unknown reconciliation, and duplicate-paid-work
     protection
   - Promotion requirement: no real or paid trial may be dispatched before this
     task is complete
+- [ ] **JDG-001: Add applied-judge configuration and automatic bounded judging**
+  - Type: Subsystem or file cluster `[context: medium]`
+  - Dependencies: `TSK-001`, `ENR-002`
+  - Scope: frozen rubrics, judge model/configuration, deterministic checks where
+    useful, evidence, disagreement, calibration and unjudged states
 - [ ] **EXP-002 — Run native harness and compatible direct-API trials**
-  - Dependencies: `EXP-001`
+  - Dependencies: `EXP-001`, `JDG-001`
+  - Scope: automatic applied judges inside the same approved rerun budget
   - Promotion requirement: the coordinator names harness, permission, and
     budget decision IDs before implementation
 - [ ] **EXP-003 — Compare criterion-level quality and economics per trial**
@@ -199,6 +302,11 @@ implementation.
   - Dependencies: `EXP-003`
   - Promotion requirement: the coordinator adds a controlled-comparison
     decision task ID before implementation
+- [ ] **SIM-001: Add later adaptive user continuation**
+  - Type: Subsystem or file cluster `[context: large]`; decompose before launch
+  - Dependencies: `EXP-003`, user-approved simulator policy
+  - Scope: intent-preserving follow-ups, separate simulator provenance/cost,
+    allowed-knowledge and leakage checks; never label as exact replay
 - [ ] **SUITE-001 — Promote useful tasks into repeatable evaluation suites**
   - Dependencies: `EXP-003`
 - [ ] **EXPORT-001 — Add deliberately sanitized exports and portable reports**
@@ -207,6 +315,12 @@ implementation.
     review task IDs before implementation
 
 ## Done
+
+- [x] **PLAN-003: Prioritize the conversation library and bounded evaluations**
+  - Captured cross-machine collection planning, shared evidence, enrichment,
+    search, datasets, automatic applied judges and later adaptive continuation
+  - Added the two-lane executable conversation-contract slice; no live collection
+    topology, remote disclosure permission, or numeric spend budget assumed
 
 - [x] **PLAN-001 — Define the local app direction and evaluation semantics**
   - Tailscale access, mobile UI, private snapshots, usage aggregation, harness

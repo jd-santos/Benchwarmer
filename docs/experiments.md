@@ -62,7 +62,19 @@ a later capability, with explicit prompt overrides, matched tools where possible
 and records of variables held fixed or changed. Neither mode guarantees
 equivalence where a harness cannot expose or override relevant behavior.
 
-## From sessions to task versions
+## From conversation units to task versions
+
+Projects can select live collections and create frozen datasets of conversation
+revisions and meaningful segments. A task unit may cover one decision or a few
+exchanges; it must include enough preceding context to define the question.
+Record segment boundaries, source/branch lineage, segmentation producer/version,
+selection rationale, and reconstruction gaps. Units from the same conversation
+are correlated observations, not automatically independent data points.
+
+Freeze dataset membership and source/enrichment revisions for each experiment.
+A live query gaining new matches never changes an existing run or starts work.
+Private programmatic dataset access supports ad hoc scripts and notebooks without
+requiring UI automation or public export.
 
 Tasks describe intent, starting inputs, fixture/environment needs, permitted
 capabilities, conversation script and criteria independently of the harness.
@@ -82,12 +94,30 @@ Record reconstruction level explicitly:
 | Fixed multi-turn simulation | Behavior through defined user messages and decision points |
 
 If original state is missing, prepare a new fixture or narrow the question and
-record the change. A transcript alone does not prove reproducibility. Branching
-from intermediate context may be useful later, but is not the default purpose
-or required first workflow.
+record the change. A transcript alone does not prove reproducibility. A selected
+intermediate segment must pin its starting context rather than silently inheriting
+later source state.
 
-Use fixed scripts before LLM-simulated users. Preserve task versions so later
-changes do not silently alter comparisons.
+### Follow-up behavior
+
+Start with single-response/action units, then fixed multi-turn sequences whose
+follow-ups remain applicable to the new response. A follow-up that assumes an
+absent candidate action is incompatible, not proof of poor model quality. Report
+that condition rather than forcing the historical script through it.
+
+Adaptive continuation is an intended later mode. A simulated user may pursue the
+original objective with follow-ups responsive to the new candidate. Historical
+follow-ups inform intent, not instructions to reproduce the original outcome.
+Record simulator model, prompt, allowed knowledge, policy, messages, usage, and
+cost separately. Preserve task versions and distinguish simulator-assisted
+results from fixed tests; they measure the candidate and simulator together.
+
+Do not expose original solutions or later discoveries to a simulator that can
+leak them to the candidate. Reference answers and historical outcomes may be
+available to judges in a separate evidence channel, never as candidate context.
+Review generated criteria for answer-specific bias; pin rubrics before a run.
+Simulator reliability and human comparison need validation before conclusions
+are treated as evidence about the candidate alone.
 
 ## Execution and review
 
@@ -96,20 +126,37 @@ environment snapshots. Freeze settings before each trial and capture actual
 model identity or routing changes where exposed. Failed requests, retries and
 their usage remain part of the evidence.
 
+No import, saved query, restart, or enrichment update starts a trial. Explicitly
+approve a frozen model-work plan covering candidates, applied judges, input and
+output allowances, request counts, retries, disclosure permissions, and a total
+cost policy. The same rule covers descriptions, classifiers, embeddings, and
+later simulators. No numeric budget or permission to send private content to a
+remote provider is assumed. See
+[conversation-library.md](conversation-library.md#model-work-requires-bounded-approval).
+
 Use fresh disposable workspaces for tool-capable trials. Establish capability,
 credential and network policy before execution. Budget controls need experiment
 and per-trial limits, including turns/time where cost cannot be measured reliably.
 Distinguish enforceable limits from estimated checks and possible in-flight cost
 overrun. Retries and recovery must be explicit.
 
-Start with human notes, ratings and task-specific definitions of good enough.
-Offer side-by-side outputs/artifacts and separate usage/cost views. Preserve
-criterion-level judgments, uncertainty, failures and per-trial variation. A single
-attempt is evidence about that attempt, not proof of general reliability.
+### Applied judges
 
-Deterministic graders and model judges can follow when tasks justify them. Record
-judge model, reasoning, prompt, rubric version and cost. Calibrate model judges
-against human review before treating their judgments as reliable.
+Every rerun presents its applied judges before approval: task-specific rubrics,
+model/configuration, evidence access, deterministic checks where applicable,
+and the budget reserved for judging. Once approved, judging runs automatically
+within that operation; it does not require a manual step after every trial.
+Additional judging or changed rubrics require a new bounded approval.
+
+Record judge model, reasoning, prompt, rubric version, usage, cost, and evidence.
+Judge error or budget exhaustion leaves a result unjudged rather than scoring the
+candidate as failed. Preserve disagreement, uncertainty, criterion-level results,
+failures, and per-trial variation. A single attempt is evidence about that attempt,
+not proof of general reliability. Human notes, corrections, and calibration remain
+available without making human review a prerequisite for each judgment.
+
+Offer side-by-side outputs/artifacts and separate usage/cost views. Calibrate model
+judges against human review before treating their judgments as reliable.
 
 ## Decisions needed before execution
 
