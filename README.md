@@ -49,10 +49,101 @@ Tool-capable simulations run only in disposable fixture workspaces.
 
 ## Project setup
 
-The Python scaffold uses Python 3.12 or newer and [uv](https://docs.astral.sh/uv/):
+Benchwarmer pins a source-built Python 3.13.15 runtime with SQLite 3.53.4 linked
+statically into the standard-library `sqlite3` extension. The build script
+verifies both source archives with SHA-256 and installs the runtime under the
+gitignored `.benchwarmer/` directory. It does not install host packages. Prepare
+a supported build host explicitly before running it. On Linux, a cheap compile
+preflight checks the required headers and OpenSSL major before downloads begin;
+user-supplied `CPPFLAGS`, `CFLAGS`, `LDFLAGS`, and `PKG_CONFIG_PATH` are honored.
+
+On Debian or Ubuntu:
 
 ```bash
-uv sync --dev
+sudo apt-get update
+sudo apt-get install --yes \
+  build-essential ca-certificates curl pkg-config tar xz-utils \
+  libssl-dev libbz2-dev liblzma-dev libreadline-dev libncurses-dev \
+  libffi-dev zlib1g-dev
+```
+
+On Fedora:
+
+```bash
+sudo dnf install \
+  gcc make ca-certificates curl pkgconf-pkg-config tar xz \
+  openssl-devel bzip2-devel xz-devel readline-devel ncurses-devel \
+  libffi-devel zlib-devel
+```
+
+On macOS, install the Command Line Tools and keg-only build dependencies with
+Homebrew. The script configures their include, library, pkg-config and runtime
+search paths, including `openssl@3`; the system LibreSSL is neither a checksum
+prerequisite nor used for Python TLS.
+
+```bash
+xcode-select --install
+brew install pkgconf openssl@3 bzip2 xz readline ncurses libffi
+```
+
+The provisioner validates exact Python and SQLite versions, an OpenSSL 3.x TLS
+runtime, and the required standard-library modules. Builds use an owned `mkdir`
+lock and a unique same-filesystem staging directory. Source archives are both
+SHA-256 verified before either is extracted.
+
+Publication is immutable and create-only. The checked-in
+`scripts/rename-noreplace.c` helper atomically moves a complete candidate to the
+exact absent final path using Linux `renameat2(RENAME_NOREPLACE)` or macOS
+`renamex_np(RENAME_EXCL)`. It never replaces an entry or nests into a raced
+directory. Every final runtime has a regular `.benchwarmer-runtime-owner` file
+containing `benchwarmer-python-runtime-v1\n`.
+
+If the final path exists but is not an owned, fully valid runtime, the script
+leaves it untouched and stops. It also stops before validation or building when
+a matching lock or staging path exists. The script never repairs, replaces,
+marks, quarantines, or removes a final runtime. Follow the exact validation and
+no-replace archival steps in
+[`docs/runtime-recovery.md`](docs/runtime-recovery.md) to clear stale
+artifacts or archive an owned invalid final.
+
+`BENCHWARMER_RUNTIME_ROOT` and `TMPDIR` must not contain whitespace or shell glob
+characters (`*`, `?`, `[`, `]`). Build flags intentionally follow shell
+word-splitting semantics. `CPPFLAGS`, `CFLAGS`, and `LDFLAGS` may contain
+conventional space-separated flag words, but individual flag values containing
+whitespace are unsupported.
+
+`.python-version` points to the default runtime inside the checkout. When
+`BENCHWARMER_RUNTIME_ROOT` selects a different root, set `UV_PYTHON` for every
+`uv` command that should use that runtime. The provisioner prints a shell-safe
+`export` command with the canonical interpreter path after a successful build or
+valid-runtime check. The equivalent explicit setup is:
+
+```bash
+RUNTIME_ROOT_INPUT=$BENCHWARMER_RUNTIME_ROOT
+scripts/build-python-runtime.sh
+ROOT=$(CDPATH= cd -- "$RUNTIME_ROOT_INPUT" && pwd)
+export UV_PYTHON="$ROOT/python-3.13.15-sqlite-3.53.4/bin/python3.13"
+uv sync --locked --dev
+```
+
+Keep `UV_PYTHON` exported for all later `uv run`, `uv add`, `uv sync`, and other
+`uv` commands that use the custom root. Alternatively, prefix each command with
+the same `UV_PYTHON="$ROOT/python-3.13.15-sqlite-3.53.4/bin/python3.13"`
+assignment.
+
+A fresh successful publication removes an existing project virtual environment.
+The valid-runtime fast path leaves `.venv` unchanged. Production image,
+deployment, serving, and target-host verification remain deferred to `DEP-003`.
+For the default runtime root, the relative interpreter path in `.python-version`
+makes `uv` stop if the runtime has not been provisioned instead of downloading a
+Python build with an unknown SQLite version. Run project `uv` commands from the
+repository root. Use the same bootstrap in development and CI:
+
+```bash
+scripts/build-python-runtime.sh
+uv sync --locked --dev
+uv run python -c \
+  'from benchwarmer.sqlite_runtime import require_wal_safe_sqlite; require_wal_safe_sqlite()'
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .

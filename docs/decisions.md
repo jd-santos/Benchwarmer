@@ -29,7 +29,9 @@ API execution is a harness.
   [ADR 0002](decisions/0002-data-recovery.md).
 - **SQLite safety:** WAL is prohibited unless the process-linked SQLite includes
   the WAL-reset fix: `3.51.3+`, `3.50.7+` on the 3.50 branch, or `3.44.6+` on the
-  3.44 branch. `ENV-001` provisions and pins a passing runtime.
+  3.44 branch. `ENV-001` pins a source-built Python 3.13.15 runtime with SQLite
+  3.53.4, validates required modules, and fails closed when its immutable runtime
+  path or recovery state is not safe to use.
 - **First import adapter:** Use a schema-gated, read-only Hermes SQLite adapter.
   Namespace source-native session, message, and usage keys by installation and
   profile; combine a committed message watermark with mutable-row rereads and
@@ -39,16 +41,6 @@ API execution is a harness.
 - **Experiments:** Start with native harness configurations, capturing accessible
   system prompts, tools, skills and differences. Controlled comparisons remain
   a later capability, rather than an initial requirement.
-
-## Before database persistence work
-
-### WAL-safe runtime
-
-- **Why it matters:** At M0 review on 2026-09-08, the project virtual
-  environment linked vulnerable SQLite `3.50.4`; opening a multi-connection WAL
-  database would risk the upstream WAL-reset corruption race.
-- **Required next step:** `ENV-001` must pin a fixed runtime and implement an
-  in-process, pre-connection gate before database migration work begins.
 
 ## Before the first simulation
 

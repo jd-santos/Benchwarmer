@@ -37,8 +37,14 @@ The commands below implement the foundation decisions accepted by `DEC-001`:
 - A configurable private data root outside the checkout, overridden by
   `BENCHWARMER_DATA_ROOT`; tests always use a temporary directory.
 - Separate API and future worker processes. Do not add an idle worker stub.
-- WAL mode is prohibited until `ENV-001` proves the runtime includes SQLite
-  `3.51.3+` or an accepted fixed backport.
+- `ENV-001` pins Python 3.13.15 with SQLite 3.53.4 and provides the in-process
+  WAL-safety gate. Every later database entry point calls that gate before its
+  first connection.
+- UI tasks follow the
+  [interface design principles](../architecture.md#interface-design-principles)
+  and the linked UI design skill. Start from task hierarchy, use the least visual
+  structure needed, preserve distinct application states, and include responsive
+  and accessibility behavior in the initial implementation.
 
 If a different choice is recorded, update this plan's paths and commands in the
 same commit so later agents do not inherit contradictory instructions.
@@ -745,7 +751,8 @@ verification instead.
 Before moving all foundation task IDs to **Done**:
 
 ```bash
-uv sync --dev
+scripts/build-python-runtime.sh
+uv sync --locked --dev
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .

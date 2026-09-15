@@ -26,9 +26,11 @@ preserved trials, and separate quality and economics remain core.
 
 ## Application shape
 
-Use SQLite for structured data, a Svelte frontend, and a Python 3.12+ backend
-managed with uv. Large private artifacts live in local files referenced by the
-database. The exact backend framework and Svelte tooling remain open.
+Use SQLite for structured data and a Python 3.12+ FastAPI backend managed with
+uv. SQLAlchemy 2 provides persistence and Alembic manages migrations. The
+SvelteKit frontend uses TypeScript, npm, ESLint, Prettier, Vitest, and a static
+adapter with a `200.html` SPA fallback. Large private artifacts live in local
+files referenced by the database.
 
 The intended runtime has a local API and a background execution worker. Import
 and experiment state persist independently of the browser. Start with one local
@@ -56,6 +58,43 @@ worker remain on the Mac mini.
 This is a design, not an implemented service. Add dependencies when an implemented
 feature needs them. Choose job scheduling and SQLite concurrency details during
 implementation; interrupted jobs must never silently rerun paid work.
+
+## Interface design principles
+
+Benchwarmer is software for repeated daily use, not a landing page. Its interface
+should provide high information clarity with low visual overhead.
+
+- Design each route around its primary task. Establish hierarchy, reading order,
+  alignment, and spacing before adding visual containers.
+- Use the least visual structure that communicates the relationship. Prefer
+  sections, rows, lists, tables, definition grids, and subtle dividers over a
+  collection of cards.
+- Use cards only for content that is independently interactive, selectable,
+  movable, or meaningfully separate. Keep radius and shadow scales restrained,
+  and reserve pills for tags, filters, statuses, tokens, and segmented controls.
+- Keep visible copy concise. Put secondary explanations, edge cases, and advanced
+  controls behind progressive disclosure unless they affect safety or immediate
+  consequences.
+- Use conventional controls with visible labels and predictable keyboard order.
+  Structured comparisons should remain tables when a table is the clearest
+  representation.
+- Assign color semantic roles such as action, neutral, success, warning, error,
+  and information. Status always needs a non-color indicator.
+- Preserve domain distinctions in every state. Unknown, zero, none, loading,
+  partial, unavailable, offline, read-only, and error are not interchangeable.
+- On narrow screens, reconsider priority and disclosure instead of only stacking
+  desktop columns. On wider screens, use available width without turning the
+  interface into a stretched phone layout.
+- Accessibility is part of the initial structure: semantic landmarks and
+  controls, visible focus, sufficient contrast, usable touch targets, sensible
+  headings, functional zoom and text scaling, reduced motion, and
+  screen-reader-friendly state changes.
+
+Before finishing a screen, remove decoration and copy that do not add meaning,
+confirm the primary task is obvious, check for generic generated-UI patterns,
+and verify that simplification did not remove an affordance or accessible state.
+The detailed workflow is in the
+[UI design skill](https://github.com/jd-santos/Skills/blob/main/skills/ui-design/SKILL.md).
 
 ## Application areas
 
