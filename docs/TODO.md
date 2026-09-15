@@ -37,11 +37,6 @@ The WAL-safe Python 3.13.15 and SQLite 3.53.4 runtime is now present in the
 ignored local data root. All focused and repository-wide pytest, Ruff, format,
 compile, and runtime checks pass.
 
-- [ ] **FND-005 — Add truthful unmigrated API health**
-  - Dependencies: `FND-004`
-  - Plan: Task 5 in the foundation plan
-  - Verify: API tests, all Python checks, and a real loopback HTTP request
-
 - [ ] **FND-006 — Add source records and migration**
   - Dependencies: `FND-004`
   - Plan: Task 6 in the foundation plan
@@ -268,6 +263,10 @@ implementation.
 
 ## Done
 
+- [x] **FND-005 — Add truthful unmigrated API health**
+  - Added the FastAPI application factory, request-scoped migration and
+    writability inspection, strict health response contract, generated API
+    documentation, and fail-closed infrastructure behavior
 - [x] **FND-004 — Add database migration plumbing**
   - Added synchronous SQLAlchemy engine/session plumbing, an empty Alembic
     environment, revision inspection, repeated WAL guards, exact private-path
