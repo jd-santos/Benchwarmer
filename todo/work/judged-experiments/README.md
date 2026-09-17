@@ -12,7 +12,11 @@ Blocked on [task preparation](../task-preparation/README.md) and [bounded model 
 
 ## Acceptance criteria
 
-Trials use compatible capabilities and disposable fixtures, retain requested and observed configurations and usage, and recover without silently repeating paid work. Applied judges run inside the approved budget; errors remain unjudged. Reusable suites pin tasks, judges, and dataset revisions.
+Trials use compatible capabilities and disposable fixtures, retain requested and
+observed configurations and usage, and recover without silently repeating paid
+work. Applied judges run inside the approved budget; errors remain unjudged.
+Reusable suites pin tasks, judges, dataset revisions, and lineage-family split
+assignments. Final-holdout evidence does not guide candidate or evaluator tuning.
 
 ## Work
 
@@ -45,6 +49,10 @@ Trials use compatible capabilities and disposable fixtures, retain requested and
   - Dependencies: [Compare criterion-level quality and economics per trial](../judged-experiments/README.md)
 
   - [ ] Link regression cases back to the motivating bundle or pattern while keeping ordinary successful work in representative comparisons.
+  - [ ] Separate development, evaluator-calibration, and final-holdout families;
+    prevent branches, derived tasks, and near-duplicate fixtures from crossing
+    partitions. Record any holdout exposure and replace a contaminated holdout
+    before making another final comparison claim.
 
 ## Verification
 

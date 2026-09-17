@@ -76,6 +76,30 @@ A live query gaining new matches never changes an existing run or starts work.
 Private programmatic dataset access supports ad hoc scripts and notebooks without
 requiring UI automation or public export.
 
+### Held-out evaluation partitions
+
+Assign partitions by **source-lineage family**, not by task row. A family contains
+a source conversation and its branches or continuations, every segment, bundle,
+or task derived from them, and near-duplicate imports or fixtures that preserve
+the same originating work. Explicitly group separate conversations when they
+continue the same objective, edit the same prepared fixture, or repeat a copied
+prompt closely enough that seeing one would reveal evidence about the other. If
+lineage is uncertain, keep the related items together and record that decision.
+
+Freeze development, evaluator-calibration, and final-holdout assignments before
+the comparison. Balance useful task and capability strata at the family level;
+do not split a family to improve row counts. Record the grouping rules, explicit
+overrides, assignment method or seed, and membership revision. Report both task
+counts and distinct lineage-family counts because tasks inside a family are not
+independent evidence.
+
+Development data may guide task construction, candidate prompts, harness changes,
+and exploratory analysis. Calibration data may guide rubrics and judge settings.
+Final-holdout inputs, labels, historical outcomes, and aggregate results must not
+guide those choices. Looking repeatedly at final-holdout results contaminates the
+partition; record the exposure and freeze a replacement holdout before making a
+new final claim. New imports never silently refill or rebalance an existing split.
+
 Tasks describe intent, starting inputs, fixture/environment needs, permitted
 capabilities, conversation script and criteria independently of the harness.
 Adapters translate those requirements into concrete execution settings.

@@ -834,8 +834,9 @@ workspaces have different semantics, so deletion must respect their categories.
 
 ## Unresolved questions
 
-- A later implementation task must choose the concrete cross-process write-gate
-  mechanism and backup/restore command names while preserving this protocol.
+- [The recovery implementation](../../todo/work/backup-and-recovery/README.md)
+  must choose the concrete cross-process write-gate mechanism and backup/restore
+  command names while preserving this protocol.
   That implementation depends on the final API/worker process boundary but not
   on the supervisor selected by [the serving decision](0003-serving-supervision.md).
 - [the pinned Python and SQLite runtime](../runtime-recovery.md) must choose and pin a Python/runtime distribution that links an
@@ -891,7 +892,8 @@ After [the accepted foundation decisions](../decisions.md) accepts the record:
 - [private data-root configuration](../../todo/work/application-foundation/plan.md) tests every data-root resolution branch, invalid input, owner-only
   creation, fixed child paths, and no import-time filesystem mutation, then runs
   the disposable prototype on the accepted build.
-- The recovery implementation tests write-gate timeout/failure, a concurrent
+- [The recovery implementation](../../todo/work/backup-and-recovery/README.md)
+  tests write-gate timeout/failure, a concurrent
   attempted mutation, partial-generation rejection, symlink rejection, corrupt
   database and file hashes, missing and extra files, unsupported formats/schema,
   rollback preservation, and external credential absence. Before allowing a
@@ -904,7 +906,7 @@ After [the accepted foundation decisions](../decisions.md) accepts the record:
   disposable root, restarts the migrated application against the restored root,
   verifies all database file references, and confirms that no runtime or private
   file is tracked by git.
-- A separate target-host restore drill to an empty root and external backup
-  device is required before calling backups operational. Its evidence must name
-  the application/SQLite versions and completed generation without recording
-  private paths or content.
+- The recovery work includes a separate target-host restore drill to an empty
+  root from an external backup device before calling backups operational. Its
+  evidence must name the application/SQLite versions and completed generation
+  without recording private paths or content.

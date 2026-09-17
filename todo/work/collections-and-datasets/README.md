@@ -12,7 +12,11 @@ Blocked on [conversation browsing](../conversation-library/README.md). Whole-con
 
 ## Acceptance criteria
 
-Live queries and frozen membership remain distinct. Exports pin source, enrichment, bundle, and selection revisions where applicable, disclose exclusions and coverage, and never trigger inference or imply public sanitization.
+Live queries and frozen membership remain distinct. Exports pin source,
+enrichment, bundle, selection, and evaluation-partition revisions where
+applicable, disclose exclusions and coverage, and never trigger inference or
+imply public sanitization. Related source-lineage families never span evaluation
+partitions.
 
 ## Work
 
@@ -22,6 +26,14 @@ Live queries and frozen membership remain distinct. Exports pin source, enrichme
     collection growth never triggers model work
 
   - [ ] Pin bundle and pattern revisions when selected; preserve selection rationale, exclusions, coverage, and source-family counts. Show how the selected sample differs from the available library.
+
+  - [ ] Define versioned source-lineage families that keep each conversation,
+    branches and continuations, derived segments/bundles/tasks, and known
+    near-duplicate prompts or fixtures together.
+  - [ ] Freeze development, evaluator-calibration, and final-holdout assignments
+    at the lineage-family level. Record grouping rules, overrides, assignment
+    method or seed, balance constraints, exclusions, and contamination events.
+    Report task and distinct-family counts.
 
 - [ ] Provide private query and dataset export access
   - Dependencies: [Add projects, live collections and frozen datasets](../collections-and-datasets/README.md)

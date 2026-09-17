@@ -50,6 +50,12 @@ Operational collector rollout requires both transport/security checks and
 verified deployment. Local fixture work does not imply that histories all live
 on the central host or authorize remote access.
 
+[Coordinated backup and recovery](../todo/work/backup-and-recovery/README.md)
+implements ADR 0002 after the application process boundary is stable. Disposable
+recovery tests can precede deployment, but backups become operational only after
+the deployed target restores a completed generation from an external failure
+domain into an empty root and passes reference and health verification.
+
 [Additional sources](../todo/work/additional-sources/README.md) prove that shared
 records preserve Pi, Codex, and Hermes structure and source-specific coverage.
 Refresh each source report before implementation. Import and execution support
@@ -58,11 +64,15 @@ remain separate capabilities.
 [Collections, frozen datasets, and private query access](../todo/work/collections-and-datasets/README.md)
 can ship after browsing, without automated enrichment or semantic search. Pin
 membership and applicable evidence revisions. Bundle selection follows the
-bundle contract. A growing collection never changes a frozen experiment.
+bundle contract. Evaluation partitions keep complete source-lineage families in
+development, evaluator calibration, or final holdout; related branches and
+derived tasks never cross those boundaries. A growing collection never changes
+a frozen experiment or split.
 
 Gate: duplicate delivery and offline recovery preserve evidence; selected
 datasets reproduce their membership and disclose exclusions and coverage;
-private exports are never presented as sanitized public data.
+private exports are never presented as sanitized public data. Backups are not
+called operational before the target-host restore drill passes.
 
 ## Approved enrichment and discovery
 
@@ -105,7 +115,8 @@ Promote useful tasks into repeatable suites after the first comparisons work.
 Gate: unsupported capabilities and judge failures are distinct from poor
 candidate quality; recovery does not silently repeat paid attempts; candidate
 inputs exclude later historical discoveries. Calibration covers successful,
-failing, and inapplicable cases.
+failing, and inapplicable cases without exposing final-holdout evidence. Final
+claims report distinct source-lineage families as well as task counts.
 
 ## Later capabilities
 

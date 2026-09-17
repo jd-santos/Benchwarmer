@@ -23,6 +23,7 @@ No current tasks at this priority.
 ## P3: Essential
 
 - [ ] [Deploy and verify the private application](work/private-deployment/README.md)
+- [ ] [Implement coordinated backups and prove recovery](work/backup-and-recovery/README.md)
 - [ ] [Collect conversations from other machines](work/cross-machine-collection/README.md)
 - [ ] [Save collections and freeze reusable datasets](work/collections-and-datasets/README.md)
 - [ ] [Run approved model work with durable limits and recovery](work/bounded-model-work/README.md)

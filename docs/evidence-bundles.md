@@ -106,8 +106,10 @@ Validate proposed evaluators against failures, successful cases, and ambiguous
 or inapplicable examples. Catching the source failure alone is insufficient.
 Keep criterion results, calibration evidence, and judge disagreements. Judge
 failure remains unjudged, not candidate failure. Source lineage stays attached
-to tasks and dataset membership so related examples are not treated as
-independent sessions.
+to tasks and dataset membership. Partition evaluation data by the complete
+source-lineage family so branches, continuations, derived bundles and tasks, and
+near-duplicate fixtures cannot cross from development or evaluator calibration
+into the final holdout.
 
 ## Scope and delivery
 
