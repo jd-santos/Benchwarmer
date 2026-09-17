@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: In progress on `task/conversation-library`. The overview and fixture-backed API path are complete; the source status page is next.
+Status: In progress on `task/conversation-library`. The fixture-backed API and source status UI are complete; the disposable browser harness is next.
 
 ## Purpose
 
@@ -41,7 +41,7 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
   - Plan: [Implementation details](plan.md#add-the-first-useful-home-page)
   - Verify: loading/healthy/unmigrated/error UI tests and frontend checks
 
-- [ ] Connect the source status page
+- [x] Connect the source status page
   - Dependencies: [Expose fixture-backed source status](../application-foundation/README.md), [Add the first useful home page](../application-foundation/README.md), Add the typed API client and `/api` proxy (already recorded)
   - Plan: [Implementation details](plan.md#connect-the-source-status-page)
   - Verify: populated/empty/error UI tests, frontend checks, and Svelte MCP
@@ -146,7 +146,23 @@ Additional checks for this slice:
 - `npm --prefix web run build` — static production build passed
 - Disposable migrated API and Vite browser review — rendered 3 sources, 1 successful import, and explicit coverage counts with a valid accessibility tree
 
-The next ready step is **Connect the source status page**.
+The source-status page slice added responsive source cards backed by the typed
+API client. Each card reports the last successful import and all ten coverage
+dimensions as text and visual status treatments. Never-imported and failed-only
+sources retain explicit missing-success states, while partial, unavailable, and
+unknown coverage remain distinct. Empty, loading, and API-failure states provide
+clear next actions.
+
+Additional checks for this slice:
+
+- `npm --prefix web test` — 27 passed
+- `npm --prefix web run lint` — passed
+- `npm --prefix web run check` — 0 errors and 0 warnings
+- `npm --prefix web run build` — static production build passed
+- Disposable migrated API and Vite browser review — rendered all 3 synthetic sources through `/api`, with readable narrow-screen cards, current navigation state, a valid accessibility tree, and no browser errors
+- Svelte MCP was unavailable; Prettier, ESLint, `svelte-check`, component tests, production build, and browser review provided the fallback validation
+
+The next ready step is **Add the disposable browser process harness**.
 
 ## Supporting material
 
