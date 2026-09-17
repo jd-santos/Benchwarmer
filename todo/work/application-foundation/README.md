@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: In progress on `task/conversation-library`. Import batches and real revision health are complete; sanitized fixture loading is next.
+Status: In progress on `task/conversation-library`. Import batches, revision health, and sanitized fixture loading are complete; source status is next.
 
 ## Purpose
 
@@ -26,7 +26,7 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
   - Plan: [Implementation details](plan.md#verify-the-real-database-revision-in-health)
   - Verify: health tests for unmigrated and migrated temporary databases
 
-- [ ] Add sanitized source fixture loading
+- [x] Add sanitized source fixture loading
   - Dependencies: [Add import-batch records and migration](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#add-sanitized-source-fixture-loading)
   - Verify: deterministic, idempotent fixture-load command and focused tests
@@ -101,7 +101,22 @@ Additional checks for this slice:
 - `uv run pytest` — 169 passed with the same warning
 - Disposable Uvicorn and `curl` loopback check — returned status `ok` and revision `0002`
 
-The next ready step is **Add sanitized source fixture loading**.
+The fixture-loading slice added three strictly synthetic source states: partial
+import, failed import, and never imported. The versioned loader inserts sources
+before their batches in one transaction, treats exact reloads as no-ops, rejects
+conflicts without rewriting evidence, and reports only bounded record counts.
+Provider charges, list-price estimates, subscription expense, and quota usage
+remain separate coverage dimensions.
+
+Additional checks for this slice:
+
+- `uv run pytest tests/services/test_fixtures.py` — 6 passed
+- `uv run pytest` — 175 passed with one upstream Starlette/AnyIO deprecation warning
+- `uv run ruff check .` and `uv run ruff format --check .` — passed
+- `uv run python -m compileall src` — passed
+- Disposable command run twice — first created 3 sources and 2 batches; second recognized all 5 as existing
+
+The next ready step is **Expose fixture-backed source status**.
 
 ## Supporting material
 

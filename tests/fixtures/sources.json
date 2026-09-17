@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "fixture-source-hermes-partial",
+      "kind": "hermes",
+      "scope_id": "fixture-hermes-profile-a",
+      "display_name": "Synthetic Hermes profile",
+      "configured_coverage": {
+        "schema_version": 1,
+        "dimensions": {
+          "conversation_content": "available",
+          "request_usage": "unavailable",
+          "provider_charges": "unknown",
+          "list_price_estimates": "unavailable",
+          "subscription_expense": "unknown",
+          "quota_usage": "unknown"
+        }
+      }
+    },
+    {
+      "id": "fixture-source-pi-failed",
+      "kind": "pi",
+      "scope_id": "fixture-pi-profile-a",
+      "display_name": "Synthetic Pi profile",
+      "configured_coverage": {
+        "schema_version": 1,
+        "dimensions": {
+          "conversation_content": "available",
+          "request_usage": "partial",
+          "provider_charges": "unavailable",
+          "list_price_estimates": "unknown",
+          "subscription_expense": "unknown",
+          "quota_usage": "unknown"
+        }
+      }
+    },
+    {
+      "id": "fixture-source-codex-never-imported",
+      "kind": "codex",
+      "scope_id": "fixture-codex-profile-a",
+      "display_name": "Synthetic Codex profile",
+      "configured_coverage": null
+    }
+  ],
+  "import_batches": [
+    {
+      "id": "fixture-batch-hermes-partial",
+      "source_id": "fixture-source-hermes-partial",
+      "idempotency_key": "fixture-hermes-attempt-1",
+      "outcome": "partial",
+      "cursor_before": null,
+      "cursor_after": {
+        "schema_version": 1,
+        "value": {
+          "last_message_id": "fixture-message-102"
+        }
+      },
+      "observed_coverage": {
+        "schema_version": 1,
+        "dimensions": {
+          "conversation_content": "partial",
+          "request_usage": "partial",
+          "provider_charges": "unknown",
+          "list_price_estimates": "unavailable",
+          "subscription_expense": "unknown",
+          "quota_usage": "unknown"
+        }
+      },
+      "started_at": "2026-09-16T12:00:00Z",
+      "completed_at": "2026-09-16T12:00:03Z",
+      "error_summary": "One synthetic record was unavailable"
+    },
+    {
+      "id": "fixture-batch-pi-failed",
+      "source_id": "fixture-source-pi-failed",
+      "idempotency_key": "fixture-pi-attempt-1",
+      "outcome": "failed",
+      "cursor_before": {
+        "schema_version": 1,
+        "value": "fixture-entry-20"
+      },
+      "cursor_after": null,
+      "observed_coverage": {
+        "schema_version": 1,
+        "dimensions": {
+          "conversation_content": "unknown",
+          "request_usage": "unknown",
+          "provider_charges": "unavailable",
+          "list_price_estimates": "unknown",
+          "subscription_expense": "unknown",
+          "quota_usage": "unknown"
+        }
+      },
+      "started_at": "2026-09-16T12:05:00Z",
+      "completed_at": "2026-09-16T12:05:01Z",
+      "error_summary": "Synthetic source read failed"
+    }
+  ]
+}
