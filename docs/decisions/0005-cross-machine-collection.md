@@ -1,7 +1,7 @@
 # ADR 0005: Push collection from personal Macs
 
-- Status: Accepted by `COL-001`
-- Task: COL-001
+- Status: Accepted by [the accepted collection decision](0005-cross-machine-collection.md)
+- Work: [the accepted collection decision](0005-cross-machine-collection.md)
 - Date: 2026-09-15
 
 ## Context and evidence
@@ -233,7 +233,7 @@ and update work unrelated to reliable collection.
 
 ## Unresolved questions
 
-`COL-002` must decompose implementation into bounded protocol, enrollment,
+[cross-machine collection](../../todo/work/cross-machine-collection/README.md) must decompose implementation into bounded protocol, enrollment,
 collector, and scheduling tasks. Those plans must pin:
 
 - versioned request and acknowledgment schemas;
@@ -268,7 +268,7 @@ Before implementing transport, compare its plan with the collection gate in
 - bounded logs and errors that contain no payloads, private paths, credentials,
   or supplied private identifiers.
 
-Operational rollout also requires `DEP-003`: verify private Tailscale Serve HTTPS,
+Operational rollout also requires [private deployment verification](../../todo/work/private-deployment/README.md): verify private Tailscale Serve HTTPS,
 no Funnel or published application port, restricted tailnet policy, revoked-device
 rejection, source-host sleep/retry behavior, and central restart recovery. Keep
 hostnames, policy principals, paths, credentials, identities, and raw responses

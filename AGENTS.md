@@ -12,8 +12,9 @@
 - **Architecture**: Central API and worker, private native snapshots and normalized
   conversations, harness-neutral task units, and source/execution adapters.
   Cross-machine collection follows ADR 0005's manual-first push topology.
-- **Status**: Design scaffold. Application, importers and execution are not yet
-  implemented. Target host is an always-on Mac mini alongside Hermes Agent.
+- **Status**: Partial application foundation and validated conversation/approval
+  contracts. Real importers, conversation browsing, enrichment, and trial execution
+  are not yet implemented. Target host is an always-on Mac mini alongside Hermes Agent.
 - **Access and UI**: Private hosting over Tailscale, with a mobile-friendly Svelte
   interface. Central serving follows ADR 0003; live deployment remains pending.
 
@@ -32,7 +33,9 @@
   access is distinct from sanitized public export.
 - Cross-machine collection follows ADR 0005's enrolled push topology: manual
   collectors first, then optional scheduled runs. Rollout stays blocked on
-  `COL-002` and `DEP-003`; never assume histories all reside on the central host.
+  [cross-machine collection](todo/work/cross-machine-collection/README.md) and
+  [private deployment verification](todo/work/private-deployment/README.md);
+  never assume histories all reside on the central host.
 - Keep benchmark task definitions independent of Pi or any other agent harness.
 - Do not combine quality and economics into a single winner score. Preserve
   criterion-level and per-trial results.
@@ -101,12 +104,12 @@ and the interface principles in [docs/architecture.md](docs/architecture.md).
 > Read the file below before changing architecture, scope, or evaluation
 > semantics.
 
-design: {architecture.md,conversation-library.md,experiments.md,decisions.md}
-delivery: {roadmap.md,plans/}
+design: {architecture.md,conversation-library.md,evidence-bundles.md,experiments.md,decisions.md}
+delivery: {roadmap.md,../todo/work/}
 evidence: {sources/,source-coverage.md}
 decisions: {decisions.md,decisions/}
 operations: {runtime-recovery.md}
-tasks: {TODO.md}
+tasks: {../todo/README.md,../todo/TODO.md}
 
 ## File-Specific Notes
 
@@ -123,10 +126,23 @@ tasks: {TODO.md}
   coordinator synthesizes them into `docs/source-coverage.md`.
 - **`docs/roadmap.md`**: Records delivery slices, dependencies, milestone gates
   and the agent handoff protocol.
-- **`docs/plans/`**: Contains executable plans with exact paths, commands,
-  acceptance criteria and verification steps. Follow the plan linked by a TODO
-  task rather than inventing missing implementation details.
-- **`docs/TODO.md`**: Tracks work using In Progress, Up Next, Backlog and Done.
+- **`todo/TODO.md`**: Single live P1–P5 priority index with human-readable task
+  names. Priority is not status. Do not introduce opaque task codes or separate
+  In Progress, Backlog, or Done sections.
+- **`todo/work/<descriptive-name>/README.md`**: Owns each substantial effort's
+  execution status, current role/branch when active, dependencies, acceptance,
+  checklist, validation, and handoff. Read the selected record and its links,
+  not every retained plan. Keep one writer per checkout; use separate worktrees
+  for assigned concurrent writers and inspect other worktrees read-only.
+- **`todo/DONE.md`**: Links Git history and retained evidence, not a completion
+  ledger. Keep checked work in the live index until reviewed shipping closeout.
+  Do not claim merge or release without verification.
+- **`docs/plans/` and `docs/TODO.md`**: Legacy redirects or explicitly historical
+  evidence. Current implementation details are linked from work READMEs. Update
+  the existing work record at handoff; do not create new timestamped handoffs.
+- **`docs/evidence-bundles.md`**: Planned evidence-reference, bundle, selective
+  inspection, pattern, and task-promotion semantics. Native evidence remains
+  distinct from interpretations; analysis-only bundles need not be runnable.
 - **`docs/runtime-recovery.md`**: Fail-closed operator recovery for interrupted
   runtime provisioning. Use exact paths and ownership checks; never improvise
   deletion or replacement commands.

@@ -8,8 +8,9 @@ reason to collect it.
 
 The project has Python quality tooling and a minimal SvelteKit scaffold. The
 planned application uses a Python backend, SQLite database and mobile-friendly
-frontend on an always-on Mac mini, with private access over Tailscale. Importers,
-the application UI and experiment execution are not implemented yet.
+frontend on an always-on Mac mini, with private access over Tailscale. The API
+foundation and responsive shell are partly implemented. Real importers,
+conversation browsing, enrichment, and experiment execution are not implemented yet.
 
 ## Scope
 
@@ -45,8 +46,10 @@ Tool-capable simulations run only in disposable fixture workspaces.
   data boundaries and delivery stages.
 - [Conversation library](docs/conversation-library.md): collection, normalization,
   enrichment approvals, search, datasets, and the first useful workflow.
-- [First contract slice](docs/plans/2026-09-15-conversation-contracts.md): shared
-  conversation records and bounded model-work plans using synthetic tests.
+- [Evidence bundles](docs/evidence-bundles.md): planned references, observations,
+  behavior patterns, and conversion into leakage-aware task drafts.
+- [Retained contract design](todo/work/conversation-contracts/README.md): shared
+  conversation records and bounded approval validation using synthetic tests.
 - [Experiments](docs/experiments.md): task derivation, harness dimensions and
   system-prompt provenance.
 - [Design decisions](docs/decisions.md): accepted choices and remaining
@@ -59,7 +62,9 @@ Tool-capable simulations run only in disposable fixture workspaces.
   usage, economics, prompt, execution, and retention comparison.
 - [Buildout roadmap](docs/roadmap.md): delivery slices, dependencies, acceptance
   gates and agent handoff protocol.
-- [TODO](docs/TODO.md): implementation queue and completed work.
+- [Task workbench](todo/README.md): workflow and stable work records.
+- [Priorities](todo/TODO.md): the live P1–P5 queue, using readable task names.
+- [History](todo/DONE.md): Git and retained evidence.
 
 ## Project setup
 
@@ -147,7 +152,7 @@ assignment.
 
 A fresh successful publication removes an existing project virtual environment.
 The valid-runtime fast path leaves `.venv` unchanged. Production image,
-deployment, serving, and target-host verification remain deferred to `DEP-003`.
+deployment, serving, and target-host verification remain deferred to [private deployment verification](todo/work/private-deployment/README.md).
 For the default runtime root, the relative interpreter path in `.python-version`
 makes `uv` stop if the runtime has not been provisioned instead of downloading a
 Python build with an unknown SQLite version. Run project `uv` commands from the

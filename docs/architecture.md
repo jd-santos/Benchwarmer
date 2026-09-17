@@ -199,7 +199,10 @@ These are conceptual boundaries, not a finalized SQL schema.
 | Classification | Label, subject, origin, classifier/version and confidence if supplied |
 | Annotation | Human rating, note or correction with subject and revision history |
 | Task version | Harness-neutral intent, starting inputs, fixture and success criteria |
-| Task source link | Conversation segments, preceding context, segmentation provenance and reconstruction gaps |
+| Evidence reference | Pinned conversation revision, event/block/range, evidence role, branch compatibility, and coverage |
+| Observation / evidence bundle | Source-linked observations and selected context, distinct from interpretations and runnable tasks |
+| Behavior pattern revision | Inspectable overlapping groups of bundles, grouping provenance, coverage, and reviewed changes |
+| Task source link | Conversation segments and bundles, preceding context, segmentation provenance and reconstruction gaps |
 | Harness configuration | Harness identity/version, execution mode and settings snapshot |
 | Candidate configuration | Model, provider, reasoning, harness, prompts, skills, tools and sampling |
 | Experiment | Task/configuration matrix, repetitions, budgets and execution policy |
@@ -207,6 +210,10 @@ These are conceptual boundaries, not a finalized SQL schema.
 | Judgment | Criterion-level human, deterministic or model assessment with evidence |
 | External evaluation | Published result or reference, its provenance and revisions |
 | Job | Durable import/execution work, progress, cancellation and recovery state |
+
+The planned [evidence-bundle design](evidence-bundles.md) defines how the new
+analytical records relate without replacing native snapshots. Start with manual
+bundles before automated extraction or grouping.
 
 One session may yield several tasks, and one task may draw on several sessions.
 Task versions and trial configuration snapshots remain stable after execution.
@@ -348,5 +355,5 @@ without forcing unlike evidence into a common score.
   watchers, and central pull remain deferred. No model operation, including
   embeddings or judges, may run without bounded approval.
 
-See [decisions.md](decisions.md) for unresolved choices and [TODO.md](TODO.md) for
+See [decisions.md](decisions.md) for unresolved choices and [the priority index](../todo/TODO.md) for
 the implementation queue.

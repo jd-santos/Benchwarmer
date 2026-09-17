@@ -1,294 +1,158 @@
 # Buildout roadmap
 
-This roadmap turns the product direction in [architecture.md](architecture.md)
-into bounded delivery slices. It describes sequence and handoff rules;
-architecture rationale stays in the design documents and live task status stays
-in [TODO.md](TODO.md).
+The [priority index](../todo/TODO.md) owns live work. Each linked work README
+owns its checklist, execution status, dependencies, and verification. This
+roadmap explains sequencing; [architecture.md](architecture.md) and the other
+maintained design documents own product rules.
 
 ## Delivery principles
 
-- Prioritize collect → normalize → enrich → discover → select → evaluate. The
-  first useful release is a conversation library, not a usage dashboard.
-  [conversation-library.md](conversation-library.md) defines the approved scope.
-- Keep automatic source import separate from explicitly approved model work,
-  including embeddings and judges. Collection growth never expands an approval.
-- Follow `COL-001`'s accepted push topology for cross-machine collection; do not
-  assume local source availability. Shared contracts and synthetic fixtures can
-  proceed before live transport.
+- Prioritize collect → normalize → enrich → discover → select → evaluate.
+  Browsing and manual selection become useful before model enrichment.
+- Deliver usable paths through storage, API, and UI. The Python service owns
+  persistence and policy; Svelte is a typed client over the same-origin `/api`
+  boundary. Do not create empty future routes or idle worker scaffolding.
+- Keep retained native observations, generated interpretations, and human review
+  distinct. Source gaps, branches, and revisions remain visible.
+- Imports and deterministic processing do not authorize inference. Model work
+  requires exact bounded approval and separately valid disclosure permission.
+- Preserve data privately outside the checkout. Use synthetic fixtures in Git
+  and disposable workspaces for tool-capable trials.
+- Accessibility, mobile behavior, migration recovery, idempotency, and restart
+  persistence belong to each relevant slice's acceptance criteria.
 
-- Deliver vertical slices that leave a usable, testable path through storage,
-  API, and UI instead of completing every layer in isolation.
-- Keep the Python service authoritative for domain rules, persistence, imports,
-  reconciliation, annotations, and experiment control. The SvelteKit
-  application is a typed client and presentation layer; it must not open the
-  application SQLite database or duplicate domain policy.
-- Keep browser-to-service requests under a same-origin `/api` boundary.
-  Development may proxy that path to the Python process. Production routing is
-  decided by `DEP-002` before deployment.
-- Develop only with sanitized fixtures. Private databases, session snapshots,
-  prompts, annotations, and generated artifacts stay outside the checkout.
-- Preserve source observations before normalization. Unknown, unavailable, and
-  unreconciled values remain explicit in API responses and UI states.
-- Treat mobile layouts, accessibility, migrations, idempotency, and restart
-  behavior as acceptance criteria rather than later cleanup.
+## First useful library
 
-## Workstreams and dependencies
+1. [Finish the application foundation](../todo/work/application-foundation/README.md).
+   Complete import records, fixture-backed source status, UI integration, browser
+   verification, restart persistence, and development instructions. Existing
+   runtime, source, health, shell, and contract implementations remain the base.
+2. [Import Hermes conversations reliably](../todo/work/hermes-import/README.md).
+   Follow the accepted first-adapter decision, refresh source evidence, and prove
+   incremental import and reconciliation before private-source validation.
+3. [Browse, search, and annotate](../todo/work/conversation-library/README.md).
+   Support readable branches and continuations, source-linked search, freshness,
+   coverage, and durable human review. Cost charts and inference are not gates.
+4. [Define evidence references and review bundles](../todo/work/evidence-bundles/README.md).
+   Synthetic contract work can begin earlier. Use the real library for manual
+   assembly and review before committing to broad automated extraction.
 
-```text
-four source inspections
-  └─► SRC-001 coverage matrix ──► SRC-002 first adapter choice ─────────┐
-                                                                        │
-three decision proposals ──► DEC-001 decision integration               │
-  ├─► FND-002 ──► ENV-001 ──► FND-003..FND-010                         │
-  └─► UI-001..UI-005                                                     ┼─► QA
-                                                                        │
-QA-001..QA-004 foundation verification ─────────────────────────────────┘
-  └─► DEP-003 target-host deployment and verification
+Gate: real conversations import without duplication, retain native evidence,
+remain readable and searchable after restart, and support durable annotations.
+Foundation checks must pass first; bundle work must not postpone basic browsing.
 
-PLAN-003 ──► LIB-001 shared conversations + ENR-001 approval contract
-COL-001 user planning ──► COL-002 cross-machine collection
-LIB-001 + foundation ──► ACT-001 Hermes import ──► ACT-002 browse/text search
-                                             ├─► REV-001 annotations
-                                             ├─► ACT-003 second source
-                                             └─► ACT-004 remaining target source
+## Operational collection and reusable selections
 
-ACT-002 + ENR-001 ──► ENR-002 durable bounded model work ──► ENR-003 enrichment
-                                                          └─► SEARCH-001 semantic
-ACT-002 ──► DATA-001 collections/datasets ──► DATA-002 private query/export
-                    └─► TSK-001 units ──► EXP-001 safety ──► EXP-002 judged trials
+[Private deployment](../todo/work/private-deployment/README.md) follows foundation
+verification and ADR 0003. [Cross-machine collection](../todo/work/cross-machine-collection/README.md)
+follows the first importer and ADR 0005's manual-first enrolled push protocol.
+Operational collector rollout requires both transport/security checks and
+verified deployment. Local fixture work does not imply that histories all live
+on the central host or authorize remote access.
 
-Useful library/evaluations ──► RPT-001 reporting + EVD-001 evidence + MOD-001 views
-```
+[Additional sources](../todo/work/additional-sources/README.md) prove that shared
+records preserve Pi, Codex, and Hermes structure and source-specific coverage.
+Refresh each source report before implementation. Import and execution support
+remain separate capabilities.
 
-The four source inspections can run in parallel because each writes a distinct
-`docs/sources/<name>.md` file. The initial decision proposals can also run in
-parallel because they write `docs/decisions/0001-*.md` through `0003-*.md`.
-`SRC-001` and `DEC-001` are coordinator-owned integration tasks: they combine
-reports, update the canonical summaries, and move TODO items after review.
+[Collections, frozen datasets, and private query access](../todo/work/collections-and-datasets/README.md)
+can ship after browsing, without automated enrichment or semantic search. Pin
+membership and applicable evidence revisions. Bundle selection follows the
+bundle contract. A growing collection never changes a frozen experiment.
 
-`DEC-001` blocks foundation implementation that relies on the three decision
-records. `SRC-002` blocks source-specific schema and importer work, but it does
-not block the fixture-backed application foundation.
+Gate: duplicate delivery and offline recovery preserve evidence; selected
+datasets reproduce their membership and disclose exclusions and coverage;
+private exports are never presented as sanitized public data.
 
-## Milestones and gates
+## Approved enrichment and discovery
 
-### M0 — Decisions and feasibility
+[Durable model-work execution](../todo/work/bounded-model-work/README.md) must
+precede provider dispatch. The current validator is not a reservation service or
+scheduler. Test cancellation, bounded retries, and outcome-unknown reconciliation
+before paid work; unlike idempotent imports, uncertain paid attempts cannot be
+blindly retried.
 
-**Outcome:** Agents can implement without inventing source capabilities,
-process boundaries, or storage locations.
+[Enrichment](../todo/work/conversation-enrichment/README.md) starts with descriptions
+and constrained classification, then adds evidence-linked task context and
+bundles. Measure tier quality and cost, inspect some unflagged examples, and keep
+all escalation within the approved plan. Human corrections remain revisions.
 
-- `SRC-PI-001`, `SRC-HERMES-001`, `SRC-CODEX-001`, and
-  `SRC-OPENROUTER-001`: inspect one source each and write an independent report
-  under `docs/sources/` from observed versions and interfaces.
-- `SRC-001`: synthesize the independent reports into
-  `docs/source-coverage.md`.
-- `SRC-002`: select the first import adapter using the completed matrix.
-- `FND-001`: record the backend, migration, frontend, package-manager, and
-  worker defaults in `docs/decisions/0001-application-foundation.md`.
-- `DEP-001`: decide the private data root and coordinated backup/restore
-  contract in `docs/decisions/0002-data-recovery.md`.
-- `DEP-002`: decide process binding, supervision, and Tailscale routing in
-  `docs/decisions/0003-serving-supervision.md` before deployment work.
-- `DEC-001`: reconcile those three proposals, update `docs/decisions.md`, and
-  apply their TODO status transitions in a coordinator-owned commit.
+[Semantic discovery](../todo/work/semantic-discovery/README.md) and
+[patterns across bundles](../todo/work/behavior-patterns/README.md) follow useful
+text search and reviewed data. Group by capability and behavior as well as topic;
+keep overlapping membership, successes, recoveries, and uncertain examples
+visible. These features do not block manual task selection.
 
-**Gate:** Every selected capability has evidence, unknowns remain labeled, and
-the first adapter has stable identifiers plus a viable incremental-import
-strategy.
+Gate: model work has exact approval and valid disclosure scope, generated
+findings cite evidence, coverage and omissions are visible, and regenerated
+metadata does not overwrite source facts or frozen datasets.
 
-Import and trial recovery deliberately have different semantics. An import may
-retry after its idempotency key/cursor is durably recorded. A paid trial
-reserves an attempt before execution and may enter `outcome_unknown`; recovery
-must require reconciliation rather than assuming the request is safe to repeat.
+## Safe tasks and judged experiments
 
-### M1 — Fixture-backed application foundation
+[Task preparation](../todo/work/task-preparation/README.md) turns selected bundles
+into reviewed starting inputs, fixtures, capabilities, and assertions. Preserve
+reconstruction gaps and correlated source lineage. Historical solutions belong
+in separate judging evidence, not candidate context. Use successes and ordinary
+work as well as failures.
 
-**Outcome:** A local developer can migrate a disposable database, start the
-Python API and SvelteKit UI, and see typed source/import status from sanitized
-fixtures.
+[Judged experiments](../todo/work/judged-experiments/README.md) establish disposable
+workspaces, durable attempt reservation, capability checks, cancellation, and
+applied-judge configuration before dispatching trials. Start with native harness
+configurations and compatible direct Python API baselines. Pin criteria, record
+all attempts, and compare criterion-level quality separately from economics.
+Promote useful tasks into repeatable suites after the first comparisons work.
 
-The executable plan is
-[plans/2026-09-07-application-foundation.md](plans/2026-09-07-application-foundation.md).
-It includes Python and frontend checks, truthful health/migration reporting,
-the first source/import migrations, responsive navigation, API error states,
-browser tests, and restart persistence.
+Gate: unsupported capabilities and judge failures are distinct from poor
+candidate quality; recovery does not silently repeat paid attempts; candidate
+inputs exclude later historical discoveries. Calibration covers successful,
+failing, and inapplicable cases.
 
-- `ENV-001`: pin a Python/runtime mechanism with a fixed SQLite library and an
-  executable pre-connection WAL gate after `FND-002` and before `FND-003`.
-- `DEP-003`: implement the private deployment and execute ADR 0003's target-host
-  checks after `QA-004`; this blocks operational rollout, not fixture-backed
-  implementation.
+## Later capabilities
 
-**Gate:** A fresh checkout resolves a WAL-safe SQLite runtime and passes all
-documented checks; no runtime data lands in git; stopping and restarting the API
-preserves fixture-backed records. The stateless frontend may restart
-independently and has no persistence role.
+- [Usage reconciliation and detailed economics](../todo/work/usage-reconciliation/README.md)
+  retain overlap decisions and distinguish charges, estimates, subscriptions,
+  and quotas. Do not publish combined totals before reconciliation.
+- [Trusted external evidence and model views](../todo/work/external-evidence/README.md)
+  retain dates, methods, configuration, revisions, and identity uncertainty.
+- [Controlled comparisons and adaptive follow-ups](../todo/work/advanced-comparisons/README.md)
+  follow proven fixed trials and explicit policy decisions. Adaptive results
+  describe the candidate and simulator together.
+- [Sanitized exports and portable reports](../todo/work/portable-reports/README.md)
+  follow private evaluations and deliberate privacy review.
 
-### M1a: Conversation and approval contracts
-
-**Outcome:** Synthetic conversations retain shared structure across sources;
-model-work previews require exact bounded approval without executing anything.
-
-- `LIB-001`: shared conversation v1, strict serialization, provenance, branches,
-  tool/artifact references, and synthetic Pi/Hermes/Codex examples.
-- `ENR-001`: immutable batch plans, request/resource/cost ceilings, and approval
-  invalidation when inputs, models, judges, limits, or disclosure scope change.
-- `COL-001`: use the accepted manual-first push design in
-  [ADR 0005](decisions/0005-cross-machine-collection.md) before any transport
-  implementation.
-
-The independent contract lanes can run before the remaining database/API work.
-Use [plans/2026-09-15-conversation-contracts.md](plans/2026-09-15-conversation-contracts.md).
-
-**Gate:** Positive/negative synthetic tests pass; no private source reads, model
-calls, live transport, or durable-execution claims. This is a prerequisite slice,
-not the first operational service.
-
-### M2: First useful conversation library
-
-**Outcome:** One real source imports incrementally without duplicates and its
-conversations can be found and read from phone or desktop.
-
-- `ACT-001`: map the first adapter into the shared conversation contract and
-  retained native snapshots, then validate against an approved private source.
-- `ACT-002`: readable transcripts, branches/continuations, filters, keyword and
-  metadata search, source freshness, and explicit coverage gaps. Usage/cost
-  metadata is available without detailed reporting.
-- `REV-001`: durable ratings, labels, notes, and revision history.
-- `COL-002`: implement the cross-machine collection path after `COL-001`, with
-  enrollment, bounded backfill, offline catch-up, and durable acknowledgments.
-
-**Gate:** Re-import/re-delivery does not duplicate conversations; source-native
-snapshots and normalized branches survive restart; search opens relevant evidence;
-ratings survive restart; costs cite price evidence or state unavailability. The
-cross-machine service is operational only after its own transport/security tests
-and `DEP-003`, not because a local importer works.
-
-### M3 — Consolidation proof
-
-**Outcome:** A second source proves the normalized conversation contract is not
-Hermes-specific; the remaining target adapter brings Pi, Codex, and Hermes into
-the library with explicitly different coverage.
-
-- `ACT-003`: import a second source while preserving its native structure.
-- `ACT-004`: import the remaining Pi/Codex/Hermes source after refreshed evidence.
-  The source inspection reports are dated observations, not current inventory.
-- `REC-001`: link overlapping harness/provider observations without deleting
-  either source record.
-- `REC-002`: expose unmatched records, overlap decisions, and reconciliation
-  differences in API and UI.
-
-**Gate:** Consolidated totals exclude known overlap, account-only totals are
-not invented at session scope, and reconciliation is inspectable.
-
-### M4: Enrichment, discovery and reusable datasets
-
-**Outcome:** Approved model work improves discovery; selected conversations are
-usable in ad hoc evaluation projects without UI automation.
-
-- `ENR-002`: durable bounded model-work service with approval previews, disclosure
-  checks, spend/request reservations, cancellation, and uncertain-outcome recovery.
-- `ENR-003`: first description/classification batch with task-specific model tiers,
-  revisions, evidence, and cost. Wider metadata stays in explicit bounded follow-ups.
-- `SEARCH-001`: approved semantic indexing/query actions alongside text/filter
-  fallback; visible stale, incomplete, pending, and unsupported content states.
-- `DATA-001`: projects, live saved queries, and frozen revision-pinned datasets.
-- `DATA-002`: versioned private read/query/export access for scripts and notebooks.
-
-**Gate:** Imports/search never silently call a model; changed plans need new
-approval; dataset membership and revisions reproduce a selection; search hits
-link to evidence. Private export is not mislabeled as sanitized public data.
-
-### M5 — Task preparation and safe experiments
-
-**Outcome:** A reviewed task derived from actual work cannot enter a paid or
-tool-capable trial until its execution safety substrate exists.
-
-- `TSK-001`: derive meaningful single-response/action or short fixed-sequence units
-  from frozen datasets without leaking original answers or later workspace state.
-  Preserve segmentation provenance and correlated source lineage.
-- `EXP-001`: add disposable workspaces, fixed scripts, capability checks,
-  credential/network policy, budgets, cancellation, durable progress, attempt
-  reservation, outcome-unknown reconciliation, and duplicate-paid-work
-  protection.
-- `EXP-002`: implement one native harness adapter and direct Python API
-  execution where the task capability permits it. Real and paid trials are
-  blocked until `EXP-001` is complete.
-- `JDG-001`: configure applied judges, pin rubrics, reserve judgment budget, and
-  distinguish judge failure from candidate failure. `EXP-002` includes automatic
-  judging under the same approval rather than making it a later optional add-on.
-- `EXP-003`: criterion-level review, judge disagreements, and per-trial comparison.
-
-**Gate:** Requested and observed configurations are distinguishable; every
-attempt is retained; tool-capable trials use disposable fixtures; recovery
-never silently repeats a paid attempt.
-
-### M6: Deeper evaluation and supporting reports
-
-- `SIM-001`: later adaptive user continuation, with allowed knowledge, simulator
-  provenance/cost, leakage checks, and separately labeled results.
-- `SUITE-001`: reusable evaluation suites built from useful task units.
-- `RPT-001`: detailed usage/economics reporting over reconciled metadata.
-- `EVD-001` and `MOD-001`: trusted external evaluations and model views, preserving
-  dates, revisions, identity uncertainty, and unlike measurements.
-
-These capabilities do not block the useful library. No combined winner score.
+These capabilities do not block the useful library. No combined winner score is
+introduced.
 
 ## Application map
 
-The route map is a planning contract, not a requirement to create empty pages.
-Routes land with the milestone that makes them useful.
+Routes arrive with working behavior, not as empty navigation placeholders.
 
-| Route | Milestone | Purpose |
-| --- | --- | --- |
-| `/` | M1/M2 | Source status initially, then recent conversations and discovery |
-| `/sources` | M1 | Source coverage and import status |
-| `/sessions` | M2/M4 | Conversation list, text/metadata and later semantic search |
-| `/sessions/[id]` | M2 | Readable transcript, branches, source evidence and review |
-| `/projects` | M4 | Questions, live collections and frozen datasets |
-| `/enrichment` | M4 | Bounded previews, approvals, progress and metadata coverage |
-| `/evidence` | M6 | Trusted external evaluations and revisions |
-| `/models/[id]` | M6 | Model/configuration evidence |
-| `/tasks` | M5 | Reviewable task drafts and versions |
-| `/experiments` | M5 | Experiment queue, progress, and budgets |
-| `/experiments/[id]` | M5 | Trial review and economics |
+| Route | Purpose |
+| --- | --- |
+| `/`, `/sources` | Health/source status first, then recent work and freshness |
+| `/sessions`, `/sessions/[id]` | Browsing, search, branches, evidence, and human review |
+| `/projects` | Questions, live collections, and frozen datasets |
+| `/enrichment` | Approved previews, progress, evidence, and coverage |
+| `/tasks` | Reviewable task drafts and versions |
+| `/experiments`, `/experiments/[id]` | Approved runs, per-trial judgments, and economics |
+| `/evidence`, `/models/[id]` | Later external evaluation evidence and model views |
 
-On narrow screens, use cards or switchable detail views instead of shrinking
-wide tables. Navigation, filters, annotations, progress, and comparison
-controls must be keyboard accessible and touch friendly.
+Keep narrow-screen layouts readable and controls keyboard accessible and touch
+friendly. Follow the maintained interface principles rather than selecting a
+container style from this roadmap.
 
-## Agent handoff protocol
+## Work and handoff
 
-1. Read `AGENTS.md`, [architecture.md](architecture.md),
-   [experiments.md](experiments.md), [decisions.md](decisions.md), this
-   roadmap, and [TODO.md](TODO.md).
-2. Ask the coordinating agent to assign one task ID from **Up Next** whose
-   dependencies are complete. The coordinator records exactly one claim line:
+Read the index, the selected work README, applicable agent instructions, and the
+linked design evidence. Pick work whose dependencies are satisfied. Record a
+bounded role and branch in the work README when starting; ownership text is not
+a lock. Keep one writer per checkout and use separate worktrees if parallel
+writers are explicitly assigned.
 
-   ```markdown
-   - Claim: owner `agent:<name-or-session>`, branch `task/<id>-<slug>`,
-     started `YYYY-MM-DDTHH:mm:ssZ`
-   ```
-
-   The coordinator moves only that task to **In Progress**; research, decision,
-   and implementation subagents do not edit [TODO.md](TODO.md) status directly.
-   Parallel workers receive disjoint output files. Integration tasks alone
-   update shared summaries and the task queue.
-3. If a required decision is unresolved, complete its decision task or stop
-   with a precise question. Do not hide a product choice inside implementation.
-4. Work on a branch or worktree. Keep private inputs and runtime state outside
-   the checkout. Add sanitized fixtures only when they are intentionally
-   public.
-5. Follow the linked task plan. Update the plan when reality invalidates a
-   command, file path, or acceptance condition rather than relying on chat
-   context.
-6. Run the task checks and the repository-wide checks. Record actual command
-   results in the PR; do not put transient logs in the repository.
-7. Return control to the coordinator for review and status transition. Move
-   the task to **Done** only after its acceptance criteria pass. Add newly
-   discovered work to **Up Next** or **Backlog** with a unique ID and
-   dependency.
-
-A task is handoff-ready only when it names exact files or discovery outputs,
-dependencies, acceptance criteria, and verification commands. Multi-day epics
-stay in this roadmap and are decomposed into task IDs before implementation.
+The work README owns status and the detailed checklist; the index retains its
+priority. Broad steps need exact files or discovery outputs, acceptance criteria,
+and verification commands before implementation. Update the existing record at
+handoff with remaining steps, actual checks, and blockers. Keep checked work
+until reviewed shipping closeout; do not create a Done section, opaque task
+codes, or timestamped handoff files. The [workbench](../todo/README.md) links the
+full workflow.

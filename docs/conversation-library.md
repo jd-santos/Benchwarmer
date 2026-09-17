@@ -61,7 +61,8 @@ anonymization.
 
 Browsing remains in the central web application over Tailscale. Native desktop
 UI, offline replicas, cloud synchronization, real-time watchers, and a persistent
-source daemon are deferred. `COL-002` must pin protocol and resource limits and
+source daemon are deferred. The [collection work](../todo/work/cross-machine-collection/README.md)
+must pin protocol and resource limits and
 pass transport/security tests before live rollout. Hermes remains the first
 adapter; Pi and Codex are targets with source-specific capabilities and cursors.
 
@@ -182,6 +183,22 @@ frozen dataset records exactly which examples a particular comparison used.
 Generated classifications should be inspectable and correctable so a filter is
 not mistaken for a complete or unbiased sample.
 
+## Evidence bundles and patterns
+
+Keep transcript segments, evidence bundles, and executable task versions distinct.
+A bundle connects relevant requirements, actions, results, and corrections through
+revision-pinned event/block references. It may select nonadjacent evidence while
+preserving branch and continuation relationships. An analysis-only bundle remains
+useful even when starting state cannot be reconstructed for a rerun.
+
+Use [the evidence-bundle design](evidence-bundles.md) for reference roles,
+provenance, manual review, and selective inspection. Separate subject, capability,
+behavior, outcome, recovery, and evaluation suitability. Later overlapping,
+versioned patterns can aid discovery and balanced dataset selection; they never
+rewrite frozen membership. Successes and recoveries remain part of representative
+work, not just failure cases. Generated grouping and deeper inspection stay within
+the exact approved model-work plan.
+
 ## Evaluation units and applied judges
 
 A meaningful unit is an objective or decision with enough starting context, often
@@ -207,8 +224,8 @@ collapse quality and economics into a single winner score.
 
 ## Delivery boundaries
 
-The first contract slice is specified in
-[plans/2026-09-15-conversation-contracts.md](plans/2026-09-15-conversation-contracts.md).
+The implemented first contract slice is documented in
+[the retained contract record](../todo/work/conversation-contracts/README.md).
 It establishes normalized synthetic evidence and a pure bounded model-work
 approval contract. It is not an operational collector, browser, or inference
 service. The next useful vertical release must collect and browse real history,

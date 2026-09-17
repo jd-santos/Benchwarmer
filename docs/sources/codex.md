@@ -1,6 +1,6 @@
 # Source: Codex
 
-- Task: SRC-CODEX-001
+- Work: [Inspect Codex capabilities](codex.md)
 - Observed version/account scope: `@openai/codex` 0.129.0 on Linux;
   authenticated non-API-key login detected, with identity and account details
   suppressed

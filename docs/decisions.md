@@ -42,7 +42,7 @@ execution is a harness. The approved workflow is in
 - **Access:** Build the frontend with `adapter-static` and a `200.html` fallback,
   then serve it and `/api/v1` from one loopback-only Python process. Use private
   Tailscale Serve HTTPS and Docker Compose restart supervision. Live target-host
-  checks remain `DEP-003`. See
+  checks remain [private deployment verification](../todo/work/private-deployment/README.md). See
   [ADR 0003](decisions/0003-serving-supervision.md).
 - **Session storage:** Keep private source snapshots plus normalized metadata
   beneath a configurable root outside the checkout. The database, artifacts,
@@ -52,7 +52,8 @@ execution is a harness. The approved workflow is in
   [ADR 0002](decisions/0002-data-recovery.md).
 - **SQLite safety:** WAL is prohibited unless the process-linked SQLite includes
   the WAL-reset fix: `3.51.3+`, `3.50.7+` on the 3.50 branch, or `3.44.6+` on the
-  3.44 branch. `ENV-001` pins a source-built Python 3.13.15 runtime with SQLite
+  3.44 branch. [The pinned runtime](runtime-recovery.md) uses source-built
+  Python 3.13.15 with SQLite
   3.53.4, validates required modules, and fails closed when its immutable runtime
   path or recovery state is not safe to use.
 - **First import adapter:** Use a schema-gated, read-only Hermes SQLite adapter.
@@ -71,9 +72,22 @@ execution is a harness. The approved workflow is in
   system prompts, tools, skills and differences. Controlled comparisons remain
   a later capability, rather than an initial requirement.
 
+## Evidence analysis direction
+
+Use [evidence references and bundles](evidence-bundles.md) between retained
+conversations and task versions. Promote exact event/block references into the
+shared enrichment contract, review manual bundles before broad extraction, and
+keep patterns overlapping and versioned. Preserve successes and recoveries in
+dataset selection. Candidate context and historical judging evidence stay separate.
+Deterministic outlines and approved selective inspection can reduce analysis cost;
+sample unflagged cases to measure what screening misses. These are planned
+capabilities and do not authorize model dispatch or change frozen runs.
+
 ## Before collector implementation
 
-`COL-001` selected the topology in ADR 0005. `COL-002` must decompose the manual
+[ADR 0005](decisions/0005-cross-machine-collection.md) selects the topology.
+The [collection work record](../todo/work/cross-machine-collection/README.md)
+must decompose the manual
 collector, versioned push protocol, enrollment, durable acknowledgment, bounded
 spool, and optional `launchd` schedule before implementation. Pin exact resource
 ceilings, credential rotation, packaging, and source-specific cursor behavior in
@@ -148,5 +162,5 @@ it, even when both are represented through the same experiment interface.
 - Repository visibility/license verification before distributing third-party
   fixtures or source material. Public code does not make personal data public.
 
-Implementation tasks live in [TODO.md](TODO.md). This document records choices
+Implementation tasks live in [the priority index](../todo/TODO.md). This document records choices
 and rationale rather than duplicating execution status.

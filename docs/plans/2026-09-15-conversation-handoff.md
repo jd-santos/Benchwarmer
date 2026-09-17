@@ -1,11 +1,12 @@
 # Conversation-library handoff
 
-> Historical handoff, superseded on 2026-09-15. `LIB-001` and `ENR-001` were
-> implemented in commit `d434703`; `COL-001` was resolved by
+> Historical handoff, superseded on 2026-09-15. [the shared conversation contract](../../todo/work/conversation-contracts/README.md) and [the bounded approval contract](../../todo/work/conversation-contracts/README.md) were
+> implemented in commit `d434703`; [the accepted collection decision](../decisions/0005-cross-machine-collection.md) was resolved by
 > [ADR 0005](../decisions/0005-cross-machine-collection.md). Use
-> [the task ledger](../TODO.md) for current status.
+> [the priority index](../../todo/TODO.md) and [retained contract record](../../todo/work/conversation-contracts/README.md) for current navigation.
+> All commands, ownership, and launch blockers below describe the old session; none authorize work now.
 
-## Resume here
+## Historical resume instructions (superseded)
 
 The user requested a handoff to another model after fixing the delegation depth
 setting and retrying the pending reviews. Stop before implementation in this
@@ -23,7 +24,7 @@ Read in order:
 
 1. [Conversation-library goals](../conversation-library.md).
 2. [Executable first-slice plan](2026-09-15-conversation-contracts.md).
-3. [Live task status](../TODO.md), especially `LIB-001`, `ENR-001`, and `COL-001`.
+3. [Live priorities](../../todo/TODO.md), especially [the shared conversation contract](../../todo/work/conversation-contracts/README.md), [the bounded approval contract](../../todo/work/conversation-contracts/README.md), and [the accepted collection decision](../decisions/0005-cross-machine-collection.md).
 4. [Experiment semantics](../experiments.md), [decisions](../decisions.md), and
    [roadmap](../roadmap.md).
 
@@ -54,7 +55,7 @@ Start evaluations with meaningful single-response/action or short applicable
 fixed-sequence units. Adaptive user follow-ups are intended later and must remain
 distinct from exact replay. Avoid leaking original answers or later state.
 
-`COL-001` is still a user planning step: histories are on multiple machines and
+[the accepted collection decision](../decisions/0005-cross-machine-collection.md) is still a user planning step: histories are on multiple machines and
 the collection service belongs in Benchwarmer. Clarify OS/device availability,
 installation rights, offline behavior, freshness/backfill scale, push/pull/transfer,
 enrollment, source access, secret exclusion, retention, and acknowledgments before
@@ -113,10 +114,10 @@ below in one async workflow with distinct keys. Use fresh context and inspect
 startup status once because earlier workflows misleadingly settled successfully
 while both children failed. Consume the actual results before implementation.
 
-- Library reviewer: inspect `LIB-001` for source-scoped identity, preserved
+- Library reviewer: inspect [the shared conversation contract](../../todo/work/conversation-contracts/README.md) for source-scoped identity, preserved
   branch/continuation structure, tool-result linkage, metadata provenance,
   private-value-safe errors, and meaningful synthetic tests.
-- Model-work reviewer: inspect `ENR-001` for immutable inputs, exact Decimal
+- Model-work reviewer: inspect [the bounded approval contract](../../todo/work/conversation-contracts/README.md) for immutable inputs, exact Decimal
   ceilings/canonicalization, digest coverage, stale approvals, and false claims
   of authentication, price validation, or durable spend reservation.
 
@@ -129,7 +130,7 @@ The parent reconciles findings into the existing plan before implementation.
 
 **Type:** Future-subagent packet `[context: medium]`.
 
-Task `LIB-001`. Follow its exact interface, envelope, negative cases, and fixture
+Task [the shared conversation contract](../../todo/work/conversation-contracts/README.md). Follow its exact interface, envelope, negative cases, and fixture
 requirements in the first-slice plan. Own only `src/benchwarmer/conversations.py`,
 `tests/test_conversations.py`, and `tests/fixtures/conversations/`. No dependencies,
 private logs, database, network, execution, or changes to shared docs/task status.
@@ -140,11 +141,11 @@ compatibility. Return patch, tests, validation blockers, and residual risks.
 
 **Type:** Future-subagent packet `[context: medium]`.
 
-Task `ENR-001`. Own only `src/benchwarmer/model_work.py` and
+Task [the bounded approval contract](../../todo/work/conversation-contracts/README.md). Own only `src/benchwarmer/model_work.py` and
 `tests/test_model_work.py`. Implement the immutable priced-work plan and exact
 approval seam from the first-slice plan. No provider calls, implicit inference,
 scheduler, permission lookup, or durable-reservation claims. Return patch, tests,
-validation blockers, and residual risks. This lane does not import `LIB-001`.
+validation blockers, and residual risks. This lane does not import [the shared conversation contract](../../todo/work/conversation-contracts/README.md).
 
 ### 4. Integrate and validate
 

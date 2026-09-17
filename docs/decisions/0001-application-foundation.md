@@ -1,7 +1,7 @@
 # ADR 0001: Application foundation
 
-- Status: Accepted by `DEC-001`
-- Task: FND-001
+- Status: Accepted by [the accepted foundation decisions](../decisions.md)
+- Work: [Record application foundation defaults](0001-application-foundation.md)
 - Date: 2026-09-08
 
 ## Context and evidence
@@ -67,7 +67,7 @@ external integration or measured concurrency need consumes it.
 
 Uvicorn is the API process runner, but this record does not choose its
 production host, port, proxy headers, process count, launcher, or supervisor.
-Those serving details belong to `DEP-002`.
+Those serving details belong to [the serving decision](0003-serving-supervision.md).
 
 ### Persistence and migrations
 
@@ -105,7 +105,7 @@ generator until a concrete feature consumes it. Initial API types remain the
 small, explicit TypeScript types required by the implemented endpoints.
 
 Pin the one-time scaffold generator exactly to `sv@0.17.0`; never resolve
-`sv@latest` during `UI-001`. ADR 0003 accepts `adapter-static`, so the scaffold
+`sv@latest` during [Scaffold SvelteKit with the selected adapter and checks](../../todo/work/application-foundation/plan.md). ADR 0003 accepts `adapter-static`, so the scaffold
 command is:
 
 ```bash
@@ -117,11 +117,11 @@ npx -y sv@0.17.0 create web \
   --install npm
 ```
 
-`UI-001` reviews every generated file, configures the accepted `200.html`
+[Scaffold SvelteKit with the selected adapter and checks](../../todo/work/application-foundation/plan.md) reviews every generated file, configures the accepted `200.html`
 fallback, and removes demo content. Playwright is added with the same pinned CLI
-only in `QA-001`, alongside its first retained browser test and process harness.
+only in [Add the disposable browser process harness](../../todo/work/application-foundation/README.md), alongside its first retained browser test and process harness.
 This keeps the selected testing direction without adding an unused dependency
-in `UI-001`.
+in [Scaffold SvelteKit with the selected adapter and checks](../../todo/work/application-foundation/plan.md).
 
 The Svelte MCP may be used for current documentation and autofixer review, but
 the required checks remain `npm run check`, `npm run lint`, focused tests, and
@@ -193,7 +193,7 @@ This ADR adds no dependency. Each implementation task adds only what it uses:
 - The API slice adds FastAPI, plain Uvicorn, and HTTP test support with the
   first application factory and API test.
 - The frontend scaffold adds only the checks and unit tooling exercised in
-  `UI-001`; Playwright waits for `QA-001`.
+  [Scaffold SvelteKit with the selected adapter and checks](../../todo/work/application-foundation/plan.md); Playwright waits for [Add the disposable browser process harness](../../todo/work/application-foundation/README.md).
 
 Do not add `pytest-asyncio`, an async SQLite driver, a worker framework, CORS
 middleware, or frontend data libraries speculatively. The coordinator should
@@ -201,11 +201,11 @@ align the implementation plan with this timing if it accepts the proposal.
 
 ### Explicit deferrals
 
-`DEP-001`, not this ADR, decides the data-root default and override, database
+[the data and recovery decision](0002-data-recovery.md), not this ADR, decides the data-root default and override, database
 and artifact paths, retention boundary, and coordinated backup, restore, and
 verification behavior.
 
-`DEP-002`, not this ADR, decides `adapter-static` versus `adapter-node`,
+[the serving decision](0003-serving-supervision.md), not this ADR, decides `adapter-static` versus `adapter-node`,
 development and production bindings, Tailscale routing and access controls,
 trusted-proxy assumptions, process supervision, restart policy, and target-host
 commands. This ADR's separation of API, presentation, and future worker
@@ -280,7 +280,7 @@ boundary without selecting unused machinery.
   migration state rather than creating or claiming schema implicitly.
 - `/api/v1` makes future incompatible contracts visible, but a future `v2`
   would carry an explicit compatibility and migration cost.
-- `UI-001` uses the static adapter accepted through `DEP-002`; a later Node/SSR
+- [Scaffold SvelteKit with the selected adapter and checks](../../todo/work/application-foundation/plan.md) uses the static adapter accepted through [the serving decision](0003-serving-supervision.md); a later Node/SSR
   requirement needs a replacement decision rather than a silent scaffold change.
 - Deferring unused dependencies reduces the initial attack and maintenance
   surface but requires each later task to add and lock its first real consumer.
@@ -291,8 +291,8 @@ boundary without selecting unused machinery.
   this ADR does not claim source capabilities.
 - The first background job must define claim/lease, transaction, cancellation,
   concurrency, and restart behavior before the worker process is implemented.
-- `DEP-003` must validate the accepted npm/static build and all production
-  serving and supervision commands on the target host after `QA-004`.
+- [private deployment verification](../../todo/work/private-deployment/README.md) must validate the accepted npm/static build and all production
+  serving and supervision commands on the target host after [foundation integration verification](../../todo/work/application-foundation/README.md).
 
 ## Verification
 
@@ -305,7 +305,7 @@ npx -y sv@0.17.0 create --help
 ```
 
 The pinned CLI completed the static command shape in a disposable directory.
-`DEC-001` accepts that adapter through ADR 0003; the scaffold probe is syntax
+[the accepted foundation decisions](../decisions.md) accepts that adapter through ADR 0003; the scaffold probe is syntax
 evidence rather than deployment verification.
 
 Validate this record with:
@@ -321,7 +321,7 @@ After coordinated acceptance, implementation verifies the selected boundaries
 through migration round trips, FastAPI contract tests, relative `/api/v1`
 frontend requests, npm's committed lockfile, browser tests, and API restart
 persistence. Target-host serving and supervisor checks remain owned by
-`DEP-003`.
+[private deployment verification](../../todo/work/private-deployment/README.md).
 
 [alembic]: https://alembic.sqlalchemy.org/en/latest/
 [fastapi-features]: https://fastapi.tiangolo.com/features/

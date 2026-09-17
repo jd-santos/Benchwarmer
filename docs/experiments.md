@@ -80,7 +80,12 @@ Tasks describe intent, starting inputs, fixture/environment needs, permitted
 capabilities, conversation script and criteria independently of the harness.
 Adapters translate those requirements into concrete execution settings.
 
-Task derivation produces a reviewable draft linked to source sessions. Separate
+Task derivation produces a reviewable draft linked to source sessions and
+[evidence bundles](evidence-bundles.md). A bundle can support analysis without
+being reconstructable as a runnable task. Candidate starting inputs and
+judge-only historical evidence have distinct typed roles and validated references.
+Prefer assertions about acceptable behavior over requiring the historical answer.
+Preserve the selected bundle and criterion revisions with the task. Separate
 initial context from subsequent answers, tool activity and outcomes. Do not leak
 the original solution or later workspace state into a fresh attempt. The
 original result is comparison evidence without being a canonical answer.
@@ -156,7 +161,10 @@ not proof of general reliability. Human notes, corrections, and calibration rema
 available without making human review a prerequisite for each judgment.
 
 Offer side-by-side outputs/artifacts and separate usage/cost views. Calibrate model
-judges against human review before treating their judgments as reliable.
+judges against human review before treating their judgments as reliable. Test
+proposed evaluators against successful, failing, and ambiguous or inapplicable
+examples; catching only the case that motivated the evaluator is insufficient.
+Retain the calibration evidence and links to motivating bundles or patterns.
 
 ## Decisions needed before execution
 
