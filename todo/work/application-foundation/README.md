@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: In progress on `task/conversation-library`. The fixture-backed Python API path is complete; the first useful home page is next.
+Status: In progress on `task/conversation-library`. The overview and fixture-backed API path are complete; the source status page is next.
 
 ## Purpose
 
@@ -36,7 +36,7 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
   - Plan: [Implementation details](plan.md#expose-fixture-backed-source-status)
   - Verify: service/API contract tests plus all Python checks
 
-- [ ] Add the first useful home page
+- [x] Add the first useful home page
   - Dependencies: Build the responsive application shell (already recorded), Add the typed API client and `/api` proxy (already recorded)
   - Plan: [Implementation details](plan.md#add-the-first-useful-home-page)
   - Verify: loading/healthy/unmigrated/error UI tests and frontend checks
@@ -131,7 +131,22 @@ Additional checks for this slice:
 - `uv run python -m compileall src` — passed
 - `git diff --check` — passed
 
-The next ready step is **Add the first useful home page**.
+The foundation home-page slice replaced the placeholder with a responsive
+system overview backed by the typed health and source clients. It distinguishes
+loading, operational, unmigrated, empty, partial, unavailable, unknown, and
+request-error states; an unmigrated database does not trigger a source query.
+The typed client now accepts SvelteKit's request-scoped `fetch`, avoiding runtime
+load warnings while preserving same-origin API paths.
+
+Additional checks for this slice:
+
+- `npm --prefix web test` — 23 passed
+- `npm --prefix web run lint` — passed
+- `npm --prefix web run check` — 0 errors and 0 warnings
+- `npm --prefix web run build` — static production build passed
+- Disposable migrated API and Vite browser review — rendered 3 sources, 1 successful import, and explicit coverage counts with a valid accessibility tree
+
+The next ready step is **Connect the source status page**.
 
 ## Supporting material
 
