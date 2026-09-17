@@ -40,7 +40,7 @@ def test_fixture_loads_partial_failed_and_never_imported_sources(
     result = load_fixture(settings, _FIXTURE)
 
     assert result.sources_created == 3
-    assert result.batches_created == 2
+    assert result.batches_created == 3
     assert result.sources_existing == 0
     assert result.batches_existing == 0
 
@@ -60,7 +60,7 @@ def test_fixture_loads_partial_failed_and_never_imported_sources(
         "fixture-source-hermes-partial",
         "fixture-source-pi-failed",
     ]
-    assert [batch.outcome for batch in batches] == ["partial", "failed"]
+    assert [batch.outcome for batch in batches] == ["partial", "succeeded", "failed"]
     assert {batch.source_id for batch in batches} == {
         "fixture-source-hermes-partial",
         "fixture-source-pi-failed",
@@ -72,16 +72,16 @@ def test_fixture_reload_is_an_idempotent_no_op(tmp_path: Path) -> None:
     first = load_fixture(settings, _FIXTURE)
     second = load_fixture(settings, _FIXTURE)
 
-    assert (first.sources_created, first.batches_created) == (3, 2)
+    assert (first.sources_created, first.batches_created) == (3, 3)
     assert (second.sources_created, second.batches_created) == (0, 0)
-    assert (second.sources_existing, second.batches_existing) == (3, 2)
+    assert (second.sources_existing, second.batches_existing) == (3, 3)
 
     engine = create_engine(settings)
     factory = create_session_factory(engine)
     try:
         with factory() as session:
             assert session.scalar(select(func.count()).select_from(Source)) == 3
-            assert session.scalar(select(func.count()).select_from(ImportBatch)) == 2
+            assert session.scalar(select(func.count()).select_from(ImportBatch)) == 3
     finally:
         engine.dispose()
 
@@ -103,14 +103,18 @@ def test_fixture_keeps_economics_coverage_dimensions_distinct(
             assert batch is not None
             assert batch.observed_coverage is not None
             assert source.configured_coverage.dimensions == {
-                "conversation_content": "available",
-                "request_usage": "unavailable",
-                "provider_charges": "unknown",
+                "sessions": "available",
+                "token_usage": "partial",
+                "request_ids": "unavailable",
+                "actual_charges": "unknown",
                 "list_price_estimates": "unavailable",
                 "subscription_expense": "unknown",
-                "quota_usage": "unknown",
+                "quota": "unknown",
+                "credits": "unknown",
+                "prompts": "partial",
+                "classifications": "unknown",
             }
-            assert batch.observed_coverage.dimensions["provider_charges"] == "unknown"
+            assert batch.observed_coverage.dimensions["actual_charges"] == "unknown"
             assert (
                 batch.observed_coverage.dimensions["list_price_estimates"]
                 == "unavailable"
@@ -196,6 +200,6 @@ def test_fixture_cli_loads_and_reloads_with_bounded_summary(tmp_path: Path) -> N
     )
 
     assert first.returncode == 0, first.stderr
-    assert first.stdout == "loaded sources=3 batches=2; existing sources=0 batches=0\n"
+    assert first.stdout == "loaded sources=3 batches=3; existing sources=0 batches=0\n"
     assert second.returncode == 0, second.stderr
-    assert second.stdout == "loaded sources=0 batches=0; existing sources=3 batches=2\n"
+    assert second.stdout == "loaded sources=0 batches=0; existing sources=3 batches=3\n"

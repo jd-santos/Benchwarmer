@@ -7,6 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel, ConfigDict
 
+from benchwarmer.api.routes.sources import create_sources_router
 from benchwarmer.config import BenchwarmerSettings
 from benchwarmer.db import create_engine, current_revision
 
@@ -42,5 +43,6 @@ def create_app(settings: BenchwarmerSettings | None = None) -> FastAPI:
             data_root_writable=True,
         )
 
+    router.include_router(create_sources_router(resolved_settings))
     app.include_router(router)
     return app

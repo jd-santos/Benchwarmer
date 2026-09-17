@@ -9,12 +9,16 @@
       "configured_coverage": {
         "schema_version": 1,
         "dimensions": {
-          "conversation_content": "available",
-          "request_usage": "unavailable",
-          "provider_charges": "unknown",
+          "sessions": "available",
+          "token_usage": "partial",
+          "request_ids": "unavailable",
+          "actual_charges": "unknown",
           "list_price_estimates": "unavailable",
           "subscription_expense": "unknown",
-          "quota_usage": "unknown"
+          "quota": "unknown",
+          "credits": "unknown",
+          "prompts": "partial",
+          "classifications": "unknown"
         }
       }
     },
@@ -26,12 +30,16 @@
       "configured_coverage": {
         "schema_version": 1,
         "dimensions": {
-          "conversation_content": "available",
-          "request_usage": "partial",
-          "provider_charges": "unavailable",
+          "sessions": "available",
+          "token_usage": "partial",
+          "request_ids": "partial",
+          "actual_charges": "unavailable",
           "list_price_estimates": "unknown",
           "subscription_expense": "unknown",
-          "quota_usage": "unknown"
+          "quota": "unknown",
+          "credits": "unknown",
+          "prompts": "unknown",
+          "classifications": "unknown"
         }
       }
     },
@@ -44,6 +52,37 @@
     }
   ],
   "import_batches": [
+    {
+      "id": "fixture-batch-hermes-succeeded",
+      "source_id": "fixture-source-hermes-partial",
+      "idempotency_key": "fixture-hermes-attempt-0",
+      "outcome": "succeeded",
+      "cursor_before": null,
+      "cursor_after": {
+        "schema_version": 1,
+        "value": {
+          "last_message_id": "fixture-message-100"
+        }
+      },
+      "observed_coverage": {
+        "schema_version": 1,
+        "dimensions": {
+          "sessions": "available",
+          "token_usage": "partial",
+          "request_ids": "unavailable",
+          "actual_charges": "unknown",
+          "list_price_estimates": "unavailable",
+          "subscription_expense": "unknown",
+          "quota": "unknown",
+          "credits": "unknown",
+          "prompts": "partial",
+          "classifications": "unknown"
+        }
+      },
+      "started_at": "2026-09-16T11:55:00Z",
+      "completed_at": "2026-09-16T11:55:02Z",
+      "error_summary": null
+    },
     {
       "id": "fixture-batch-hermes-partial",
       "source_id": "fixture-source-hermes-partial",
@@ -59,12 +98,16 @@
       "observed_coverage": {
         "schema_version": 1,
         "dimensions": {
-          "conversation_content": "partial",
-          "request_usage": "partial",
-          "provider_charges": "unknown",
+          "sessions": "partial",
+          "token_usage": "partial",
+          "request_ids": "unavailable",
+          "actual_charges": "unknown",
           "list_price_estimates": "unavailable",
           "subscription_expense": "unknown",
-          "quota_usage": "unknown"
+          "quota": "unknown",
+          "credits": "unknown",
+          "prompts": "partial",
+          "classifications": "unknown"
         }
       },
       "started_at": "2026-09-16T12:00:00Z",
@@ -84,12 +127,16 @@
       "observed_coverage": {
         "schema_version": 1,
         "dimensions": {
-          "conversation_content": "unknown",
-          "request_usage": "unknown",
-          "provider_charges": "unavailable",
+          "sessions": "unknown",
+          "token_usage": "unknown",
+          "request_ids": "unknown",
+          "actual_charges": "unavailable",
           "list_price_estimates": "unknown",
           "subscription_expense": "unknown",
-          "quota_usage": "unknown"
+          "quota": "unknown",
+          "credits": "unknown",
+          "prompts": "unknown",
+          "classifications": "unknown"
         }
       },
       "started_at": "2026-09-16T12:05:00Z",

@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: In progress on `task/conversation-library`. Import batches, revision health, and sanitized fixture loading are complete; source status is next.
+Status: In progress on `task/conversation-library`. The fixture-backed Python API path is complete; the first useful home page is next.
 
 ## Purpose
 
@@ -31,7 +31,7 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
   - Plan: [Implementation details](plan.md#add-sanitized-source-fixture-loading)
   - Verify: deterministic, idempotent fixture-load command and focused tests
 
-- [ ] Expose fixture-backed source status
+- [x] Expose fixture-backed source status
   - Dependencies: [Verify the real database revision in health](../application-foundation/README.md), [Add sanitized source fixture loading](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#expose-fixture-backed-source-status)
   - Verify: service/API contract tests plus all Python checks
@@ -116,7 +116,22 @@ Additional checks for this slice:
 - `uv run python -m compileall src` — passed
 - Disposable command run twice — first created 3 sources and 2 batches; second recognized all 5 as existing
 
-The next ready step is **Expose fixture-backed source status**.
+The source-status slice added a database-backed `GET /api/v1/sources` route with
+stable display ordering, successful-import timestamps, and all ten public
+coverage dimensions. Missing configured coverage remains `unknown`; failed and
+partial batches never become successful imports. The synthetic Hermes history
+now includes a successful import followed by a partial attempt, so the contract
+exercises both freshness and degraded later work.
+
+Additional checks for this slice:
+
+- `uv run pytest tests/services/test_fixtures.py tests/services/test_source_status.py tests/api/test_sources.py` — 11 passed
+- `uv run pytest` — 180 passed with one upstream Starlette/AnyIO deprecation warning
+- `uv run ruff check .` and `uv run ruff format --check .` — passed
+- `uv run python -m compileall src` — passed
+- `git diff --check` — passed
+
+The next ready step is **Add the first useful home page**.
 
 ## Supporting material
 
