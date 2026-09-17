@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: In progress on `task/conversation-library`. The disposable browser harness is complete; desktop and mobile browser-flow verification is next.
+Status: In progress on `task/conversation-library`. Desktop and mobile foundation flows are verified; API restart persistence is next.
 
 ## Purpose
 
@@ -53,7 +53,7 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
   - Verify: Playwright starts, migrates, seeds, stops, and cleans up disposable
     processes/state
 
-- [ ] Verify desktop and mobile browser flows
+- [x] Verify desktop and mobile browser flows
   - Dependencies: [Add the disposable browser process harness](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#verify-desktop-and-mobile-browser-flows)
   - Verify: `npm --prefix web run test:e2e` at desktop and 375px viewports
@@ -178,7 +178,27 @@ Additional checks for this slice:
 - `npm --prefix web run build` — static production build passed
 - Temporary-root audit after Playwright exit — no `benchwarmer-playwright-*` directories remained
 
-The next ready step is **Verify desktop and mobile browser flows**.
+The browser-flow slice expanded the harness into full desktop and 375px paths.
+Both start at the fixture-backed overview, verify health and source counts,
+navigate to the source page, and assert all ten coverage labels and explicit
+coverage states. The phone path reaches navigation through the visible skip
+link and keyboard focus order, opens the menu with Enter, and completes
+navigation without pointer input. Both viewports measure page width to prevent
+horizontal overflow. A same-run request interception verifies the actionable
+API-failure message without changing disposable storage.
+
+Additional checks for this slice:
+
+- `npm --prefix web test` — 27 unit tests and 4 browser tests passed
+- `npm --prefix web run lint` — passed
+- `npm --prefix web run check` — 0 errors and 0 warnings
+- `npm --prefix web run build` — static production build passed
+- Desktop and 375px flows — fixture-backed overview and source records verified
+- Mobile keyboard flow — skip link, brand, menu, overview, and source links verified in focus order
+- API interception — same-origin `/api/` failure rendered the recovery alert
+- Overflow checks — desktop and mobile document widths remained within their viewports
+
+The next ready step is **Verify API restart persistence**.
 
 ## Supporting material
 
