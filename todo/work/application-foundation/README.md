@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: In progress on `task/conversation-library`. The fixture-backed API and source status UI are complete; the disposable browser harness is next.
+Status: In progress on `task/conversation-library`. The disposable browser harness is complete; desktop and mobile browser-flow verification is next.
 
 ## Purpose
 
@@ -47,7 +47,7 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
   - Verify: populated/empty/error UI tests, frontend checks, and Svelte MCP
     autofixer review where available
 
-- [ ] Add the disposable browser process harness
+- [x] Add the disposable browser process harness
   - Dependencies: [Expose fixture-backed source status](../application-foundation/README.md), [Connect the source status page](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#add-the-disposable-browser-process-harness)
   - Verify: Playwright starts, migrates, seeds, stops, and cleans up disposable
@@ -162,7 +162,23 @@ Additional checks for this slice:
 - Disposable migrated API and Vite browser review — rendered all 3 synthetic sources through `/api`, with readable narrow-screen cards, current navigation state, a valid accessibility tree, and no browser errors
 - Svelte MCP was unavailable; Prettier, ESLint, `svelte-check`, component tests, production build, and browser review provided the fallback validation
 
-The next ready step is **Add the disposable browser process harness**.
+The browser-harness slice added Playwright with a worker-scoped application
+fixture. Each worker allocates independent loopback ports and a temporary data
+root, migrates and seeds synthetic records, starts the API and Vite proxy, waits
+for both services, and owns process-group shutdown and recursive cleanup. The
+generated demo was removed. A smoke test verifies the migrated API and source
+page, while a second overlapping application instance proves that teardown
+removes its root without colliding with the active worker fixture.
+
+Additional checks for this slice:
+
+- `npm --prefix web test` — 27 unit tests and 2 browser tests passed
+- `npm --prefix web run lint` — passed
+- `npm --prefix web run check` — 0 errors and 0 warnings
+- `npm --prefix web run build` — static production build passed
+- Temporary-root audit after Playwright exit — no `benchwarmer-playwright-*` directories remained
+
+The next ready step is **Verify desktop and mobile browser flows**.
 
 ## Supporting material
 
