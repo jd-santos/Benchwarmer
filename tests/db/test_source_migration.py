@@ -230,7 +230,7 @@ def _assert_sources_schema(root: Path) -> None:
 def test_sources_migration_round_trips_schema_and_revision(tmp_path: Path) -> None:
     root = tmp_path / "private"
 
-    upgrade = _run_alembic(root, "upgrade", "head")
+    upgrade = _run_alembic(root, "upgrade", "0001")
     assert upgrade.returncode == 0, upgrade.stderr
     assert _revision(root) == "0001"
     _assert_sources_schema(root)
@@ -239,7 +239,7 @@ def test_sources_migration_round_trips_schema_and_revision(tmp_path: Path) -> No
     assert downgrade.returncode == 0, downgrade.stderr
     assert _revision(root) is None
 
-    upgrade_again = _run_alembic(root, "upgrade", "head")
+    upgrade_again = _run_alembic(root, "upgrade", "0001")
     assert upgrade_again.returncode == 0, upgrade_again.stderr
     assert _revision(root) == "0001"
     _assert_sources_schema(root)

@@ -31,6 +31,7 @@ def create_engine(settings: BenchwarmerSettings) -> Engine:
 
     engine = sqlalchemy_create_engine(database_url(settings))
     event.listen(engine, "do_connect", _verify_connection_preconditions(database_path))
+    event.listen(engine, "connect", _enable_sqlite_foreign_keys)
     return engine
 
 
@@ -43,6 +44,16 @@ def current_revision(engine: Engine) -> str | None:
     """Return the applied Alembic revision, or None for an unmigrated database."""
     with engine.connect() as connection:
         return MigrationContext.configure(connection).get_current_revision()
+
+
+def _enable_sqlite_foreign_keys(connection: object, record: object) -> None:
+    """Enable SQLite foreign-key enforcement for every DBAPI connection."""
+    del record
+    cursor = connection.cursor()  # type: ignore[attr-defined]
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+    finally:
+        cursor.close()
 
 
 def _verify_connection_preconditions(database_path: Path):

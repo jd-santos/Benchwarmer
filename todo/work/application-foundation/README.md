@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: Planned. Implementation and delivery are pending unless a supporting record explicitly says otherwise.
+Status: In progress on `task/conversation-library`. The import-batch slice is complete; real revision health is next.
 
 ## Purpose
 
@@ -16,7 +16,7 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
 
 ## Work
 
-- [ ] Add import-batch records and migration
+- [x] Add import-batch records and migration
   - Dependencies: Add source records and migration (already recorded)
   - Plan: [Implementation details](plan.md#add-import-batch-records-and-migration)
   - Verify: migration round-trip and focused model tests
@@ -74,9 +74,22 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
 
 ## Verification
 
-Before implementing a broad step, specify its files, fixtures, and focused
-checks here. Follow [repository validation](../../../AGENTS.md) and record actual
-results at handoff. This record currently defines planned work.
+The import-batch slice added `ImportBatch`, versioned cursor and observed-coverage
+envelopes, migration `0002`, SQLite foreign-key enforcement, and model/migration
+coverage for terminal outcomes, retry identity, provenance, and round trips.
+
+Actual checks on `task/conversation-library`:
+
+- `uv run pytest tests/models/test_import_batch.py tests/db/test_import_batch_migration.py` — 11 passed
+- `uv run ruff check .` — passed
+- `uv run ruff format --check .` — 82 files already formatted
+- `uv run python -m compileall src` — passed
+- `uv run pytest` — 168 passed with one upstream Starlette/AnyIO deprecation warning
+- `git diff --check` — passed
+
+The full suite also found and corrected one stale test reference to the legacy
+foundation-plan redirect. The next ready step is **Verify the real database
+revision in health**.
 
 ## Supporting material
 
