@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: In progress on `task/conversation-library`. The import-batch slice is complete; real revision health is next.
+Status: In progress on `task/conversation-library`. Import batches and real revision health are complete; sanitized fixture loading is next.
 
 ## Purpose
 
@@ -21,7 +21,7 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
   - Plan: [Implementation details](plan.md#add-import-batch-records-and-migration)
   - Verify: migration round-trip and focused model tests
 
-- [ ] Verify the real database revision in health
+- [x] Verify the real database revision in health
   - Dependencies: Add truthful unmigrated API health (already recorded), [Add import-batch records and migration](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#verify-the-real-database-revision-in-health)
   - Verify: health tests for unmigrated and migrated temporary databases
@@ -88,8 +88,20 @@ Actual checks on `task/conversation-library`:
 - `git diff --check` — passed
 
 The full suite also found and corrected one stale test reference to the legacy
-foundation-plan redirect. The next ready step is **Verify the real database
-revision in health**.
+foundation-plan redirect.
+
+The health-revision slice added an integration test that migrates a disposable
+database and verifies `/api/v1/health` reports revision `0002`. The existing API
+implementation passed without changes, confirming that the `/api/v1` contract
+version remains separate from the inspected Alembic revision.
+
+Additional checks for this slice:
+
+- `uv run pytest tests/api/test_health.py` — 9 passed with one upstream Starlette/AnyIO deprecation warning
+- `uv run pytest` — 169 passed with the same warning
+- Disposable Uvicorn and `curl` loopback check — returned status `ok` and revision `0002`
+
+The next ready step is **Add sanitized source fixture loading**.
 
 ## Supporting material
 

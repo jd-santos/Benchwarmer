@@ -9,6 +9,21 @@ from benchwarmer.api.app import create_app
 from benchwarmer.config import BenchwarmerSettings
 
 
+_REPOSITORY_ROOT = Path(__file__).parents[2]
+
+
+def _upgrade_database(root: Path) -> subprocess.CompletedProcess[str]:
+    environment = os.environ | {"BENCHWARMER_DATA_ROOT": str(root)}
+    return subprocess.run(
+        ["uv", "run", "alembic", "upgrade", "head"],
+        cwd=_REPOSITORY_ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
 def test_health_reports_an_unmigrated_private_database(tmp_path: Path) -> None:
     settings = BenchwarmerSettings(data_root=tmp_path / "private")
     client = TestClient(create_app(settings))
@@ -21,6 +36,24 @@ def test_health_reports_an_unmigrated_private_database(tmp_path: Path) -> None:
     assert response.json() == {
         "status": "ok",
         "alembic_revision": None,
+        "data_root_writable": True,
+    }
+
+
+def test_health_reports_the_real_revision_of_a_migrated_database(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "private"
+    upgrade = _upgrade_database(root)
+    assert upgrade.returncode == 0, upgrade.stderr
+    client = TestClient(create_app(BenchwarmerSettings(data_root=root)))
+
+    response = client.get("/api/v1/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok",
+        "alembic_revision": "0002",
         "data_root_writable": True,
     }
 
