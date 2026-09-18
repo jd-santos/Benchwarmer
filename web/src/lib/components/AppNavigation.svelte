@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { afterNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { Pathname } from '$app/types';
 	import { onMount } from 'svelte';
@@ -16,6 +17,10 @@
 
 	let isNarrow = $state(navigationQuery()?.matches ?? false);
 	let navigationOpen = $state(false);
+
+	afterNavigate(() => {
+		navigationOpen = false;
+	});
 
 	function isCurrent(href: string) {
 		return currentPath === href || (href !== '/' && currentPath.startsWith(`${href}/`));

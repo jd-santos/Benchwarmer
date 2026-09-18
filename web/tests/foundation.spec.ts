@@ -88,6 +88,8 @@ test('completes the fixture-backed flow at 375px using only the keyboard', async
 	await page.keyboard.press('Enter');
 
 	await expect(page).toHaveURL(`${foundation.webUrl}/sources`);
+	await expect(menu).toHaveAttribute('aria-expanded', 'false');
+	await expect(page.locator('[data-navigation-links]')).toBeHidden();
 	await expect(page.getByRole('heading', { name: 'Sources', exact: true })).toBeVisible();
 	await expectFixtureSources(page);
 	await expectNoHorizontalOverflow(page);
