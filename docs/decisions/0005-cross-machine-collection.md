@@ -1,7 +1,7 @@
 # ADR 0005: Push collection from personal Macs
 
-- Status: Accepted by [the accepted collection decision](0005-cross-machine-collection.md)
-- Work: [the accepted collection decision](0005-cross-machine-collection.md)
+- Status: Accepted
+- Work: [Collect conversations from other machines](../../todo/work/cross-machine-collection/README.md)
 - Date: 2026-09-15
 
 ## Context and evidence
@@ -77,7 +77,7 @@ databases, or modify source retention. Live SQLite inputs require a consistent
 read transaction or the SQLite backup API; copying a database file without its
 WAL state is invalid.
 
-Hermes remains the first implemented adapter. Codex and Pi use the same collector
+Hermes remains the first selected adapter. Codex and Pi use the same collector
 protocol when their source adapters are implemented, without pretending their
 native capabilities or cursors are identical.
 
@@ -210,9 +210,10 @@ protocol can support a watcher later if measured freshness requires it.
 
 ### Native desktop application and library synchronization
 
-Deferred. The private browser already works across the tailnet. Offline replicas
-would add local database lifecycle, synchronization, conflict resolution, signing,
-and update work unrelated to reliable collection.
+Deferred. The private browser is intended to work across the tailnet once
+deployment is implemented and verified. Offline replicas would add local database
+lifecycle, synchronization, conflict resolution, signing, and update work unrelated
+to reliable collection.
 
 ## Consequences
 

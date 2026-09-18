@@ -1,7 +1,7 @@
 # ADR 0004: Select Hermes as the first import adapter
 
-- Status: Accepted by [the first-adapter decision](0004-first-import-adapter.md) coordinator review
-- Work: [the first-adapter decision](0004-first-import-adapter.md)
+- Status: Accepted
+- Work: [Import Hermes conversations reliably](../../todo/work/hermes-import/README.md)
 - Date: 2026-09-09
 
 ## Context and evidence
