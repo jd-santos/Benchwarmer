@@ -114,3 +114,23 @@ test('removes its temporary data root during teardown', async () => {
 
 	await expect(access(dataRoot)).rejects.toMatchObject({ code: 'ENOENT' });
 });
+
+test('retains durable fixture state across a FastAPI restart', async ({ foundation, page }) => {
+	const beforeHealth = await page.request.get(`${foundation.apiUrl}/api/v1/health`);
+	const beforeSources = await page.request.get(`${foundation.apiUrl}/api/v1/sources`);
+	expect(beforeHealth.ok()).toBe(true);
+	expect(beforeSources.ok()).toBe(true);
+
+	await foundation.restart();
+
+	const afterHealth = await page.request.get(`${foundation.apiUrl}/api/v1/health`);
+	const afterSources = await page.request.get(`${foundation.apiUrl}/api/v1/sources`);
+	expect(afterHealth.ok()).toBe(true);
+	expect(afterSources.ok()).toBe(true);
+	expect(await afterHealth.json()).toEqual(await beforeHealth.json());
+	expect(await afterSources.json()).toEqual(await beforeSources.json());
+
+	await page.goto(foundation.webUrl);
+	await expect(page.getByRole('heading', { name: 'System overview' })).toBeVisible();
+	await expect(page.getByText('3 configured', { exact: true })).toBeVisible();
+});

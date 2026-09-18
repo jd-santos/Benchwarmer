@@ -8,6 +8,7 @@ import path from 'node:path';
 const webRoot = path.resolve(import.meta.dirname, '../..');
 const repositoryRoot = path.resolve(webRoot, '..');
 const fixturePath = path.join(repositoryRoot, 'tests/fixtures/sources.json');
+const builtUiRoot = path.join(webRoot, 'build');
 
 interface ManagedProcess {
 	child: ChildProcess;
@@ -20,6 +21,7 @@ export interface Foundation {
 	apiUrl: string;
 	webUrl: string;
 	dataRoot: string;
+	restart: () => Promise<void>;
 	stop: () => Promise<void>;
 }
 
@@ -43,12 +45,8 @@ function allocatePort(): Promise<number> {
 	});
 }
 
-function run(command: string, args: string[], environment: NodeJS.ProcessEnv): void {
-	const result = spawnSync(command, args, {
-		cwd: repositoryRoot,
-		env: environment,
-		encoding: 'utf8'
-	});
+function run(command: string, args: string[], cwd: string, environment: NodeJS.ProcessEnv): void {
+	const result = spawnSync(command, args, { cwd, env: environment, encoding: 'utf8' });
 	if (result.status !== 0) {
 		const detail = [result.stdout, result.stderr].filter(Boolean).join('\n').trim();
 		throw new Error(`${command} ${args.join(' ')} failed${detail ? `:\n${detail}` : ''}`);
@@ -132,30 +130,18 @@ async function stopProcess(managed: ManagedProcess): Promise<void> {
 
 export async function startFoundation(): Promise<Foundation> {
 	const dataRoot = await mkdtemp(path.join(tmpdir(), 'benchwarmer-playwright-'));
-	const processes: ManagedProcess[] = [];
+	let api: ManagedProcess | undefined;
 	let stopped = false;
-
-	const stop = async () => {
-		if (stopped) return;
-		stopped = true;
-		for (const process of processes.reverse()) await stopProcess(process);
-		await rm(dataRoot, { recursive: true, force: true });
+	const apiPort = await allocatePort();
+	const apiUrl = `http://127.0.0.1:${apiPort}`;
+	const apiEnvironment = {
+		...process.env,
+		BENCHWARMER_DATA_ROOT: dataRoot,
+		BENCHWARMER_UI_ROOT: builtUiRoot
 	};
 
-	try {
-		const [apiPort, webPort] = await Promise.all([allocatePort(), allocatePort()]);
-		const apiUrl = `http://127.0.0.1:${apiPort}`;
-		const webUrl = `http://127.0.0.1:${webPort}`;
-		const apiEnvironment = { ...process.env, BENCHWARMER_DATA_ROOT: dataRoot };
-
-		run('uv', ['run', 'alembic', 'upgrade', 'head'], apiEnvironment);
-		run(
-			'uv',
-			['run', 'python', '-m', 'benchwarmer.services.fixtures', '--load', fixturePath],
-			apiEnvironment
-		);
-
-		const api = start(
+	const startApi = async () => {
+		api = start(
 			'uv',
 			[
 				'run',
@@ -170,19 +156,37 @@ export async function startFoundation(): Promise<Foundation> {
 			repositoryRoot,
 			apiEnvironment
 		);
-		processes.push(api);
 		await waitUntilReady(`${apiUrl}/api/v1/health`, api);
+	};
 
-		const web = start(
-			'npm',
-			['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(webPort), '--strictPort'],
-			webRoot,
-			{ ...process.env, BENCHWARMER_API_ORIGIN: apiUrl }
+	const stop = async () => {
+		if (stopped) return;
+		stopped = true;
+		if (api) await stopProcess(api);
+		await rm(dataRoot, { recursive: true, force: true });
+	};
+
+	try {
+		run('npm', ['run', 'build'], webRoot, process.env);
+		run('uv', ['run', 'alembic', 'upgrade', 'head'], repositoryRoot, apiEnvironment);
+		run(
+			'uv',
+			['run', 'python', '-m', 'benchwarmer.services.fixtures', '--load', fixturePath],
+			repositoryRoot,
+			apiEnvironment
 		);
-		processes.push(web);
-		await waitUntilReady(webUrl, web);
+		await startApi();
 
-		return { apiUrl, webUrl, dataRoot, stop };
+		return {
+			apiUrl,
+			webUrl: apiUrl,
+			dataRoot,
+			restart: async () => {
+				if (api) await stopProcess(api);
+				await startApi();
+			},
+			stop
+		};
 	} catch (error) {
 		await stop();
 		throw error;
