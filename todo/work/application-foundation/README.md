@@ -1,6 +1,10 @@
 # Finish the application foundation
 
-Status: Complete on `task/conversation-library`; pull request #5 is pending merge. The final integration gate and independent acceptance review passed.
+Status: Complete on `task/conversation-library`. Earlier foundation work merged
+in [pull request #5](https://github.com/jd-santos/Benchwarmer/pull/5); the
+single-origin completion is pending in
+[pull request #6](https://github.com/jd-santos/Benchwarmer/pull/6). The final
+integration gate and independent acceptance review passed.
 
 ## Purpose
 
