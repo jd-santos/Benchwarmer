@@ -14,5 +14,5 @@ Retained evidence:
 - [Accepted decisions](../docs/decisions/README.md)
 - [Source inspection reports](../docs/sources/README.md)
 
-No changelog or verified release/merged-PR references were established during
-this migration. Add links when they exist; do not infer delivery from checkboxes.
+See [the changelog](../CHANGELOG.md) for maintained release notes. Unreleased
+entries do not claim a merge, release, or deployment.

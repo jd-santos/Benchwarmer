@@ -72,6 +72,20 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
     processes, and pass desktop/mobile/restart flows with no private or
     generated artifacts tracked
 
+## Shipping reconciliation
+
+A second local session created the initial changelog commit while this branch was
+under review. Preserve that commit and reconcile forward without rewriting history:
+
+- [x] Merge both changelog drafts and link the maintained changelog from the workbench.
+- [x] Remove generated test output and rerun affected validation.
+- [ ] Push `task/conversation-library` and open a pull request against `main`.
+
+Reconciliation validation reused the green Python and frontend checks from the
+shipping review. The reviewer fix then passed 27 frontend unit tests, 4 browser
+tests, lint, `svelte-check`, the production build, LSP diagnostics, and
+`git diff --check`. The generated `.vitest/` output was removed.
+
 ## Verification
 
 The import-batch slice added `ImportBatch`, versioned cursor and observed-coverage
