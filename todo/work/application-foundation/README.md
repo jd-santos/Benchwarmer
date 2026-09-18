@@ -79,7 +79,8 @@ under review. Preserve that commit and reconcile forward without rewriting histo
 
 - [x] Merge both changelog drafts and link the maintained changelog from the workbench.
 - [x] Remove generated test output and rerun affected validation.
-- [ ] Push `task/conversation-library` and open a pull request against `main`.
+- [x] Push `task/conversation-library` and open
+  [pull request #5](https://github.com/jd-santos/Benchwarmer/pull/5) against `main`.
 
 Reconciliation validation reused the green Python and frontend checks from the
 shipping review. The reviewer fix then passed 27 frontend unit tests, 4 browser
