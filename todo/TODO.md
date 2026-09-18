@@ -15,7 +15,7 @@ No current tasks at this priority.
 
 ## P2: High
 
-- [ ] [Finish the application foundation](work/application-foundation/README.md)
+- [x] [Finish the application foundation](work/application-foundation/README.md)
 - [ ] [Import Hermes conversations reliably](work/hermes-import/README.md)
 - [ ] [Browse, search, and annotate conversations](work/conversation-library/README.md)
 - [ ] [Define evidence references and review conversation bundles](work/evidence-bundles/README.md)

@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: In progress on `task/conversation-library`. Desktop and mobile foundation flows are verified; single-origin FastAPI serving is next.
+Status: Complete on `task/conversation-library`; pull request #5 is pending merge. The final integration gate and independent acceptance review passed.
 
 ## Purpose
 
@@ -8,7 +8,7 @@ Complete the fixture-backed path through SQLite, the Python API, and the respons
 
 ## Dependencies and order
 
-The existing source records, health boundary, runtime, shell, and API client are present. Follow the remaining sections of [the implementation plan](plan.md); completed sections are reference material.
+The fixture-backed foundation is complete. The [implementation plan](plan.md) is retained as reference material for the accepted boundaries and verification.
 
 ## Acceptance criteria
 
@@ -58,19 +58,19 @@ A fresh checkout can migrate and seed disposable state, build the Svelte applica
   - Plan: [Implementation details](plan.md#verify-desktop-and-mobile-browser-flows)
   - Verify: `npm --prefix web run test:e2e` at desktop and 375px viewports
 
-- [ ] Serve the built application through FastAPI
+- [x] Serve the built application through FastAPI
   - Dependencies: [Verify desktop and mobile browser flows](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#serve-the-built-application-through-fastapi)
   - Verify: one origin serves the built UI and `/api/v1`; unknown API routes,
     mutations, and missing assets never fall through to the SPA document
 
-- [ ] Verify API restart persistence
+- [x] Verify API restart persistence
   - Dependencies: [Serve the built application through FastAPI](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#verify-api-restart-persistence)
   - Verify: migrated fixture records survive a single-origin API process
     restart; the stateless frontend does not own persistence
 
-- [ ] Document development and final integration
+- [x] Document development and final integration
   - Dependencies: [Verify API restart persistence](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#document-development-and-final-integration)
   - Output: `docs/development.md` and `scripts/run-foundation-demo.sh`
@@ -219,7 +219,38 @@ Additional checks for this slice:
 - API interception — same-origin `/api/` failure rendered the recovery alert
 - Overflow checks — desktop and mobile document widths remained within their viewports
 
-The next ready step is **Serve the built application through FastAPI**.
+The final single-origin slice replaced Vite in the browser harness with the built
+Svelte application served by FastAPI. Environment startup now requires a valid,
+absolute `BENCHWARMER_UI_ROOT`; explicit API-only test construction remains
+available. API routes take precedence, unsafe methods and unknown API paths do
+not receive the SPA document, static traversal is rejected, and missing assets
+return errors. The restart flow verifies unchanged health and source responses,
+then reloads the browser view from the replacement process.
+
+Final integration checks:
+
+- Pinned runtime validation and `uv sync --locked --dev`: passed
+- `uv run pytest`: 185 passed with one upstream Starlette/AnyIO deprecation warning
+- `uv run ruff check .`, `uv run ruff format --check .`, and compileall: passed
+- `npm --prefix web ci`: passed; npm reported 3 low-severity audit findings
+- `svelte-check` and frontend lint: 0 errors and 0 warnings
+- Frontend unit tests: 27 passed
+- Single-origin desktop, 375px, API-failure, cleanup, and restart browser tests:
+  5 passed
+- Static production build and `git diff --check`: passed
+- `scripts/run-foundation-demo.sh`: served the UI and API, loaded only 3
+  synthetic sources, and removed its temporary data root after termination
+- Demo refusal checks: rejected a preconfigured data root and invalid port
+  before preparing state
+- Independent acceptance review: no runtime, privacy, traversal, routing, or
+  shell-cleanup blocker found
+
+Image construction, immutable `/opt/benchwarmer/ui` packaging, cache headers,
+Tailscale routing, proxy trust, and target-host verification remain in
+[private deployment](../private-deployment/README.md).
+
+The next ready step is
+**[Import Hermes conversations reliably](../hermes-import/README.md)**.
 
 ## Supporting material
 
