@@ -4,7 +4,13 @@ version = "0.1.0"
 description = "Portable evaluations for comparing model utility and economics"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "alembic>=1.20.0",
+    "fastapi>=0.141.1",
+    "pydantic>=2.13.5",
+    "sqlalchemy>=2.0.53",
+    "uvicorn>=0.53.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.10.2,<0.11.0"]
@@ -12,8 +18,14 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13.0",
     "pytest>=9.1.1",
     "ruff>=0.16.6",
+]
+
+[tool.pyright]
+executionEnvironments = [
+    { root = ".", extraPaths = ["src"] },
 ]
 
 [tool.ruff]

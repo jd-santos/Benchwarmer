@@ -28,6 +28,7 @@ export class ApiClientError extends Error {
 
 export interface ApiRequestOptions {
 	signal?: AbortSignal;
+	fetch?: typeof globalThis.fetch;
 }
 
 const coverageValues: ReadonlySet<CoverageValue> = new Set([
@@ -93,10 +94,14 @@ function isAbort(error: unknown, signal: AbortSignal | undefined): boolean {
 	);
 }
 
-async function getJson(path: string, signal: AbortSignal | undefined): Promise<unknown> {
+async function getJson(
+	path: string,
+	signal: AbortSignal | undefined,
+	request: typeof globalThis.fetch = globalThis.fetch
+): Promise<unknown> {
 	let response: Response;
 	try {
-		response = await fetch(path, {
+		response = await request(path, {
 			method: 'GET',
 			headers: { Accept: 'application/json' },
 			signal
@@ -138,7 +143,7 @@ async function getJson(path: string, signal: AbortSignal | undefined): Promise<u
 }
 
 export async function getHealth(options: ApiRequestOptions = {}): Promise<HealthResponse> {
-	const value = await getJson('/api/v1/health', options.signal);
+	const value = await getJson('/api/v1/health', options.signal, options.fetch);
 	if (!isHealthResponse(value)) {
 		throw new ApiClientError('The API health response did not match its contract.', {
 			kind: 'invalid-contract'
@@ -148,7 +153,7 @@ export async function getHealth(options: ApiRequestOptions = {}): Promise<Health
 }
 
 export async function getSources(options: ApiRequestOptions = {}): Promise<SourcesResponse> {
-	const value = await getJson('/api/v1/sources', options.signal);
+	const value = await getJson('/api/v1/sources', options.signal, options.fetch);
 	if (!isSourcesResponse(value)) {
 		throw new ApiClientError('The API sources response did not match its contract.', {
 			kind: 'invalid-contract'

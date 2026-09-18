@@ -6,12 +6,11 @@ without sharing an output file.
 
 ## Ownership
 
-- A source worker edits only its assigned file.
-- Source workers do not edit `docs/TODO.md`, `docs/source-coverage.md`, or another
-  source report.
-- The `SRC-001` coordinating task reads all completed reports, builds
-  `docs/source-coverage.md`, and records status transitions in `docs/TODO.md`.
-- Reports describe observed capability; they do not select the first adapter.
+An assigned worker owns one report and its work record. An integrator maintains
+the shared [coverage matrix](../source-coverage.md) and
+[priority index](../../todo/TODO.md). Use separate worktrees for concurrent
+writers. Reports describe dated observed capability; the accepted adapter
+decision determines implementation order.
 
 ## Completed reports
 
@@ -26,7 +25,7 @@ without sharing an output file.
 ```markdown
 # Source: Name
 
-- Task: SOURCE-TASK-ID
+- Work: Readable source-inspection task name
 - Observed version/account scope: ...
 - Inspected: YYYY-MM-DD
 

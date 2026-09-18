@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "normalized-pi-branch",
+  "revision": "revision-pi-1",
+  "source": {
+    "kind": "pi",
+    "scope_id": "synthetic-workspace-a",
+    "native_id": "native-session-1",
+    "adapter_version": "fixture-1",
+    "source_version": null,
+    "captured_at": "2026-09-15T12:00:00+00:00",
+    "snapshot_id": "snapshot-pi-1",
+    "extensions": {}
+  },
+  "events": [
+    {"id": "event-root", "native_id": "native-root", "ordinal": 0, "parent_id": null, "kind": "message", "role": "user", "occurred_at": null, "content": [{"id": "block-root", "kind": "text", "text": "Synthetic branch root.", "tool_call_id": null, "artifact_id": null, "extensions": {}}], "extensions": {}},
+    {"id": "event-left", "native_id": "native-left", "ordinal": 1, "parent_id": "event-root", "kind": "message", "role": "assistant", "occurred_at": null, "content": [{"id": "block-left-call", "kind": "tool_call", "text": null, "tool_call_id": "native-call-1", "artifact_id": null, "extensions": {}}], "extensions": {}},
+    {"id": "event-left-result", "native_id": "native-left-result", "ordinal": 2, "parent_id": "event-left", "kind": "message", "role": "tool", "occurred_at": null, "content": [{"id": "block-left-result", "kind": "tool_result", "text": null, "tool_call_id": "native-call-1", "artifact_id": null, "extensions": {}}], "extensions": {}},
+    {"id": "event-right", "native_id": "native-right", "ordinal": 3, "parent_id": "event-root", "kind": "message", "role": "assistant", "occurred_at": null, "content": [{"id": "block-right-call", "kind": "tool_call", "text": null, "tool_call_id": "native-call-1", "artifact_id": null, "extensions": {}}], "extensions": {}}
+  ],
+  "artifacts": [],
+  "relationships": [],
+  "metadata": [],
+  "coverage": {"tool_calls": "available", "messages": "available"},
+  "extensions": {}
+}

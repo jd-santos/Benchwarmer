@@ -57,6 +57,13 @@ describe('getHealth', () => {
 		expect(fetchMock.mock.calls[0]?.[0]).not.toMatch(/^https?:\/\//);
 	});
 
+	it('uses a load-scoped fetch implementation when provided', async () => {
+		const request = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(healthResponse));
+
+		await expect(getHealth({ fetch: request })).resolves.toEqual(healthResponse);
+		expect(request).toHaveBeenCalledOnce();
+	});
+
 	it('preserves the original abort reason and identity', async () => {
 		const controller = new AbortController();
 		const abortReason = new DOMException('request cancelled', 'AbortError');

@@ -1,7 +1,7 @@
 # ADR 0002: Private data and recovery boundary
 
-- Status: Accepted by `DEC-001`
-- Task: DEP-001
+- Status: Accepted by [the accepted foundation decisions](../decisions.md)
+- Work: [the data and recovery decision](0002-data-recovery.md)
 - Date: 2026-09-08
 
 ## Context and evidence
@@ -15,8 +15,8 @@ can produce a restore with missing or mismatched evidence.
 
 The foundation plan already reserves `BENCHWARMER_DATA_ROOT` as the proposed
 configuration interface and requires tests to override it with a temporary
-directory. `FND-003` needs deterministic child paths without creating files at
-module import. `QA-004` needs a disposable recovery check, but neither task may
+directory. [private data-root configuration](../../todo/work/application-foundation/plan.md) needs deterministic child paths without creating files at
+module import. [foundation integration verification](../../todo/work/application-foundation/README.md) needs a disposable recovery check, but neither task may
 claim that a production recovery implementation exists merely because this ADR
 contains an executable prototype.
 
@@ -47,7 +47,7 @@ application-level write barrier is still required.
 
 No application, backup command, worker, frontend, or process supervisor exists
 at the time of this proposal. Serving, process binding, and supervision belong
-to `DEP-002` and are not decided here.
+to [the serving decision](0003-serving-supervision.md) and are not decided here.
 
 ## Decision
 
@@ -186,7 +186,7 @@ Retention follows data semantics rather than one timer for the entire root:
 - Job staging, disposable workspaces, logs, and lock files are transient and are
   not recovery inputs. They may be cleaned after terminal job reconciliation or
   bounded by a later operational policy. The exact age and size limits remain a
-  deployment setting, not a prerequisite for `FND-003`.
+  deployment setting, not a prerequisite for [private data-root configuration](../../todo/work/application-foundation/plan.md).
 - Completed backup generations are immutable. The initial backup implementation
   does not silently prune them. Rotation is an operator policy and must preserve
   at least one successfully verified generation.
@@ -292,8 +292,8 @@ configuration state rather than being reconstructed from private snapshots.
 
 ### Disposable WAL/recovery prototype
 
-The following prototype is the executable design fixture for `FND-003` and
-`QA-004`. Run the entire block in one POSIX shell from the checkout. Its first
+The following prototype is the executable design fixture for [private data-root configuration](../../todo/work/application-foundation/plan.md) and
+[foundation integration verification](../../todo/work/application-foundation/README.md). Run the entire block in one POSIX shell from the checkout. Its first
 operation checks the SQLite library linked to `uv run python`, before `mktemp`,
 `sqlite3.connect`, or any WAL file creation. Failure stops the entire shell; do
 not bypass the gate or run the remaining lines separately. After a successful
@@ -305,7 +305,7 @@ in an active WAL, backs up only the durable boundary through Python's Online
 Backup API, restores to a fresh root, checks hashes/references, prints one success
 line, and removes all temporary state.
 
-At DEP-001 verification time, `uv run python` links SQLite 3.50.4. The gate
+At [the data and recovery decision](0002-data-recovery.md) verification time, `uv run python` links SQLite 3.50.4. The gate
 correctly reports it as blocked, so the WAL portion of this prototype must not be
 run in the current environment. A future run requires an accepted SQLite build.
 
@@ -740,9 +740,9 @@ print("recovery prototype: PASS")
 PY
 ```
 
-`ENV-001` first supplies a runtime linked to an accepted SQLite build. It tests
+[the pinned Python and SQLite runtime](../runtime-recovery.md) first supplies a runtime linked to an accepted SQLite build. It tests
 the safety predicate against fixed and vulnerable boundary versions and proves
-gate failure occurs before database or sidecar creation. `FND-003` then executes
+gate failure occurs before database or sidecar creation. [private data-root configuration](../../todo/work/application-foundation/plan.md) then executes
 this prototype as a design fixture, including rejection of empty, dot-only,
 absolute, `..` traversal, and noncanonical database file references before file
 reads. It separately tests the accepted resolver behavior, directory creation,
@@ -751,7 +751,7 @@ Passing the prototype at that stage validates the selected path layout and
 recovery algorithm only; it does not mean an application backup command or
 multi-process write gate exists.
 
-`QA-004` executes the same prototype again on an integrated toolchain whose
+[foundation integration verification](../../todo/work/application-foundation/README.md) executes the same prototype again on an integrated toolchain whose
 in-process gate passes and records `recovery prototype: PASS` in its verification
 output. It must also test any implemented application backup/restore surface
 through the migrated schema and real file-reference verifier. Until that surface
@@ -834,11 +834,12 @@ workspaces have different semantics, so deletion must respect their categories.
 
 ## Unresolved questions
 
-- A later implementation task must choose the concrete cross-process write-gate
-  mechanism and backup/restore command names while preserving this protocol.
+- [The recovery implementation](../../todo/work/backup-and-recovery/README.md)
+  must choose the concrete cross-process write-gate mechanism and backup/restore
+  command names while preserving this protocol.
   That implementation depends on the final API/worker process boundary but not
-  on the supervisor selected by `DEP-002`.
-- `ENV-001` must choose and pin a Python/runtime distribution that links an
+  on the supervisor selected by [the serving decision](0003-serving-supervision.md).
+- [the pinned Python and SQLite runtime](../runtime-recovery.md) must choose and pin a Python/runtime distribution that links an
   accepted SQLite version on development, CI, and the target Mac mini. The
   executable in-process gate remains required after that toolchain choice so a
   later runtime downgrade cannot silently re-enable vulnerable WAL use.
@@ -853,7 +854,7 @@ workspaces have different semantics, so deletion must respect their categories.
 
 ## Verification
 
-### DEP-001 design verification
+### Decide the private data and recovery boundary design verification
 
 This proposed record is complete when the following checks pass:
 
@@ -884,14 +885,15 @@ unimplemented application behavior.
 
 ### Later implementation verification
 
-After `DEC-001` accepts the record:
+After [the accepted foundation decisions](../decisions.md) accepts the record:
 
-- `ENV-001` tests the WAL gate's accepted and rejected version boundaries and
+- [the pinned Python and SQLite runtime](../runtime-recovery.md) tests the WAL gate's accepted and rejected version boundaries and
   rejection before any SQLite file creation.
-- `FND-003` tests every data-root resolution branch, invalid input, owner-only
+- [private data-root configuration](../../todo/work/application-foundation/plan.md) tests every data-root resolution branch, invalid input, owner-only
   creation, fixed child paths, and no import-time filesystem mutation, then runs
   the disposable prototype on the accepted build.
-- The recovery implementation tests write-gate timeout/failure, a concurrent
+- [The recovery implementation](../../todo/work/backup-and-recovery/README.md)
+  tests write-gate timeout/failure, a concurrent
   attempted mutation, partial-generation rejection, symlink rejection, corrupt
   database and file hashes, missing and extra files, unsupported formats/schema,
   rollback preservation, and external credential absence. Before allowing a
@@ -900,11 +902,11 @@ After `DEC-001` accepts the record:
   `"artifacts/../outside"`, `"./artifacts/example"`,
   `"artifacts//example"`, and `"artifacts/example/"`; a canonical relative
   reference remains accepted.
-- `QA-004` runs the exact prototype and the implemented backup/restore path in a
+- [foundation integration verification](../../todo/work/application-foundation/README.md) runs the exact prototype and the implemented backup/restore path in a
   disposable root, restarts the migrated application against the restored root,
   verifies all database file references, and confirms that no runtime or private
   file is tracked by git.
-- A separate target-host restore drill to an empty root and external backup
-  device is required before calling backups operational. Its evidence must name
-  the application/SQLite versions and completed generation without recording
-  private paths or content.
+- The recovery work includes a separate target-host restore drill to an empty
+  root from an external backup device before calling backups operational. Its
+  evidence must name the application/SQLite versions and completed generation
+  without recording private paths or content.

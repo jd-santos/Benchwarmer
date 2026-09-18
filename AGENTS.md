@@ -6,18 +6,36 @@
 
 ## Project Context
 
-- **Project**: Benchwarmer, a local app for personal model evaluations, task
-  simulations, trusted external evidence, and consolidated usage economics
+- **Project**: Benchwarmer, a private conversation library and model evaluation
+  app: collect, normalize, enrich, discover, select, and evaluate
 - **Tech stack**: Python 3.12+, uv, SQLite and Svelte (planned application)
-- **Architecture**: Local API and worker, private artifact storage, harness-neutral
-  tasks, and adapters for harnesses, providers, pricing and published evaluations
-- **Status**: Design scaffold. Application, importers and execution are not yet
-  implemented. Target host is an always-on Mac mini alongside Hermes Agent.
+- **Architecture**: Central API and worker, private native snapshots and normalized
+  conversations, harness-neutral task units, and source/execution adapters.
+  Cross-machine collection follows ADR 0005's manual-first push topology.
+- **Status**: Partial application foundation and validated conversation/approval
+  contracts. Real importers, conversation browsing, enrichment, and trial execution
+  are not yet implemented. Target host is an always-on Mac mini alongside Hermes Agent.
 - **Access and UI**: Private hosting over Tailscale, with a mobile-friendly Svelte
-  interface. Exact serving configuration remains open.
+  interface. Central serving follows ADR 0003; live deployment remains pending.
 
 ## Critical Rules
 
+- Prioritize the conversation library and search over detailed usage reporting.
+  Cost is metadata; preserve imported, calculated, generated, and human origins.
+- Keep native snapshots alongside versioned normalized conversation structure.
+  Preserve branches, continuations, tool linkage, and explicit capture gaps.
+- Imports, searches, and growing collections must not silently launch model work.
+  Require exact bounded approval for enrichment, embeddings, reruns, judges, and
+  later simulators. Content/provider permission is separate from spend approval.
+- Applied judges run automatically inside the approved rerun budget. Judge
+  failure means unjudged, not a candidate quality failure.
+- Support live collections and frozen revision-pinned datasets. Ad hoc private
+  access is distinct from sanitized public export.
+- Cross-machine collection follows ADR 0005's enrolled push topology: manual
+  collectors first, then optional scheduled runs. Rollout stays blocked on
+  [cross-machine collection](todo/work/cross-machine-collection/README.md) and
+  [private deployment verification](todo/work/private-deployment/README.md);
+  never assume histories all reside on the central host.
 - Keep benchmark task definitions independent of Pi or any other agent harness.
 - Do not combine quality and economics into a single winner score. Preserve
   criterion-level and per-trial results.
@@ -86,19 +104,21 @@ and the interface principles in [docs/architecture.md](docs/architecture.md).
 > Read the file below before changing architecture, scope, or evaluation
 > semantics.
 
-[Root]: ./docs/
-design: {architecture.md,experiments.md,decisions.md}
-delivery: {roadmap.md,plans/}
+design: {architecture.md,conversation-library.md,evidence-bundles.md,experiments.md,decisions.md}
+delivery: {roadmap.md,../todo/work/}
 evidence: {sources/,source-coverage.md}
 decisions: {decisions.md,decisions/}
 operations: {runtime-recovery.md}
-tasks: {TODO.md}
+tasks: {../todo/README.md,../todo/TODO.md}
 
 ## File-Specific Notes
 
 - **`docs/architecture.md`**: Records the chosen design, MVP boundary,
   alternatives, acceptance criteria, and open questions.
-- **`docs/experiments.md`**: Defines simulation, harness and prompt semantics.
+- **`docs/conversation-library.md`**: Defines the approved workflow, collection
+  topology, enrichment approvals, search, datasets, and applied judges.
+- **`docs/experiments.md`**: Defines task units, simulation, harness, prompt, and
+  judge semantics.
 - **`docs/decisions.md`**: Records unresolved choices and proposed defaults.
 - **`docs/decisions/`**: Stores independently authored ADR proposals and their
   index. A coordinator reconciles accepted records into `docs/decisions.md`.
@@ -106,10 +126,23 @@ tasks: {TODO.md}
   coordinator synthesizes them into `docs/source-coverage.md`.
 - **`docs/roadmap.md`**: Records delivery slices, dependencies, milestone gates
   and the agent handoff protocol.
-- **`docs/plans/`**: Contains executable plans with exact paths, commands,
-  acceptance criteria and verification steps. Follow the plan linked by a TODO
-  task rather than inventing missing implementation details.
-- **`docs/TODO.md`**: Tracks work using In Progress, Up Next, Backlog and Done.
+- **`todo/TODO.md`**: Single live P1–P5 priority index with human-readable task
+  names. Priority is not status. Do not introduce opaque task codes or separate
+  In Progress, Backlog, or Done sections.
+- **`todo/work/<descriptive-name>/README.md`**: Owns each substantial effort's
+  execution status, current role/branch when active, dependencies, acceptance,
+  checklist, validation, and handoff. Read the selected record and its links,
+  not every retained plan. Keep one writer per checkout; use separate worktrees
+  for assigned concurrent writers and inspect other worktrees read-only.
+- **`todo/DONE.md`**: Links Git history and retained evidence, not a completion
+  ledger. Keep checked work in the live index until reviewed shipping closeout.
+  Do not claim merge or release without verification.
+- **`docs/plans/` and `docs/TODO.md`**: Legacy redirects or explicitly historical
+  evidence. Current implementation details are linked from work READMEs. Update
+  the existing work record at handoff; do not create new timestamped handoffs.
+- **`docs/evidence-bundles.md`**: Planned evidence-reference, bundle, selective
+  inspection, pattern, and task-promotion semantics. Native evidence remains
+  distinct from interpretations; analysis-only bundles need not be runnable.
 - **`docs/runtime-recovery.md`**: Fail-closed operator recovery for interrupted
   runtime provisioning. Use exact paths and ownership checks; never improvise
   deletion or replacement commands.

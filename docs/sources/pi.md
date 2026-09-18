@@ -1,6 +1,6 @@
 # Source: Pi
 
-- Task: SRC-PI-001
+- Work: [Inspect Pi capabilities](pi.md)
 - Observed version/account scope: No Pi executable, process, global npm package,
   default agent directory, default session directory, or Pi directory override was
   available in the inspected environment. The installed version and account scope

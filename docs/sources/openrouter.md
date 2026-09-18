@@ -1,6 +1,6 @@
 # Source: OpenRouter
 
-- Task: SRC-OPENROUTER-001
+- Work: [Inspect OpenRouter capabilities](openrouter.md)
 - Observed version/account scope: OpenRouter production API; published OpenAPI
   `3.1.0` with API info version `1.0.0`; public endpoints only; no account
   credential was available

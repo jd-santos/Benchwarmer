@@ -1,11 +1,11 @@
 # Source coverage matrix
 
-**Status:** Completed evidence synthesis for `SRC-001`
+**Status:** Completed evidence synthesis for [the source coverage review](source-coverage.md)
 
 **Evidence date:** 2026-09-08
 
 This document compares the four independent source inspections without choosing
-an import adapter. Source selection remains the responsibility of `SRC-002`.
+an import adapter. Source selection remains the responsibility of [the first-adapter decision](decisions/0004-first-import-adapter.md).
 
 Detailed reports:
 
@@ -224,7 +224,7 @@ confidence label and user-visible provenance.
 7. No source alone captures all prompt, tool, artifact, environment, and approval
    state required for exact replay.
 
-## SRC-002 handoff
+## Select the first import adapter handoff
 
 The first-adapter decision must score at least:
 
@@ -236,5 +236,5 @@ The first-adapter decision must score at least:
 - usage provenance and unknown-field handling; and
 - user value from the sessions currently available.
 
-`SRC-002` must record the choice and rejected alternatives in ADR 0004. This
+[the first-adapter decision](decisions/0004-first-import-adapter.md) must record the choice and rejected alternatives in ADR 0004. This
 matrix deliberately makes no selection.

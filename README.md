@@ -1,31 +1,42 @@
 # Benchwarmer
 
-Benchwarmer is a local app for choosing language models using personal sessions,
-task simulations, trusted public evaluations, and usage economics. It brings
-usage across Pi, Nous Research's Hermes Agent, and Codex where accessible into
-one place, then helps compare whether alternative models can do everyday work
-better or more cheaply.
+Benchwarmer is a private conversation library and model evaluation app. It will
+collect Codex, Pi, and Hermes histories across the user's machines, preserve
+native transcripts alongside shared records, and make that work searchable and
+reusable for evaluations. Usage and cost are part of the metadata, not the only
+reason to collect it.
 
 The project has Python quality tooling and a minimal SvelteKit scaffold. The
 planned application uses a Python backend, SQLite database and mobile-friendly
-frontend on an always-on Mac mini, with private access over Tailscale. Importers,
-the application UI and experiment execution are not implemented yet.
+frontend on an always-on Mac mini, with private access over Tailscale. The API
+foundation and responsive shell are partly implemented. Real importers,
+conversation browsing, enrichment, and experiment execution are not implemented yet.
 
 ## Scope
 
-- Aggregate usage, spend and classifications with source provenance.
+- Collect conversations across machines through a service owned by this project.
+- Preserve native snapshots and normalize messages, tools, branches, and artifacts.
+- Browse conversations with keyword, metadata, and later semantic search.
+- Enrich summaries, descriptions, classifications, usage, and cost with provenance.
+  Model-powered work requires explicit bounded approval; imports never launch it.
+- Build live collections and frozen datasets, including private programmatic
+  access for ad hoc evaluation projects.
 - Add personal ratings and notes to real sessions.
-- Prepare task simulations from successful or unsuccessful work.
+- Derive meaningful task units and rerun them with visible applied judges inside
+  the approved budget. Adaptive simulated follow-ups come later.
 - Compare models, reasoning levels, harnesses, prompts, skills and tools as
   distinct dimensions. Direct Python API execution is a harness too.
 - Track accessible system prompts and make missing or partial capture visible.
 - Start with native harness configurations; add controlled comparisons later.
-- Keep trusted external evaluations with dates, sources and configuration details.
+- Add detailed usage reporting and trusted external evaluations after the library
+  is useful, preserving dates, sources, and configuration details.
 - Preserve trial results and quality/cost tradeoffs without one combined score.
 
 Imported session content is retained as private snapshots alongside metadata.
-Application data stays on the Mac mini and outside the public checkout by
-default. Private sessions, prompts, databases, artifacts and annotations must
+Central application data stays on the Mac mini and outside the public checkout
+by default; source-side collection storage remains a design decision. Sending
+content to remote models needs separate disclosure permission and bounded spend
+approval. Private sessions, prompts, databases, artifacts and annotations must
 not be committed.
 Tool-capable simulations run only in disposable fixture workspaces.
 
@@ -33,6 +44,12 @@ Tool-capable simulations run only in disposable fixture workspaces.
 
 - [Architecture](docs/architecture.md): product direction, application components,
   data boundaries and delivery stages.
+- [Conversation library](docs/conversation-library.md): collection, normalization,
+  enrichment approvals, search, datasets, and the first useful workflow.
+- [Evidence bundles](docs/evidence-bundles.md): planned references, observations,
+  behavior patterns, and conversion into leakage-aware task drafts.
+- [Retained contract design](todo/work/conversation-contracts/README.md): shared
+  conversation records and bounded approval validation using synthetic tests.
 - [Experiments](docs/experiments.md): task derivation, harness dimensions and
   system-prompt provenance.
 - [Design decisions](docs/decisions.md): accepted choices and remaining
@@ -45,7 +62,9 @@ Tool-capable simulations run only in disposable fixture workspaces.
   usage, economics, prompt, execution, and retention comparison.
 - [Buildout roadmap](docs/roadmap.md): delivery slices, dependencies, acceptance
   gates and agent handoff protocol.
-- [TODO](docs/TODO.md): implementation queue and completed work.
+- [Task workbench](todo/README.md): workflow and stable work records.
+- [Priorities](todo/TODO.md): the live P1–P5 queue, using readable task names.
+- [History](todo/DONE.md): Git and retained evidence.
 
 ## Project setup
 
@@ -133,7 +152,7 @@ assignment.
 
 A fresh successful publication removes an existing project virtual environment.
 The valid-runtime fast path leaves `.venv` unchanged. Production image,
-deployment, serving, and target-host verification remain deferred to `DEP-003`.
+deployment, serving, and target-host verification remain deferred to [private deployment verification](todo/work/private-deployment/README.md).
 For the default runtime root, the relative interpreter path in `.python-version`
 makes `uv` stop if the runtime has not been provisioned instead of downloading a
 Python build with an unknown SQLite version. Run project `uv` commands from the

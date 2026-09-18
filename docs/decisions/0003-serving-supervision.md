@@ -1,7 +1,7 @@
 # ADR 0003: Private serving and process supervision
 
-- Status: Accepted by `DEC-001`
-- Task: DEP-002
+- Status: Accepted by [the accepted foundation decisions](../decisions.md)
+- Work: [the serving decision](0003-serving-supervision.md)
 - Date: 2026-09-08
 
 ## Context and evidence
@@ -10,7 +10,7 @@ Benchwarmer is a single-user application whose Python service owns domain rules,
 SQLite access, imports, and jobs. Browser requests must remain on a same-origin
 `/api` boundary. The first production deployment is an always-on Mac mini that
 already runs Docker Compose and a Tailscale sidecar for private services.
-Data-root, backup, restore, and retention choices belong to DEP-001 and are not
+Data-root, backup, restore, and retention choices belong to [the data and recovery decision](0002-data-recovery.md) and are not
 made here.
 
 The inspected deployment has three relevant properties:
@@ -56,7 +56,7 @@ The following official documentation was checked on 2026-09-08:
 
 The current agent container can inspect the Compose, Serve, and s6 shapes, but
 it does not have the Docker Compose plugin. Target-host rendering and live route
-checks therefore remain owned by `DEP-003` before deployment can be called
+checks therefore remain owned by [private deployment verification](../../todo/work/private-deployment/README.md) before deployment can be called
 operational; they do not block acceptance of this design record.
 
 ## Decision
@@ -119,7 +119,7 @@ services:
 
 The final image may invoke its installed Uvicorn executable instead of
 `uv run`, but it must use exec-form startup, remain in the foreground, honor
-SIGTERM, and retain the binding and proxy restrictions above. DEP-001 and the
+SIGTERM, and retain the binding and proxy restrictions above. [the data and recovery decision](0002-data-recovery.md) and the
 integration decision supply the omitted data-root mount and environment.
 
 ### Dedicated tailnet HTTPS origin
@@ -274,13 +274,13 @@ alerting covers the required behavior with fewer long-running processes.
   not auto-restarted. This avoids restart loops hiding migration, storage, or
   configuration failures.
 - Logs go to the container log stream. Persistent data and backup behavior are
-  unchanged and remain governed by DEP-001.
+  unchanged and remain governed by [the data and recovery decision](0002-data-recovery.md).
 - A future worker adds a second service only when it has real work and a durable
   recovery contract. Frontend changes alone never add another process.
 
 ## Unresolved questions
 
-- `DEP-003` must confirm that HTTPS port 8443 is unused on the target Tailscale
+- [private deployment verification](../../todo/work/private-deployment/README.md) must confirm that HTTPS port 8443 is unused on the target Tailscale
   node and select the private tailnet grant principals.
 - The application image and static-file integration must define cache headers:
   immutable hashed assets may be cached long-term, while HTML and `200.html`
@@ -294,7 +294,7 @@ alerting covers the required behavior with fewer long-running processes.
 
 ## Verification
 
-### DEP-002 design verification
+### Decide private serving and supervision design verification
 
 Run build and static-fallback checks from a clean checkout:
 
@@ -305,13 +305,13 @@ npm --prefix web run build
 test -f web/build/200.html
 ```
 
-The scaffold/build commands become executable in `UI-001`. Syntax, configuration
+The scaffold/build commands become executable in [Scaffold SvelteKit with the selected adapter and checks](../../todo/work/application-foundation/plan.md). Syntax, configuration
 shape, and the absence of a Node/SSR requirement are sufficient to accept this
-record through `DEC-001`.
+record through [the accepted foundation decisions](../decisions.md).
 
-### DEP-003 target-host verification
+### Implement and validate private deployment target-host verification
 
-After `QA-004`, implement the deployment and render the merged configuration on
+After [foundation integration verification](../../todo/work/application-foundation/README.md), implement the deployment and render the merged configuration on
 the target host before startup. Verify that `benchwarmer` has no `ports` entry:
 
 ```sh

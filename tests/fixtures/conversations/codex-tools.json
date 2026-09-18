@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "normalized-codex-tools",
+  "revision": "revision-codex-1",
+  "source": {"kind": "codex", "scope_id": "synthetic-workspace-b", "native_id": "native-session-2", "adapter_version": "fixture-1", "source_version": null, "captured_at": "2026-09-15T12:03:00+00:00", "snapshot_id": "snapshot-codex-1", "extensions": {"native_mode": "synthetic"}},
+  "events": [
+    {"id": "event-call", "native_id": "native-call-event", "ordinal": 0, "parent_id": null, "kind": "message", "role": "assistant", "occurred_at": null, "content": [{"id": "block-call", "kind": "tool_call", "text": null, "tool_call_id": "native-call-2", "artifact_id": null, "extensions": {"arguments": {"mode": "synthetic"}}}], "extensions": {}},
+    {"id": "event-result", "native_id": "native-result-event", "ordinal": 1, "parent_id": "event-call", "kind": "message", "role": "tool", "occurred_at": null, "content": [{"id": "block-result", "kind": "tool_result", "text": null, "tool_call_id": "native-call-2", "artifact_id": null, "extensions": {"result": {"status": "synthetic"}}}, {"id": "block-attachment", "kind": "attachment", "text": null, "tool_call_id": null, "artifact_id": "artifact-1", "extensions": {}}], "extensions": {"native_unknown_field": "preserved"}},
+    {"id": "event-missing-result", "native_id": "native-missing-result-event", "ordinal": 2, "parent_id": "event-result", "kind": "message", "role": "tool", "occurred_at": null, "content": [{"id": "block-missing-result", "kind": "tool_result", "text": null, "tool_call_id": "missing-call", "artifact_id": null, "extensions": {}}], "extensions": {}}
+  ],
+  "artifacts": [{"id": "artifact-1", "kind": "text", "media_type": "text/plain", "availability": "partial", "locator": null, "extensions": {}}],
+  "relationships": [],
+  "metadata": [{"name": "capture", "value": {"complete": false}, "origin": "calculated", "producer": "fixture", "producer_version": null, "input_revision": "revision-codex-1", "extensions": {}}],
+  "coverage": {"tool_calls": "partial", "artifacts": "partial"},
+  "extensions": {"unknown_native_top_level": {"preserved": true}}
+}

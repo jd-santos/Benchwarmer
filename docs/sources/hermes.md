@@ -1,6 +1,6 @@
 # Source: Hermes Agent
 
-- Task: SRC-HERMES-001
+- Work: [Inspect Hermes capabilities](hermes.md)
 - Observed version/account scope: Docker-installed Hermes Agent 0.20.5
   (`2026.8.19`, upstream `987064ca`); schema-only inspection of one active
   named profile; separate clean source checkout 0.21.0 at `693641aa8b4359c6`
