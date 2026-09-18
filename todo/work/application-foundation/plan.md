@@ -716,9 +716,13 @@ origin, while SQLite and domain policy remain Python-owned.
 **Steps:**
 
 1. Add an explicit built-UI root contract that is separate from the private
-   data root. Tests may inject a temporary build root; the Uvicorn factory may
-   read a narrowly named environment setting. Do not serve arbitrary files from
-   the current directory or the private data root.
+   data root. The deployment image copies `web/build` to the immutable
+   `/opt/benchwarmer/ui` path and sets
+   `BENCHWARMER_UI_ROOT=/opt/benchwarmer/ui`; the Uvicorn factory requires an
+   absolute root containing `200.html` and fails startup otherwise. Tests may
+   inject a temporary build root, and local tools may set the environment value
+   to an absolute checkout build. Do not auto-discover the current directory or
+   serve anything from the private data root.
 2. Register `/api/v1` routes before UI handling. Keep `/api`, unknown API paths,
    and non-GET/HEAD requests out of the SPA fallback.
 3. Serve exact generated assets when present. Missing assets and path-traversal
@@ -729,13 +733,15 @@ origin, while SQLite and domain policy remain Python-owned.
 5. Build the frontend before browser startup, replace the Vite process with one
    Uvicorn process configured with the build root, and run the existing desktop
    and mobile flows against that origin.
-6. Add focused route-precedence, fallback, method, missing-asset, and traversal
+6. Add focused route-precedence, fallback, method, missing-asset, traversal,
+   startup-validation, HTML content-type, and generated-asset content-type
    tests. Run Python and frontend checks.
 7. Commit with `feat: serve the built application from FastAPI`.
 
 **Acceptance:** One loopback FastAPI process serves the built UI and versioned
 API. SPA convenience cannot mask API mistakes, missing assets, unsafe methods,
-or traversal attempts. Starting the application never migrates or seeds data.
+or traversal attempts. Environment-driven startup fails when the built UI is
+missing or invalid and never migrates or seeds data.
 
 ### Verify API restart persistence
 
@@ -756,10 +762,11 @@ owner.
    `BENCHWARMER_DATA_ROOT` and built-UI root.
 3. Assert the records and Alembic revision are unchanged and startup did not
    migrate, seed, or rewrite data.
-4. Record that the browser may show a transient request failure while the one
-   application process is down; a refresh after readiness reconnects to the
-   same durable state. Automated browser refresh recovery is not a foundation
-   gate.
+4. After the replacement process reports ready, request the root application
+   route in the browser and verify that it reconnects to the unchanged source
+   records. Record that the browser may show a transient request failure while
+   the process is down; automated recovery during the interruption is not a
+   foundation gate.
 5. Run `npm run test:e2e` and all frontend checks.
 6. Commit with `test: verify API restart persistence`.
 

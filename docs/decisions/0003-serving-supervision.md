@@ -1,7 +1,8 @@
 # ADR 0003: Private serving and process supervision
 
-- Status: Accepted by [the accepted foundation decisions](../decisions.md)
-- Work: [the serving decision](0003-serving-supervision.md)
+- Status: Accepted
+- Work: [Finish the application foundation](../../todo/work/application-foundation/README.md)
+  and [deploy the private application](../../todo/work/private-deployment/README.md)
 - Date: 2026-09-08
 
 ## Context and evidence
@@ -66,7 +67,13 @@ operational; they do not block acceptance of this design record.
 Build the SvelteKit UI with `@sveltejs/adapter-static`. Configure a `200.html`
 SPA fallback and disable SSR for the application shell. Prerender routes that
 are genuinely static, but retain the fallback for identifier-based routes.
-Package the generated assets with the Python application.
+Package the generated assets in the application image rather than the Python
+wheel. The image copies `web/build` to `/opt/benchwarmer/ui` and sets
+`BENCHWARMER_UI_ROOT=/opt/benchwarmer/ui`. The Uvicorn factory requires an
+absolute UI root containing `200.html` and fails startup when that contract is
+missing or invalid. Tests and local tools may inject another explicit absolute
+root; the application never discovers assets from its current working directory
+or private data root.
 
 In production, the Python ASGI service serves both the generated UI and
 `/api/v1/*`. Register API routes before a GET/HEAD-only UI fallback; `/api`,
@@ -83,6 +90,8 @@ loopback interface. The production Compose shape is:
 services:
   benchwarmer:
     build: <benchwarmer-source>
+    environment:
+      BENCHWARMER_UI_ROOT: /opt/benchwarmer/ui
     restart: unless-stopped
     network_mode: service:tailscale-hermes
     depends_on:
