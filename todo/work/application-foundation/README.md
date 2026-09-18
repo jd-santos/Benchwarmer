@@ -1,6 +1,6 @@
 # Finish the application foundation
 
-Status: In progress on `task/conversation-library`. Desktop and mobile foundation flows are verified; API restart persistence is next.
+Status: In progress on `task/conversation-library`. Desktop and mobile foundation flows are verified; single-origin FastAPI serving is next.
 
 ## Purpose
 
@@ -12,7 +12,7 @@ The existing source records, health boundary, runtime, shell, and API client are
 
 ## Acceptance criteria
 
-A fresh checkout can migrate and seed disposable state, browse source status on desktop and mobile, and restart the API without losing records. All checks in the plan’s final integration gate pass.
+A fresh checkout can migrate and seed disposable state, build the Svelte application, browse source status from one FastAPI origin on desktop and mobile, and restart the API without losing records. API paths, static assets, and SPA fallback behavior remain distinct. All checks in the plan’s final integration gate pass.
 
 ## Work
 
@@ -58,19 +58,25 @@ A fresh checkout can migrate and seed disposable state, browse source status on 
   - Plan: [Implementation details](plan.md#verify-desktop-and-mobile-browser-flows)
   - Verify: `npm --prefix web run test:e2e` at desktop and 375px viewports
 
-- [ ] Verify API restart persistence
+- [ ] Serve the built application through FastAPI
   - Dependencies: [Verify desktop and mobile browser flows](../application-foundation/README.md)
+  - Plan: [Implementation details](plan.md#serve-the-built-application-through-fastapi)
+  - Verify: one origin serves the built UI and `/api/v1`; unknown API routes,
+    mutations, and missing assets never fall through to the SPA document
+
+- [ ] Verify API restart persistence
+  - Dependencies: [Serve the built application through FastAPI](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#verify-api-restart-persistence)
-  - Verify: migrated fixture records survive an API process restart; the
-    stateless frontend does not own persistence
+  - Verify: migrated fixture records survive a single-origin API process
+    restart; the stateless frontend does not own persistence
 
 - [ ] Document development and final integration
   - Dependencies: [Verify API restart persistence](../application-foundation/README.md)
   - Plan: [Implementation details](plan.md#document-development-and-final-integration)
-  - Output: `docs/development.md`
-  - Acceptance: a fresh checkout can migrate disposable state, start both
-    processes, and pass desktop/mobile/restart flows with no private or
-    generated artifacts tracked
+  - Output: `docs/development.md` and `scripts/run-foundation-demo.sh`
+  - Acceptance: a fresh checkout can run the synthetic demo, migrate disposable
+    state, start the single application process, and pass desktop, mobile, and
+    restart flows with no private or generated artifacts tracked
 
 ## Shipping reconciliation
 
@@ -213,7 +219,7 @@ Additional checks for this slice:
 - API interception — same-origin `/api/` failure rendered the recovery alert
 - Overflow checks — desktop and mobile document widths remained within their viewports
 
-The next ready step is **Verify API restart persistence**.
+The next ready step is **Serve the built application through FastAPI**.
 
 ## Supporting material
 

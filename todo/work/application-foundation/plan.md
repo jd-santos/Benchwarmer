@@ -700,10 +700,48 @@ and phone-sized viewports.
 **Acceptance:** Both viewports complete the storage-to-UI path and expose
 coverage labels without horizontal page scrolling.
 
+### Serve the built application through FastAPI
+
+**Objective:** Exercise the product-shaped one-process boundary selected by ADR
+0003: FastAPI serves both the built Svelte application and `/api/v1` from one
+origin, while SQLite and domain policy remain Python-owned.
+
+**Files:**
+
+- Modify: `src/benchwarmer/api/app.py`
+- Modify or create: focused API/static-serving tests under `tests/api/`
+- Modify: `web/tests/support/foundation.ts`
+- Modify: `web/tests/foundation.spec.ts` only where the origin contract changes
+
+**Steps:**
+
+1. Add an explicit built-UI root contract that is separate from the private
+   data root. Tests may inject a temporary build root; the Uvicorn factory may
+   read a narrowly named environment setting. Do not serve arbitrary files from
+   the current directory or the private data root.
+2. Register `/api/v1` routes before UI handling. Keep `/api`, unknown API paths,
+   and non-GET/HEAD requests out of the SPA fallback.
+3. Serve exact generated assets when present. Missing assets and path-traversal
+   attempts return a normal error rather than `200.html`.
+4. Return the generated `200.html` only for safe application-route GET/HEAD
+   requests. Preserve explicit content types and avoid reading file contents
+   into application memory when FastAPI or Starlette can stream them.
+5. Build the frontend before browser startup, replace the Vite process with one
+   Uvicorn process configured with the build root, and run the existing desktop
+   and mobile flows against that origin.
+6. Add focused route-precedence, fallback, method, missing-asset, and traversal
+   tests. Run Python and frontend checks.
+7. Commit with `feat: serve the built application from FastAPI`.
+
+**Acceptance:** One loopback FastAPI process serves the built UI and versioned
+API. SPA convenience cannot mask API mistakes, missing assets, unsafe methods,
+or traversal attempts. Starting the application never migrates or seeds data.
+
 ### Verify API restart persistence
 
-**Objective:** Prove migrated fixture records survive an API process restart;
-the stateless frontend is not the persistence owner.
+**Objective:** Prove migrated fixture records survive a restart of the
+single-origin FastAPI process; the stateless frontend is not the persistence
+owner.
 
 **Files:**
 
@@ -713,44 +751,57 @@ the stateless frontend is not the persistence owner.
 **Steps:**
 
 1. In the disposable browser harness, migrate and seed the temporary database.
-2. Start the API, fetch `/api/v1/sources`, stop the API, start a new API
-   process with the same `BENCHWARMER_DATA_ROOT`, and fetch again.
-3. Assert the records and revision are unchanged and the API did not seed data
-   on startup.
-4. Restart the frontend only as needed to prove it has no persistence role.
+2. Start FastAPI with the built UI, fetch `/api/v1/health` and
+   `/api/v1/sources`, stop it, and start a new process with the same
+   `BENCHWARMER_DATA_ROOT` and built-UI root.
+3. Assert the records and Alembic revision are unchanged and startup did not
+   migrate, seed, or rewrite data.
+4. Record that the browser may show a transient request failure while the one
+   application process is down; a refresh after readiness reconnects to the
+   same durable state. Automated browser refresh recovery is not a foundation
+   gate.
 5. Run `npm run test:e2e` and all frontend checks.
 6. Commit with `test: verify API restart persistence`.
 
-**Acceptance:** Data survives API restart from durable SQLite state; the
-frontend can restart independently without changing records.
+**Acceptance:** Data survives FastAPI restart from durable SQLite state. The
+same-origin UI returns after readiness without owning or recreating records.
 
 ### Document development and final integration
 
-**Objective:** Leave a fresh agent with exact setup, verification, and cleanup
-instructions.
+**Objective:** Leave a human or agent with one concise synthetic demo command
+plus exact setup, verification, and cleanup instructions.
 
 **Files:**
 
 - Create: `docs/development.md`
+- Create: `scripts/run-foundation-demo.sh`
 
 **Steps:**
 
-1. Document `uv sync --dev`, `BENCHWARMER_DATA_ROOT`, migration, fixture-load,
-   API startup, `npm --prefix web ci`, Playwright browser install, development,
-   test, build, and cleanup commands.
-2. Record the pinned `sv` scaffold version chosen by [Scaffold SvelteKit with the selected adapter and checks](plan.md) and the adapter
-   chosen by [the serving decision](../../../docs/decisions/0003-serving-supervision.md).
-3. Document optional Svelte MCP use: verify `mcp_servers.svelte` in
+1. Add a small fail-fast demo script that builds the frontend, prepares clearly
+   identified disposable state, migrates and loads only sanitized fixtures, and
+   starts the single FastAPI application on loopback. It must print the local
+   URL and cleanup behavior, forward termination, and never inspect or reuse a
+   private data root implicitly.
+2. Document `uv sync --locked --dev`, the demo script,
+   `BENCHWARMER_DATA_ROOT`, the built-UI root, migration, fixture loading, direct
+   API startup, `npm --prefix web ci`, Playwright browser installation,
+   development, test, build, restart behavior, and cleanup commands.
+3. Record the pinned `sv` scaffold version chosen by
+   [Scaffold SvelteKit with the selected adapter and checks](plan.md) and the
+   adapter chosen by
+   [the serving decision](../../../docs/decisions/0003-serving-supervision.md).
+4. Document optional Svelte MCP use: verify `mcp_servers.svelte` in
    `config.yaml`, run `hermes mcp test svelte` where available, and use
    `svelte-autofixer` after component changes. If MCP is unavailable, fall back
    to `npm run check`, `npm run lint`, tests, and browser verification.
-4. Run the Final integration gate below.
-5. Stop all processes, confirm no runtime artifacts are tracked, and commit
+5. Run the Final integration gate below.
+6. Stop all processes, confirm no runtime artifacts are tracked, and commit
    with `docs: add foundation development workflow`.
 
-**Acceptance:** A fresh checkout can follow `docs/development.md`; browser,
-restart, and unit checks prove the storage-to-UI path; test state is
-disposable.
+**Acceptance:** A fresh checkout can follow `docs/development.md` or the demo
+script; browser, restart, and unit checks prove the one-process storage-to-UI
+path; test state is disposable.
 
 ## Svelte MCP use
 
