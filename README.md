@@ -6,11 +6,11 @@ native transcripts alongside shared records, and make that work searchable and
 reusable for evaluations. Usage and cost are part of the metadata, not the only
 reason to collect it.
 
-The project has Python quality tooling and a minimal SvelteKit scaffold. The
-planned application uses a Python backend, SQLite database and mobile-friendly
-frontend on an always-on Mac mini, with private access over Tailscale. The API
-foundation and responsive shell are partly implemented. Real importers,
-conversation browsing, enrichment, and experiment execution are not implemented yet.
+The project has a fixture-backed application foundation with a Python backend,
+SQLite database, and mobile-friendly Svelte frontend. FastAPI serves the built
+application and versioned API from one origin. Private deployment on an
+always-on Mac mini over Tailscale remains planned. Real importers, conversation
+browsing, enrichment, and experiment execution are not implemented yet.
 
 ## Scope
 
@@ -180,5 +180,8 @@ npm run test:unit -- --run
 npm run build
 ```
 
-The static build writes `web/build/200.html`. There are no backend runtime
-dependencies or application start commands yet.
+The static build writes `web/build/200.html`. FastAPI serves that build only
+from an explicit absolute `BENCHWARMER_UI_ROOT`; environment-driven startup
+fails when the build or `200.html` is missing. See the
+[development workflow](docs/development.md) for the disposable synthetic demo,
+manual startup, restart behavior, and full validation commands.

@@ -16,6 +16,8 @@ This project does not currently declare a Semantic Versioning policy.
   APIs.
 - Add responsive overview and source-coverage pages with unit and disposable
   desktop and mobile browser tests.
+- Serve the built Svelte application and versioned API from one FastAPI origin
+  with strict SPA fallback and API restart-persistence coverage.
 
 ### Changed
 
