@@ -62,7 +62,11 @@ def test_factory_resolves_environment_settings_when_omitted(
     monkeypatch, tmp_path: Path
 ) -> None:
     root = tmp_path / "private"
+    ui_root = tmp_path / "ui"
+    ui_root.mkdir()
+    (ui_root / "200.html").write_text("<html></html>")
     monkeypatch.setenv("BENCHWARMER_DATA_ROOT", str(root))
+    monkeypatch.setenv("BENCHWARMER_UI_ROOT", str(ui_root))
     app = create_app()
 
     assert not root.exists()

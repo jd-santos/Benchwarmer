@@ -1,7 +1,7 @@
 [project]
 name = "benchwarmer"
 version = "0.1.0"
-description = "Portable evaluations for comparing model utility and economics"
+description = "Private conversation library and model evaluation app"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
