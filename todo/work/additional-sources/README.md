@@ -8,7 +8,7 @@ Bring Pi, Codex, and Hermes into one library while testing that shared records p
 
 ## Dependencies and order
 
-Blocked on [Hermes import](../hermes-import/README.md). Choose the second source from actual available history and refresh its source report before naming exact implementation files.
+Blocked on [Hermes import](../hermes-import/README.md) and [verified additional-source research](../additional-source-research/README.md). Choose the second source from actual available history and refreshed evidence before naming exact implementation files.
 
 ## Acceptance criteria
 
@@ -17,7 +17,7 @@ Both remaining source adapters preserve native snapshots, identity, branches or 
 ## Work
 
 - [ ] Add a second source adapter
-  - Dependencies: [Import Hermes conversations reliably](../hermes-import/README.md)
+  - Dependencies: [Import Hermes conversations reliably](../hermes-import/README.md), [Verify additional conversation sources](../additional-source-research/README.md)
   - Promotion requirement: the coordinator names the exact second-source work and required inspection report before implementation
 
 - [ ] Add the remaining Pi/Codex/Hermes source adapter
