@@ -8,11 +8,19 @@ Connect separated requirements, actions, results, and corrections without turnin
 
 ## Dependencies and order
 
-Contract design and synthetic examples can begin now. The manual review pilot waits for [browsing and annotations](../conversation-library/README.md). This is the last P2 slice, ahead of broad model-powered enrichment.
+Contract design and synthetic examples can begin now. The manual review pilot
+waits for [browsing and annotations](../conversation-library/README.md). The
+user-facing [history and cost dashboards](../history-and-cost-dashboards/README.md)
+precede suggested-group approval in the product sequence. This is the last P2
+slice, ahead of broad model-powered enrichment.
 
 ## Acceptance criteria
 
-Evidence resolves against pinned conversation revisions and valid branch ancestry. Bundles distinguish observed events from interpretations and remain useful when a task cannot be reconstructed. A manually reviewed pilot informs the extraction schema.
+Evidence resolves against pinned conversation revisions and valid branch
+ancestry. Bundles distinguish observed events from interpretations and remain
+useful when a task cannot be reconstructed. Coherent phases may overlap; their
+membership does not make them independent examples. A manually reviewed pilot
+informs the extraction schema and later in-app review of suggested groups.
 
 ## Work
 

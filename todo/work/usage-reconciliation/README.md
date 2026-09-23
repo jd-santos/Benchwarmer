@@ -8,7 +8,11 @@ Explain usage and economics without inflating totals from overlapping source obs
 
 ## Dependencies and order
 
-Blocked on [a second source](../additional-sources/README.md) for cross-source reconciliation and [browsing](../conversation-library/README.md) for reporting. Imported usage and cost provenance still ship with the library; aggregate dashboards can wait.
+Blocked on [a second source](../additional-sources/README.md) for cross-source
+reconciliation and [browsing](../conversation-library/README.md) for detailed
+reporting. The earlier [history and cost dashboards](../history-and-cost-dashboards/README.md)
+show basic sourced activity and time series without claiming unreconciled totals.
+Imported usage and cost provenance still ship with the library.
 
 ## Acceptance criteria
 
