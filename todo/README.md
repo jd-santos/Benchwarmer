@@ -1,7 +1,11 @@
 # Benchwarmer workbench
 
-This workbench keeps the path to a useful conversation library and trustworthy
-evaluations readable. It follows the
+Benchwarmer helps its single user understand work done across agent tools and
+choose an acceptable model, reasoning level, harness, and configuration for each
+kind of task. Conversation history, usage, cost, quality evidence, and eventually
+repeatable trials support that choice. The first useful experience is a clear
+way to navigate and report on real history before building automated grouping
+and judged experiments. This workbench tracks that path. It follows the
 [`todo-manager`](https://github.com/jd-santos/Skills/tree/main/skills/todo-manager)
 workflow from [jd-santos/Skills](https://github.com/jd-santos/Skills).
 

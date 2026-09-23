@@ -4,7 +4,10 @@ Status: Planned. Implementation and delivery are pending unless a supporting rec
 
 ## Purpose
 
-Improve discovery using descriptions, classifications, and task-aware extraction while keeping generated interpretations distinguishable from source facts.
+Improve discovery using descriptions, classifications, and task-aware extraction
+while keeping generated interpretations distinguishable from source facts.
+Suggest coherent, potentially overlapping task phases that the user can review
+in the app as possible test artifacts.
 
 ## Dependencies and order
 
@@ -12,7 +15,12 @@ Blocked on [bounded model execution](../bounded-model-work/README.md) and [evide
 
 ## Acceptance criteria
 
-Every generated observation cites source evidence and records its input, prompt, schema, model, coverage, and generation revision. Tier selection is measured; deeper inspection and escalation stay within the approved plan.
+Every generated observation cites source evidence and records its input, prompt,
+schema, model, coverage, and generation revision. Group suggestions link source
+exchanges and context, allow overlap, and support individual and batch review,
+correction, and approval in the app. Approved groups are not automatically
+runnable tasks. Tier selection is measured; deeper inspection and escalation
+stay within the approved plan.
 
 ## Work
 
@@ -31,6 +39,12 @@ Every generated observation cites source evidence and records its input, prompt,
   - [ ] Keep initial descriptions narrow; require source-linked bundles before promoting richer generated findings.
   - [ ] Separate low-cost screening from deeper evidence inspection. Measure missed semantic failures using an approved sample of unflagged work; track review accuracy and cost before choosing model tiers.
   - [ ] Permit deeper inspection or escalation only inside the exact approved input, provider, request, and resource scope. Version generated artifacts and preserve human corrections.
+
+- [ ] Suggest coherent task-phase groups and review them in the app
+  - Dependencies: [Extract task context, behavior, and evidence bundles](../conversation-enrichment/README.md), [Define evidence references and review conversation bundles](../evidence-bundles/README.md)
+  - Scope: overlapping source-linked groups, preview and correction, individual
+    or batch approval, versioned producer/configuration, and review accuracy and
+    cost measurement before considering more automated approval
 
 ## Verification
 
