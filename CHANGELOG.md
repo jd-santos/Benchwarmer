@@ -9,6 +9,9 @@ This project does not currently declare a Semantic Versioning policy.
 
 ### Added
 
+- Add Pi session and run-log import plus ChatGPT account-export import, with
+  private native snapshots, normalized branch structure, and explicit coverage
+  for fields the source does not expose.
 - Add canonical conversation and bounded model-work validation contracts with
   synthetic fixtures.
 - Add a schema-gated, WAL-aware, read-only Hermes schema-30 adapter with a

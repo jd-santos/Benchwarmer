@@ -1,5 +1,24 @@
 # Source: Pi
 
+## Local follow-up, 2026-09-23
+
+The current Mac has Pi CLI 0.87.1 and a session directory with 258 JSONL files.
+A sanitized full scan read and normalized 207 version 3 files (43,915 entries)
+and 51 version 1 run logs. The version 1 records have a stable `runId` per file
+but no entry ID. The adapter uses `runId` for conversation identity and marks
+calculated record ordinals and partial content coverage explicitly. No message
+text, account identifier, credential, provider payload, or private path was
+printed or retained in Git. The original 2026-09-08 absence
+finding below describes the earlier inspection environment.
+
+The new adapter reads complete v3 sessions and the observed v1 run logs from an
+explicit file or directory. It retains parsed native entries in private
+snapshots and v3 branch parents in normalized revisions. One file of each format
+was imported into an automatically removed private temp database, producing two
+snapshots and two revisions. Full directory persistence, rewrite/truncation
+reconciliation, and enrolled collector delivery remain pending. The stored Pi
+cost remains a harness-side calculation, not an actual provider charge.
+
 - Work: [Inspect Pi capabilities](pi.md)
 - Observed version/account scope: No Pi executable, process, global npm package,
   default agent directory, default session directory, or Pi directory override was
