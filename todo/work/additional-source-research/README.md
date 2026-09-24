@@ -71,4 +71,5 @@ Before completion:
 - [Source coverage matrix](../../../docs/source-coverage.md)
 - [Existing source reports](../../../docs/sources/README.md)
 - [Conversation contract](../conversation-contracts/design.md)
+- [Hermes implementation plan](../hermes-import/plan.md)
 - [Additional adapters](../additional-sources/README.md)

@@ -7,7 +7,21 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, JSON, String, UniqueConstraint, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    JSON,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, validates
 from sqlalchemy.types import TypeDecorator
 
@@ -200,3 +214,290 @@ class Source(Base):
         if value is None or isinstance(value, ConfiguredCoverage):
             return value
         return ConfiguredCoverage.from_mapping(value)
+
+
+class NativeSnapshot(Base):
+    """Immutable private raw-source snapshot referenced by imported records."""
+
+    __tablename__ = "native_snapshots"
+    __table_args__ = (
+        CheckConstraint("length(trim(id)) > 0", name="ck_native_snapshots_id_nonblank"),
+        CheckConstraint(
+            "length(trim(content_sha256)) = 64",
+            name="ck_native_snapshots_hash_length",
+        ),
+        CheckConstraint(
+            "byte_length >= 0", name="ck_native_snapshots_byte_length_nonnegative"
+        ),
+        UniqueConstraint(
+            "source_id",
+            "content_sha256",
+            name="uq_native_snapshots_source_hash",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    source_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("sources.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    import_batch_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("import_batches.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    content_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    relative_path: Mapped[str] = mapped_column(Text(), nullable=False)
+    byte_length: Mapped[int] = mapped_column(Integer(), nullable=False)
+    captured_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(), nullable=False, default=utc_now
+    )
+    created_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(),
+        nullable=False,
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+
+class NativeSession(Base):
+    """Latest source-native session observation for one source scope."""
+
+    __tablename__ = "native_sessions"
+    __table_args__ = (
+        PrimaryKeyConstraint("source_id", "native_id"),
+        CheckConstraint(
+            "length(trim(native_id)) > 0", name="ck_native_sessions_id_nonblank"
+        ),
+    )
+
+    source_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("sources.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+    )
+    native_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    parent_native_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_version: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    schema_version: Mapped[int] = mapped_column(Integer(), nullable=False)
+    application_version: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON(), nullable=False)
+    snapshot_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("native_snapshots.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+    )
+    source_present: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, default=True, server_default=text("1")
+    )
+    first_seen_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(), nullable=False, default=utc_now
+    )
+    last_seen_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(), nullable=False, default=utc_now
+    )
+
+
+class NativeMessage(Base):
+    """Latest imported message observation keyed by source-native identity."""
+
+    __tablename__ = "native_messages"
+    __table_args__ = (
+        PrimaryKeyConstraint("source_id", "native_id"),
+        CheckConstraint(
+            "length(trim(native_id)) > 0", name="ck_native_messages_id_nonblank"
+        ),
+        CheckConstraint(
+            "length(trim(session_native_id)) > 0",
+            name="ck_native_messages_session_nonblank",
+        ),
+        ForeignKeyConstraint(
+            ["source_id", "session_native_id"],
+            ["native_sessions.source_id", "native_sessions.native_id"],
+            ondelete="RESTRICT",
+            onupdate="RESTRICT",
+        ),
+    )
+
+    source_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("sources.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+    )
+    native_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    native_order: Mapped[int] = mapped_column(Integer(), nullable=False)
+    session_native_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(64), nullable=False)
+    content: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    tool_call_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tool_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reasoning: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    source_timestamp: Mapped[float] = mapped_column(Float(), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON(), nullable=False)
+    snapshot_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("native_snapshots.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+    )
+    source_present: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, default=True, server_default=text("1")
+    )
+    first_seen_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(), nullable=False, default=utc_now
+    )
+    last_seen_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(), nullable=False, default=utc_now
+    )
+
+
+class NativeUsage(Base):
+    """Latest source-native aggregate usage observation."""
+
+    __tablename__ = "native_usages"
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "source_id",
+            "session_native_id",
+            "model",
+            "billing_provider",
+            "billing_base_url",
+            "billing_mode",
+            "task",
+        ),
+        CheckConstraint(
+            "length(trim(session_native_id)) > 0",
+            name="ck_native_usages_session_nonblank",
+        ),
+        ForeignKeyConstraint(
+            ["source_id", "session_native_id"],
+            ["native_sessions.source_id", "native_sessions.native_id"],
+            ondelete="RESTRICT",
+            onupdate="RESTRICT",
+        ),
+    )
+
+    source_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("sources.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+    )
+    session_native_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    model: Mapped[str] = mapped_column(String(255), nullable=False)
+    billing_provider: Mapped[str] = mapped_column(String(255), nullable=False)
+    billing_base_url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    billing_mode: Mapped[str] = mapped_column(String(255), nullable=False)
+    task: Mapped[str] = mapped_column(String(255), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON(), nullable=False)
+    snapshot_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("native_snapshots.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+    )
+    source_present: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, default=True, server_default=text("1")
+    )
+    first_seen_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(), nullable=False, default=utc_now
+    )
+    last_seen_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(), nullable=False, default=utc_now
+    )
+
+
+class ConversationRevision(Base):
+    """Versioned normalized conversation document backed by native evidence."""
+
+    __tablename__ = "conversation_revisions"
+    __table_args__ = (
+        CheckConstraint(
+            "length(trim(id)) > 0", name="ck_conversation_revisions_id_nonblank"
+        ),
+        CheckConstraint(
+            "length(trim(native_id)) > 0",
+            name="ck_conversation_revisions_native_id_nonblank",
+        ),
+        UniqueConstraint(
+            "source_id",
+            "native_id",
+            "revision",
+            name="uq_conversation_revisions_source_native_revision",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    source_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("sources.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    native_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    revision: Mapped[str] = mapped_column(String(64), nullable=False)
+    snapshot_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("native_snapshots.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+    )
+    document: Mapped[dict[str, Any]] = mapped_column(JSON(), nullable=False)
+    captured_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False)
+    created_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(),
+        nullable=False,
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+
+class SourcePresence(Base):
+    """Bounded observation that a source-native subject was present."""
+
+    __tablename__ = "source_presence"
+    __table_args__ = (
+        PrimaryKeyConstraint("source_id", "batch_id", "subject_kind", "native_id"),
+    )
+
+    source_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("sources.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+    )
+    batch_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("import_batches.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        nullable=False,
+    )
+    subject_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    native_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    present: Mapped[bool] = mapped_column(Boolean(), nullable=False)
+    observed_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False)
+
+
+class SourceImportState(Base):
+    """Current adapter cursor for one configured source scope."""
+
+    __tablename__ = "source_import_states"
+    __table_args__ = (
+        CheckConstraint(
+            "length(trim(adapter_version)) > 0",
+            name="ck_source_import_states_adapter_nonblank",
+        ),
+    )
+
+    source_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("sources.id", ondelete="RESTRICT", onupdate="RESTRICT"),
+        primary_key=True,
+    )
+    adapter_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    schema_version: Mapped[int] = mapped_column(Integer(), nullable=False)
+    cursor: Mapped[dict[str, Any]] = mapped_column(JSON(), nullable=False)
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        UTCDateTime(),
+        nullable=False,
+        default=utc_now,
+        onupdate=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )

@@ -167,6 +167,48 @@ def _assert_import_batch_schema(root: Path) -> None:
         engine.dispose()
 
 
+def _assert_hermes_schema(root: Path) -> None:
+    engine = create_engine(BenchwarmerSettings(data_root=root))
+    try:
+        inspector = inspect(engine)
+        expected_tables = {
+            "native_snapshots",
+            "native_sessions",
+            "native_messages",
+            "native_usages",
+            "conversation_revisions",
+            "source_presence",
+            "source_import_states",
+        }
+        assert expected_tables <= set(inspector.get_table_names())
+        assert inspector.get_pk_constraint("native_sessions")[
+            "constrained_columns"
+        ] == [
+            "source_id",
+            "native_id",
+        ]
+        assert inspector.get_pk_constraint("native_messages")[
+            "constrained_columns"
+        ] == [
+            "source_id",
+            "native_id",
+        ]
+        assert inspector.get_pk_constraint("source_import_states")[
+            "constrained_columns"
+        ] == ["source_id"]
+        assert {
+            tuple(item["column_names"])
+            for item in inspector.get_unique_constraints("native_snapshots")
+        } == {("source_id", "content_sha256")}
+        assert {
+            foreign_key["referred_table"]
+            for table in expected_tables
+            for foreign_key in inspector.get_foreign_keys(table)
+        } >= {"sources", "import_batches"}
+    finally:
+        engine.dispose()
+
+
 def test_import_batch_migration_round_trips_schema_and_revision(
     tmp_path: Path,
 ) -> None:
@@ -174,20 +216,35 @@ def test_import_batch_migration_round_trips_schema_and_revision(
 
     upgrade = _run_alembic(root, "upgrade", "head")
     assert upgrade.returncode == 0, upgrade.stderr
-    assert _revision(root) == "0002"
+    assert _revision(root) == "0003"
     _assert_import_batch_schema(root)
+    _assert_hermes_schema(root)
 
     downgrade = _run_alembic(root, "downgrade", "0001")
     assert downgrade.returncode == 0, downgrade.stderr
     assert _revision(root) == "0001"
     engine = create_engine(BenchwarmerSettings(data_root=root))
     try:
-        assert "import_batches" not in inspect(engine).get_table_names()
-        assert "sources" in inspect(engine).get_table_names()
+        tables = set(inspect(engine).get_table_names())
+        assert "import_batches" not in tables
+        assert (
+            not {
+                "native_snapshots",
+                "native_sessions",
+                "native_messages",
+                "native_usages",
+                "conversation_revisions",
+                "source_presence",
+                "source_import_states",
+            }
+            & tables
+        )
+        assert "sources" in tables
     finally:
         engine.dispose()
 
     upgrade_again = _run_alembic(root, "upgrade", "head")
     assert upgrade_again.returncode == 0, upgrade_again.stderr
-    assert _revision(root) == "0002"
+    assert _revision(root) == "0003"
     _assert_import_batch_schema(root)
+    _assert_hermes_schema(root)

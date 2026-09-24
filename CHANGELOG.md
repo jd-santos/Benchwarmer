@@ -11,6 +11,11 @@ This project does not currently declare a Semantic Versioning policy.
 
 - Add canonical conversation and bounded model-work validation contracts with
   synthetic fixtures.
+- Add a schema-gated, WAL-aware, read-only Hermes schema-30 adapter with a
+  synthetic upstream-pinned fixture and bounded private-data failures.
+- Add incremental Hermes persistence with private content-addressed snapshots,
+  source-native upserts, normalized conversation revisions, cursor state, and
+  durable failed-batch records.
 - Add private data-root configuration, Alembic migrations, source and import-batch
   records, synthetic fixture loading, and database-backed health and source-status
   APIs.

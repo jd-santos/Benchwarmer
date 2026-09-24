@@ -8,7 +8,9 @@ Deliver enrolled, read-only manual push collection before optional scheduling. T
 
 ## Dependencies and order
 
-Blocked on [Hermes import](../hermes-import/README.md) and [the application foundation](../application-foundation/README.md). Operational rollout also requires [private deployment](../private-deployment/README.md).
+Blocked on the Hermes source adapter and importer core in [Hermes import](../hermes-import/README.md), plus [the application foundation](../application-foundation/README.md). Manual Hermes delivery then completes the first real central import across both records. This avoids a dependency cycle: adapter and importer behavior are proved before transport, while Hermes is not called centrally available until the collector receives durable acknowledgment.
+
+Operational rollout also requires [private deployment](../private-deployment/README.md). This work does not block synthetic fixture development, source-device reader validation, or local importer implementation.
 
 ## Acceptance criteria
 
