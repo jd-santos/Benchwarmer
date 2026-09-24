@@ -4,7 +4,7 @@ Status: Planned. Implementation and delivery are pending unless a supporting rec
 
 ## Purpose
 
-Make the imported library useful immediately: find work, follow its actual branch, and record human observations before adding automated analysis.
+Make the imported library useful immediately: find work, follow its actual branch, and record human observations before adding automated analysis. This browsing path is the foundation for the [history and cost dashboards](../history-and-cost-dashboards/README.md).
 
 ## Dependencies and order
 
@@ -12,7 +12,7 @@ Blocked on [Hermes import](../hermes-import/README.md). Ratings and corrections 
 
 ## Acceptance criteria
 
-Search opens the matching evidence, branches and continuations stay distinct, and ratings, labels, notes, and their revisions survive restart. The main reading path works on desktop and mobile without requiring cost charts or inference.
+Search opens the matching evidence, branches and continuations stay distinct, and ratings, labels, notes, and their revisions survive restart. The main reading path works on desktop and mobile. Basic charting follows as a separate slice so browsing does not wait for a reporting implementation.
 
 ## Work
 

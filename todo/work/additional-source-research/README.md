@@ -34,8 +34,11 @@ The source-coverage matrix is updated with explicit unknowns. Any shared-schema 
   - Scope: Codex CLI and app-server, Codex desktop/web or ChatGPT export surfaces, ChatGPT-plan usage, and OpenAI API usage/cost endpoints
   - Verify: current full official pages, installed-version boundaries, individual versus administrator access, and a documented list of probe-only unknowns
 
-- [ ] Inspect Claude Desktop and Claude Code evidence
-  - Scope: supported exports, documented local session storage, Claude Code structured output and monitoring, consumer retention, and Anthropic API/admin usage surfaces
+- [ ] Inspect Claude Desktop, Cowork, and Claude Code evidence
+  - Scope: distinguish agentic Cowork sessions from ordinary chat even where
+    the desktop UI has a unified entry point; inspect supported exports,
+    documented local session storage, Claude Code structured output and
+    monitoring, consumer retention, and Anthropic API/admin usage surfaces
   - Verify: distinguish consumer, Pro/Max, API, Team, and Enterprise availability without inferring access from organization-only documentation
 
 - [ ] Refresh OpenRouter evidence

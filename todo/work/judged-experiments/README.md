@@ -8,7 +8,7 @@ Compare useful work across native harness configurations and compatible direct A
 
 ## Dependencies and order
 
-Blocked on [task preparation](../task-preparation/README.md) and [bounded model execution](../bounded-model-work/README.md). Execution safety and applied-judge configuration precede real trials.
+Blocked on [task preparation](../task-preparation/README.md), [evaluation planning](../evaluation-planning/README.md), and [bounded model execution](../bounded-model-work/README.md). Execution safety and applied-judge configuration precede real trials.
 
 ## Acceptance criteria
 
