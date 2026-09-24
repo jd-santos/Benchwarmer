@@ -1,0 +1,16 @@
+{
+  "schema_version": 30,
+  "application_version": "fixture-app-1.0",
+  "adapter_version": "1",
+  "capability_manifest_version": 1,
+  "journal_mode": "wal",
+  "table_order": [
+    "gateway_routing",
+    "messages",
+    "session_model_usage",
+    "sessions",
+    "system_prompts"
+  ],
+  "additive_column": "column.sessions.fixture_extension",
+  "additive_value": "extra"
+}

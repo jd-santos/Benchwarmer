@@ -191,27 +191,33 @@ Split this milestone so schema work and import behavior remain reviewable.
 
 **Type:** subsystem or file cluster `[context: medium]`
 
+**Status:** Complete for synthetic validation.
+
 Add migrations and source-neutral records for native session/message/usage
 subjects, immutable snapshot references, source-presence observations, and the
 Hermes cursor. Do not encode Hermes-only columns into source-neutral tables when
 versioned extensions or native snapshot references preserve them accurately.
 
-Migration tests must cover upgrade/downgrade, constraints, source-scoped native
-identity, and retention of prior observations.
+Migration tests cover upgrade/downgrade, table and key constraints, and
+source-scoped native identity. Importer tests cover retention of prior snapshots
+and revisions across updates.
 
 ### 2B. Import transaction
 
 **Type:** subsystem or file cluster `[context: medium]`
 
-Build `src/benchwarmer/adapters/hermes/importer.py` around the reader and existing
-`Source` and `ImportBatch` contracts. The import unit must publish immutable
-private snapshot content before committing its references, upsert source-native
-subjects idempotently, and advance the message watermark only after the entire
-unit commits.
+**Status:** Complete for synthetic validation.
 
-Test initial, unchanged, appended, metadata-only, mutable-usage, interrupted, and
-retry cases. A zero actual-cost value remains unconfirmed unless its source
-status and provenance establish a charge.
+Build `src/benchwarmer/adapters/hermes/importer.py` around the reader and existing
+`Source` and `ImportBatch` contracts. The import unit publishes immutable private
+snapshot content before committing its references, upserts source-native subjects
+idempotently, and advances the message watermark only after the entire unit
+commits. The public importer seam requires an idle SQLAlchemy session to avoid
+rolling back caller-owned work and checks the cursor again before publishing.
+
+Tests cover initial, unchanged, appended, edited/tool-linked, mutable-usage,
+interrupted, source-read-failure, and retry cases. A zero actual-cost value
+remains unconfirmed unless its source status and provenance establish a charge.
 
 ## Milestone 3: deliver through the permanent collector
 

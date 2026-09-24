@@ -85,7 +85,7 @@ def test_migration_commands_report_and_remove_the_latest_revision(
 
     upgrade = _run_alembic(root, "upgrade", "head")
     assert upgrade.returncode == 0, upgrade.stderr
-    assert _current_revision(BenchwarmerSettings(data_root=root)) == "0002"
+    assert _current_revision(BenchwarmerSettings(data_root=root)) == "0003"
 
     downgrade = _run_alembic(root, "downgrade", "base")
     assert downgrade.returncode == 0, downgrade.stderr
