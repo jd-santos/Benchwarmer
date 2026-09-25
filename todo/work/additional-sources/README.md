@@ -17,8 +17,11 @@ research must identify the actual session type rather than rely on a mode label.
 The local Pi installation supplied version 3 session files, so Pi was selected
 for the second read/import seam. The Hermes private-source gate and enrolled
 collector remain open. The ChatGPT macOS cache was not selected as an interface;
-an account export is the supported input. Codex and Claude work still depend on
-[additional-source research](../additional-source-research/README.md).
+an account export is the supported input. A 2026-09-24 metadata-only Mac check
+found local Codex session JSONL and SQLite artifacts, but did not establish
+desktop-versus-CLI attribution. Prefer the documented Codex app-server read
+surface over treating its internal stores as a stable format. Codex and Claude
+implementation work still depend on [additional-source research](../additional-source-research/README.md).
 
 ## Acceptance criteria
 

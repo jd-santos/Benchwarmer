@@ -2,7 +2,7 @@
 
 **Status:** Completed evidence synthesis for [the source coverage review](source-coverage.md)
 
-**Evidence date:** 2026-09-08
+**Evidence date:** 2026-09-24
 
 This document compares the original four independent source inspections and a
 later ChatGPT macOS addendum. The first-adapter choice is recorded in
@@ -14,7 +14,7 @@ Detailed reports:
 - [Hermes](sources/hermes.md)
 - [Codex](sources/codex.md)
 - [OpenRouter](sources/openrouter.md)
-- [ChatGPT macOS conversations](sources/chatgpt-macos.md) (2026-09-23 addendum)
+- [ChatGPT macOS conversations](sources/chatgpt-macos.md) (2026-09-24 addendum)
 
 ## Reading the matrix
 
@@ -34,7 +34,7 @@ Detailed reports:
 | --- | --- | --- | --- |
 | Pi | Installed session files observed on 2026-09-23 | Local CLI 0.87.1 / v3 and other v1 records | Not inspected |
 | Hermes | Local store | App 0.20.5 / schema 30 | Profile only |
-| Codex | Installed and authenticated | CLI 0.129.0 | Private values not read |
+| Codex | Installed; local macOS session/SQLite artifacts observed | CLI 0.129.0; desktop/CLI attribution unknown | Private values not read |
 | OpenRouter | Public API only | Live public schemas | No credential available |
 | ChatGPT macOS | App cache present; export not inspected | Export JSON schema unverified | Not inspected |
 
@@ -46,9 +46,10 @@ account fields remain unknown because no authenticated request was made. Pi's
 version 3 JSONL headers and entry key names without printing content. A later
 sanitized scan normalized 207 version 3 sessions and 51 version 1 run logs.
 The version 1 logs use `runId` plus calculated record ordinals and have partial
-content coverage. ChatGPT's
-local app cache is opaque in this review. Its connector uses a user-supplied
-account export and still needs private export validation.
+content coverage. ChatGPT's local app cache is opaque in this review. Regular
+Chat history is exported through a user-requested account ZIP; its connector
+still needs private export validation. Desktop Codex is a separate history
+source.
 
 ## Identity and incremental import
 

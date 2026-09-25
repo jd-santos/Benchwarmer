@@ -6,6 +6,22 @@
   suppressed
 - Inspected: 2026-09-08
 
+## Local macOS addendum, 2026-09-24
+
+A metadata-only check on the Mac running the ChatGPT desktop app found local
+Codex session JSONL files, archived session JSONL files, and SQLite state/log
+databases under the Codex data directory. No transcript text or private metadata
+values were read. The files were not attributed individually to desktop Codex
+versus Codex CLI, so their presence does not establish complete desktop-mode
+coverage.
+
+The documented app-server offers a better read interface than parsing these
+internal stores: `thread/list` pages stored threads and `thread/read` retrieves
+a thread without resuming it; the latter can include turns. The CLI/app-server
+source and account history remain distinct from ChatGPT Chat. See the
+[ChatGPT Work and Codex source note](chatgpt-macos.md) for the desktop mode
+boundary. [Codex App Server documentation][app-server] describes these methods.
+
 ## Evidence boundary
 
 This report combines three bounded evidence sets:
