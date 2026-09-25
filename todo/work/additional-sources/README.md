@@ -1,6 +1,8 @@
 # Add the other conversation sources
 
-Status: Planned. Implementation and delivery are pending unless a supporting record explicitly says otherwise.
+Status: In progress. Pi JSONL and ChatGPT account-export adapters have synthetic
+validation. Pi read/normalize and two private temp imports passed; ChatGPT
+actual-export validation and collector delivery are pending.
 
 ## Purpose
 
@@ -12,7 +14,14 @@ research must identify the actual session type rather than rely on a mode label.
 
 ## Dependencies and order
 
-Blocked on [Hermes import](../hermes-import/README.md) and [verified additional-source research](../additional-source-research/README.md). Choose the second source from actual available history and refreshed evidence before naming exact implementation files.
+The local Pi installation supplied version 3 session files, so Pi was selected
+for the second read/import seam. The Hermes private-source gate and enrolled
+collector remain open. The ChatGPT macOS cache was not selected as an interface;
+an account export is the supported input. A 2026-09-24 metadata-only Mac check
+found local Codex session JSONL and SQLite artifacts, but did not establish
+desktop-versus-CLI attribution. Prefer the documented Codex app-server read
+surface over treating its internal stores as a stable format. Codex and Claude
+implementation work still depend on [additional-source research](../additional-source-research/README.md).
 
 ## Acceptance criteria
 
@@ -24,13 +33,43 @@ paths remain documented gaps rather than invented parity.
 
 ## Work
 
-- [ ] Add a second source adapter
-  - Dependencies: [Import Hermes conversations reliably](../hermes-import/README.md), [Verify additional conversation sources](../additional-source-research/README.md)
-  - Promotion requirement: the coordinator names the exact second-source work and required inspection report before implementation
+- [x] Add Pi v3 session and v1 run-log read/import seams
+  - Files: `src/benchwarmer/adapters/pi/reader.py`, shared file-source
+    persistence, and `tests/adapters/test_file_conversations.py`
+  - Preserve the full parsed native content in private snapshots, v3 branch
+    parents in normalized revisions, and usage with source-specific cost
+    provenance. V1 records use `runId` plus calculated record ordinals and mark
+    content coverage partial. Import one explicit file or directory at a time.
+    File truncation or unsupported versions fail closed. No Pi process,
+    credentials, or model call is involved. A mixed directory records native
+    versions in the cursor and uses state schema `0` to mean mixed; each native
+    session keeps its own schema version.
 
-- [ ] Add the remaining Pi/Codex source adapter
-  - Dependencies: [Add a second source adapter](../additional-sources/README.md)
-  - Gate: refresh source evidence and name exact adapter tasks before launch
+- [x] Add ChatGPT account-export read and import seam
+  - Files: `src/benchwarmer/adapters/chatgpt/reader.py`, shared file-source
+    persistence, synthetic ZIP fixture, and
+    [source report](../../../docs/sources/chatgpt-macos.md)
+  - Accept an explicit export ZIP or conversation JSON. Keep full native
+    conversation snapshots and normalize supported text/branch fields. Unknown
+    content remains private and marks coverage partial. The undocumented macOS
+    cache is not an import interface.
+
+- [ ] Complete ChatGPT export verification and broader source reconciliation
+  - Compare only schema keys, bounded counts, coverage, and pass/fail in Git.
+    Do not commit private content or machine-specific paths.
+  - The local read/normalize pass accepted 207 Pi v3 sessions and 51 v1 run
+    logs. One file from each layout passed a private temp database import, and
+    the temp directory was removed automatically. Full directory persistence
+    and source rewrite/deletion reconciliation are still pending.
+  - Reconcile Pi file rewrite/truncation and ChatGPT missing/exported subjects
+    without deleting retained evidence.
+
+- [ ] Deliver configured source collection through the enrolled push topology
+  - Coordinate with [cross-machine collection](../cross-machine-collection/README.md).
+    No source adapter implies central collection is live.
+
+- [ ] Add Codex conversation history
+  - Gate: refresh source evidence and name exact adapter tasks before launch.
 
 - [ ] Investigate and add Claude Cowork history where access is feasible
   - Dependencies: [Inspect Claude Desktop and Claude Code evidence](../additional-source-research/README.md)
@@ -40,9 +79,20 @@ paths remain documented gaps rather than invented parity.
 
 ## Verification
 
-Before implementing a broad step, specify its files, fixtures, and focused
-checks here. Follow [repository validation](../../../AGENTS.md) and record actual
-results at handoff. This record currently defines planned work.
+Synthetic checks on this branch:
+
+- `tests/adapters/test_file_conversations.py`: Pi tree, edited revision,
+  repeat import, mixed-version directory import, ChatGPT ZIP branch import,
+  unsupported Pi version, and ChatGPT cycle checks pass.
+- Full `pytest`: 208 passed, one upstream Starlette/AnyIO warning, 52 subtests.
+  The test process needs `UV_CACHE_DIR` under a writable temp directory because
+  subprocess checks invoke `uv` and the default cache is outside this sandbox.
+- `ruff check .`, `ruff format --check .`, `compileall`, and `git diff --check`
+  pass.
+
+No private Pi row or ChatGPT export was retained. The connector APIs accept
+explicit source paths and source identities; collector configuration, source
+delivery, reconciliation, and actual-export compatibility remain open.
 
 ## Supporting material
 

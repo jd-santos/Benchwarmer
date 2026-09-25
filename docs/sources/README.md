@@ -1,7 +1,7 @@
 # Source inspection reports
 
 Each source inspection is an independent evidence-gathering task. This directory
-allows Pi, Hermes, Codex, and OpenRouter investigations to run concurrently
+allows Pi, Hermes, Codex, OpenRouter, and ChatGPT investigations to run concurrently
 without sharing an output file.
 
 ## Ownership
@@ -18,6 +18,7 @@ decision determines implementation order.
 - [Hermes](hermes.md)
 - [Codex](codex.md)
 - [OpenRouter](openrouter.md)
+- [ChatGPT macOS conversations](chatgpt-macos.md)
 - [Cross-source coverage matrix](../source-coverage.md)
 
 ## Required report shape
