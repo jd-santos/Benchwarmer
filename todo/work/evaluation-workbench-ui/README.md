@@ -1,9 +1,7 @@
 # Design the evidence-to-evaluation workbench UI
 
-Status: Stopped on 2026-10-15 after the first decision. The user chose to proceed
-to implementation instead of further Markdown prototypes. The remaining decision
-records stay as reference questions for the implementing work records; they are
-no longer a gate.
+Status: All decisions resolved with the user on 2026-10-15. Implementation
+proceeds in the existing work records, starting with conversation browsing.
 
 Current role: None claimed. Existing work records remain authoritative for
 implementation.
@@ -97,41 +95,37 @@ complete.
 
 ## Decision frontier
 
-The unresolved records below are not being worked as standalone prototypes.
-Settle each question inside the work record that implements it, starting with
-[Browse, search, and annotate conversations](../conversation-library/README.md).
-
 - [x] [Shape long-conversation reading and navigation](decisions/long-conversation-navigation.md)
   - Type: Prototype, human in the loop
   - Blocked by: Nothing
-- [ ] [Define the anchored annotation grammar](decisions/anchored-annotation-grammar.md)
+- [x] [Define the anchored annotation grammar](decisions/anchored-annotation-grammar.md)
   - Type: Grilling, human in the loop
   - Blocked by: Nothing
-- [ ] [Define evaluation-project navigation and artifact relationships](decisions/project-navigation.md)
+- [x] [Define evaluation-project navigation and artifact relationships](decisions/project-navigation.md)
   - Type: Grilling, human in the loop
   - Blocked by: Nothing
-- [ ] [Design evidence selection and bundle assembly](decisions/evidence-selection-and-bundles.md)
+- [x] [Design evidence selection and bundle assembly](decisions/evidence-selection-and-bundles.md)
   - Type: Prototype, human in the loop
   - Blocked by: [Shape long-conversation reading and navigation](decisions/long-conversation-navigation.md) and [Define the anchored annotation grammar](decisions/anchored-annotation-grammar.md)
-- [ ] [Design generated-suggestion review and bulk triage](decisions/suggestion-review.md)
+- [x] [Design generated-suggestion review and bulk triage](decisions/suggestion-review.md)
   - Type: Prototype, human in the loop
   - Blocked by: [Define the anchored annotation grammar](decisions/anchored-annotation-grammar.md) and [Design evidence selection and bundle assembly](decisions/evidence-selection-and-bundles.md)
-- [ ] [Design bundle-to-task promotion and readiness review](decisions/task-promotion.md)
+- [x] [Design bundle-to-task promotion and readiness review](decisions/task-promotion.md)
   - Type: Prototype, human in the loop
   - Blocked by: [Design evidence selection and bundle assembly](decisions/evidence-selection-and-bundles.md)
-- [ ] [Design test-plan authoring and applied-judge preview](decisions/test-plan-authoring.md)
+- [x] [Design test-plan authoring and applied-judge preview](decisions/test-plan-authoring.md)
   - Type: Prototype, human in the loop
   - Blocked by: [Define evaluation-project navigation and artifact relationships](decisions/project-navigation.md) and [Design bundle-to-task promotion and readiness review](decisions/task-promotion.md)
-- [ ] [Design run monitoring, interruption, and recovery](decisions/run-monitoring.md)
+- [x] [Design run monitoring, interruption, and recovery](decisions/run-monitoring.md)
   - Type: Prototype, human in the loop
   - Blocked by: [Design test-plan authoring and applied-judge preview](decisions/test-plan-authoring.md)
-- [ ] [Design trial, judgment, and disagreement review](decisions/judgment-review.md)
+- [x] [Design trial, judgment, and disagreement review](decisions/judgment-review.md)
   - Type: Prototype, human in the loop
   - Blocked by: [Design test-plan authoring and applied-judge preview](decisions/test-plan-authoring.md)
-- [ ] [Define responsive transformations and the keyboard workflow](decisions/responsive-and-keyboard-workflow.md)
+- [x] [Define responsive transformations and the keyboard workflow](decisions/responsive-and-keyboard-workflow.md)
   - Type: Prototype, human in the loop
   - Blocked by: [Shape long-conversation reading and navigation](decisions/long-conversation-navigation.md), [Design evidence selection and bundle assembly](decisions/evidence-selection-and-bundles.md), [Design test-plan authoring and applied-judge preview](decisions/test-plan-authoring.md), and [Design trial, judgment, and disagreement review](decisions/judgment-review.md)
-- [ ] [Place the accepted UI slices in the delivery sequence](decisions/implementation-sequence.md)
+- [x] [Place the accepted UI slices in the delivery sequence](decisions/implementation-sequence.md)
   - Type: Grilling, human in the loop
   - Blocked by: Every preceding decision
 
@@ -141,6 +135,19 @@ Settle each question inside the work record that implements it, starting with
   The outline is hidden behind a left-drawer toggle. Suggested chapters appear
   inline with an edit control, and details open on demand rather than in a
   persistent drawer. Each branch remembers its own reading position.
+- [Define the anchored annotation grammar](decisions/anchored-annotation-grammar.md):
+  Annotations are typed records with one shared shape, revision history and no
+  replies. They anchor to a message or a text range. Judges score each criterion
+  from 0 to 1 in 0.1 steps, and unjudged results have no score.
+- [Define evaluation-project navigation and artifact relationships](decisions/project-navigation.md):
+  Projects reference global artifacts and never own them, with a visible
+  project switcher.
+- Remaining records: bundles are built by selecting first, with agent-proposed
+  bundles going through suggestion review. Suggestions appear inline and in one
+  triage queue. Tasks use a wizard that saves each reversible stage. Test plans,
+  runs, and results share a task × configuration grid with separate cost
+  columns. The phone covers reading and review, while authoring is optimized
+  for desktop. Build order follows the priority list, starting with browsing.
 
 ## Not yet specified
 

@@ -1,8 +1,8 @@
 # Design trial, judgment, and disagreement review
 
 Type: Prototype, human in the loop\
-Status: Open\
-Claim: Unclaimed\
+Status: Resolved\
+Claim: None\
 Parent: [Design the evidence-to-evaluation workbench UI](../README.md)\
 Blocked by: [Design test-plan authoring and applied-judge preview](test-plan-authoring.md)\
 Blocks: [Define responsive transformations and the keyboard workflow](responsive-and-keyboard-workflow.md)
@@ -19,3 +19,12 @@ inapplicability, uncertainty, human corrections, calibration evidence, and links
 back to motivating bundles. Keep quality, tokens, money, speed, and judge overhead
 separate while still supporting practical comparison across the same task set and
 distinct source-lineage families.
+
+## Resolution
+
+Decided with the user on 2026-10-15.
+
+Results use the same task × configuration grid as test plans. Each cell shows the
+0 to 1 score for each criterion, keeps unjudged and failed results visibly
+distinct, and shows cost, tokens, and time in separate columns. Selecting a cell
+opens side-by-side output, judge reasoning, and human review.

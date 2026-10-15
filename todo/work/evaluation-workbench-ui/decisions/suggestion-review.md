@@ -1,8 +1,8 @@
 # Design generated-suggestion review and bulk triage
 
 Type: Prototype, human in the loop\
-Status: Open\
-Claim: Unclaimed\
+Status: Resolved\
+Claim: None\
 Parent: [Design the evidence-to-evaluation workbench UI](../README.md)\
 Blocked by: [Define the anchored annotation grammar](anchored-annotation-grammar.md) and [Design evidence selection and bundle assembly](evidence-selection-and-bundles.md)
 
@@ -18,3 +18,12 @@ unavailable confidence, producer revisions, and measured samples of unflagged
 content. Decide which suggestion types may share a queue, how review progress and
 coverage remain visible, and where bounded model-work scope, disclosure, cost,
 and skipped material are inspected.
+
+## Resolution
+
+Decided with the user on 2026-10-15.
+
+Suggestions appear inline as pending wherever they apply, and one triage queue,
+filterable by suggestion type, supports individual and batch accept, edit,
+reject, and defer with source expansion. The queue shows review progress,
+coverage, and the model-work scope and cost that produced the suggestions.

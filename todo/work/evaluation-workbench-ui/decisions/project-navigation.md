@@ -1,8 +1,8 @@
 # Define evaluation-project navigation and artifact relationships
 
 Type: Grilling, human in the loop\
-Status: Open\
-Claim: Unclaimed\
+Status: Resolved\
+Claim: None\
 Parent: [Design the evidence-to-evaluation workbench UI](../README.md)\
 Blocks: [Design test-plan authoring and applied-judge preview](test-plan-authoring.md)
 
@@ -18,3 +18,13 @@ and results. Decide what establishes current project context, how artifacts can
 belong to or be referenced by more than one project, how global search and saved
 views enter a project workflow, and how the interface keeps location, version,
 selection, and unsaved changes clear.
+
+## Resolution
+
+Decided with the user on 2026-10-15.
+
+Projects reference artifacts; they never own them. Conversations, annotations,
+bundles, tasks, and test plans live in the global library, and one item can be
+referenced by several projects. A visible project switcher sets the current
+context, and leaving it returns to the library. Ordinary review never requires
+creating a project.
