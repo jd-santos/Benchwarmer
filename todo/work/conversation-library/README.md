@@ -21,6 +21,14 @@ Search opens the matching evidence, branches and continuations stay distinct, an
   - Scope: readable transcripts, branches/continuations, source freshness,
     coverage, filters and evidence-linked keyword search; usage/cost as metadata,
     no chart dependency
+  - [x] List, filter, and keyword-search latest revisions; read a conversation
+    with branch paths, revision history, and two-way continuation links
+    (`GET /api/v1/conversations`, `GET /api/v1/conversations/{id}`) on
+    `task/conversation-browsing`. Verified with synthetic imports in
+    `tests/api/test_conversation_api.py` and all repository checks.
+  - [ ] Replace the per-request search scan with an SQLite FTS5 index before
+    real library volumes
+  - [ ] Conversation list and transcript screens
 
 - [ ] Add ratings, labels, notes, and annotation revision history
   - Dependencies: [Browse conversations and search their text and metadata](../conversation-library/README.md)
