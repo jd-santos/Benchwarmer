@@ -1,0 +1,1244 @@
+{
+ "schema_version": 1,
+ "description": "Synthetic conversations for local browsing demos. All content is invented.",
+ "imports": [
+  {
+   "source_id": "fixture-source-pi-failed",
+   "source_kind": "pi",
+   "batch_id": "demo-pi-1",
+   "captured_at": "2026-10-04T00:00:00+00:00",
+   "conversations": [
+    {
+     "native_id": "demo-import-duplicates",
+     "title": "Investigate duplicate Hermes sessions in nightly import",
+     "coverage": {
+      "messages": "available",
+      "tool_calls": "available",
+      "usage": "unknown"
+     },
+     "events": [
+      {
+       "native_id": "u0",
+       "ordinal": 0,
+       "parent_id": null,
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:00:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Why does the nightly import report duplicate Hermes sessions?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a0",
+       "ordinal": 1,
+       "parent_id": "u0",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:01:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "I'll compare the session IDs in the last two batches before changing anything, so we can tell a real duplicate from a second revision of the same session.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 3'\"}",
+         "tool_call_id": "call-0",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t0",
+       "ordinal": 2,
+       "parent_id": "a0",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:02:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-0-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-0-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-0-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions\nbatch-0-03 | succeeded | 2026-10-04T03:00:00Z | 13 sessions\nbatch-0-04 | succeeded | 2026-10-05T04:00:00Z | 14 sessions\nbatch-0-05 | succeeded | 2026-10-06T05:00:00Z | 15 sessions\nbatch-0-06 | succeeded | 2026-10-07T06:00:00Z | 16 sessions\nbatch-0-07 | succeeded | 2026-10-08T07:00:00Z | 17 sessions\nbatch-0-08 | succeeded | 2026-10-09T08:00:00Z | 18 sessions\nbatch-0-09 | succeeded | 2026-10-01T09:00:00Z | 19 sessions\nbatch-0-10 | succeeded | 2026-10-02T00:00:00Z | 20 sessions\nbatch-0-11 | succeeded | 2026-10-03T01:00:00Z | 21 sessions\nbatch-0-12 | succeeded | 2026-10-04T02:00:00Z | 22 sessions\nbatch-0-13 | succeeded | 2026-10-05T03:00:00Z | 23 sessions\nbatch-0-14 | succeeded | 2026-10-06T04:00:00Z | 24 sessions\nbatch-0-15 | succeeded | 2026-10-07T05:00:00Z | 25 sessions\nbatch-0-16 | succeeded | 2026-10-08T06:00:00Z | 26 sessions\nbatch-0-17 | succeeded | 2026-10-09T07:00:00Z | 27 sessions\nbatch-0-18 | succeeded | 2026-10-01T08:00:00Z | 28 sessions\nbatch-0-19 | succeeded | 2026-10-02T09:00:00Z | 29 sessions\nbatch-0-20 | succeeded | 2026-10-03T00:00:00Z | 30 sessions\nbatch-0-21 | succeeded | 2026-10-04T01:00:00Z | 31 sessions\nbatch-0-22 | succeeded | 2026-10-05T02:00:00Z | 32 sessions\nbatch-0-23 | succeeded | 2026-10-06T03:00:00Z | 33 sessions",
+         "tool_call_id": "call-0",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u1",
+       "ordinal": 3,
+       "parent_id": "t0",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:07:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Can you check whether the cursor resets after an interrupted batch?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a1",
+       "ordinal": 4,
+       "parent_id": "u1",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:08:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "The cursor is only written when a batch commits. An interrupted batch leaves the previous cursor in place, so the next run re-reads the same window.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 4'\"}",
+         "tool_call_id": "call-1",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t1",
+       "ordinal": 5,
+       "parent_id": "a1",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:09:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-1-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-1-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-1-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions",
+         "tool_call_id": "call-1",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u2",
+       "ordinal": 6,
+       "parent_id": "t1",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:14:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Show me the batches table for the last three runs.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a2",
+       "ordinal": 7,
+       "parent_id": "u2",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:15:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "Here are the recent batches. Two runs overlap on the same window, which explains the repeated sessions in the report.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 5'\"}",
+         "tool_call_id": "call-2",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t2",
+       "ordinal": 8,
+       "parent_id": "a2",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:16:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-2-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-2-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-2-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions\nbatch-2-03 | succeeded | 2026-10-04T03:00:00Z | 13 sessions\nbatch-2-04 | succeeded | 2026-10-05T04:00:00Z | 14 sessions\nbatch-2-05 | succeeded | 2026-10-06T05:00:00Z | 15 sessions\nbatch-2-06 | succeeded | 2026-10-07T06:00:00Z | 16 sessions\nbatch-2-07 | succeeded | 2026-10-08T07:00:00Z | 17 sessions\nbatch-2-08 | succeeded | 2026-10-09T08:00:00Z | 18 sessions\nbatch-2-09 | succeeded | 2026-10-01T09:00:00Z | 19 sessions\nbatch-2-10 | succeeded | 2026-10-02T00:00:00Z | 20 sessions\nbatch-2-11 | succeeded | 2026-10-03T01:00:00Z | 21 sessions\nbatch-2-12 | succeeded | 2026-10-04T02:00:00Z | 22 sessions\nbatch-2-13 | succeeded | 2026-10-05T03:00:00Z | 23 sessions\nbatch-2-14 | succeeded | 2026-10-06T04:00:00Z | 24 sessions\nbatch-2-15 | succeeded | 2026-10-07T05:00:00Z | 25 sessions\nbatch-2-16 | succeeded | 2026-10-08T06:00:00Z | 26 sessions\nbatch-2-17 | succeeded | 2026-10-09T07:00:00Z | 27 sessions\nbatch-2-18 | succeeded | 2026-10-01T08:00:00Z | 28 sessions\nbatch-2-19 | succeeded | 2026-10-02T09:00:00Z | 29 sessions\nbatch-2-20 | succeeded | 2026-10-03T00:00:00Z | 30 sessions\nbatch-2-21 | succeeded | 2026-10-04T01:00:00Z | 31 sessions\nbatch-2-22 | succeeded | 2026-10-05T02:00:00Z | 32 sessions\nbatch-2-23 | succeeded | 2026-10-06T03:00:00Z | 33 sessions",
+         "tool_call_id": "call-2",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "compaction-1",
+       "ordinal": 9,
+       "parent_id": "t2",
+       "kind": "compaction",
+       "role": "unknown",
+       "occurred_at": "2026-10-02T09:17:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Earlier turns were summarized by the harness to fit the context window.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u3",
+       "ordinal": 10,
+       "parent_id": "compaction-1",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:21:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "So the retry path re-reads the WAL snapshot. Is that safe?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a3",
+       "ordinal": 11,
+       "parent_id": "u3",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:22:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "Yes. The reader opens the database read-only and copies a consistent snapshot, so re-reading cannot modify Hermes or skip committed rows.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 6'\"}",
+         "tool_call_id": "call-3",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t3",
+       "ordinal": 12,
+       "parent_id": "a3",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:23:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-3-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-3-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-3-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions",
+         "tool_call_id": "call-3",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u4",
+       "ordinal": 13,
+       "parent_id": "t3",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:28:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Let's write a regression test for the interrupted import.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a4",
+       "ordinal": 14,
+       "parent_id": "u4",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:29:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "I'll add a test that interrupts a batch after the snapshot is written and asserts that the retry produces no new revision when nothing changed.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 7'\"}",
+         "tool_call_id": "call-4",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t4",
+       "ordinal": 15,
+       "parent_id": "a4",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:30:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-4-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-4-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-4-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions\nbatch-4-03 | succeeded | 2026-10-04T03:00:00Z | 13 sessions\nbatch-4-04 | succeeded | 2026-10-05T04:00:00Z | 14 sessions\nbatch-4-05 | succeeded | 2026-10-06T05:00:00Z | 15 sessions\nbatch-4-06 | succeeded | 2026-10-07T06:00:00Z | 16 sessions\nbatch-4-07 | succeeded | 2026-10-08T07:00:00Z | 17 sessions\nbatch-4-08 | succeeded | 2026-10-09T08:00:00Z | 18 sessions\nbatch-4-09 | succeeded | 2026-10-01T09:00:00Z | 19 sessions\nbatch-4-10 | succeeded | 2026-10-02T00:00:00Z | 20 sessions\nbatch-4-11 | succeeded | 2026-10-03T01:00:00Z | 21 sessions\nbatch-4-12 | succeeded | 2026-10-04T02:00:00Z | 22 sessions\nbatch-4-13 | succeeded | 2026-10-05T03:00:00Z | 23 sessions\nbatch-4-14 | succeeded | 2026-10-06T04:00:00Z | 24 sessions\nbatch-4-15 | succeeded | 2026-10-07T05:00:00Z | 25 sessions\nbatch-4-16 | succeeded | 2026-10-08T06:00:00Z | 26 sessions\nbatch-4-17 | succeeded | 2026-10-09T07:00:00Z | 27 sessions\nbatch-4-18 | succeeded | 2026-10-01T08:00:00Z | 28 sessions\nbatch-4-19 | succeeded | 2026-10-02T09:00:00Z | 29 sessions\nbatch-4-20 | succeeded | 2026-10-03T00:00:00Z | 30 sessions\nbatch-4-21 | succeeded | 2026-10-04T01:00:00Z | 31 sessions\nbatch-4-22 | succeeded | 2026-10-05T02:00:00Z | 32 sessions\nbatch-4-23 | succeeded | 2026-10-06T03:00:00Z | 33 sessions",
+         "tool_call_id": "call-4",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u5",
+       "ordinal": 16,
+       "parent_id": "t4",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:35:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "The test passes locally. Does it cover edited messages too?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a5",
+       "ordinal": 17,
+       "parent_id": "u5",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:36:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "Not yet. An edited message changes the revision hash, so I'll add a second case that expects exactly one new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u6",
+       "ordinal": 18,
+       "parent_id": "a5",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:42:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Can you summarize what changed and what is still unverified?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a6",
+       "ordinal": 19,
+       "parent_id": "u6",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:43:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "Retries no longer create duplicate revisions. Edited messages still need a test on real Hermes data.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "alt-u",
+       "ordinal": 20,
+       "parent_id": "t3",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:24:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Actually, skip the test. Can we just dedupe in the list query instead?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "alt-a",
+       "ordinal": 21,
+       "parent_id": "alt-u",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:25:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "We could, but it would hide real revisions. Deduplicating in the query would make two captured revisions look like one conversation, which loses evidence.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      }
+     ]
+    },
+    {
+     "native_id": "demo-ruff-flag",
+     "events": [
+      {
+       "native_id": "q1",
+       "ordinal": 0,
+       "parent_id": null,
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-03T15:00:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "What's the flag to make ruff only check formatting?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "q2",
+       "ordinal": 1,
+       "parent_id": "q1",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-03T15:00:20Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Use `ruff format --check .`. It reports files that would change without writing them.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      }
+     ]
+    },
+    {
+     "native_id": "demo-model-switch",
+     "title": "Draft release notes, then switch models",
+     "events": [
+      {
+       "native_id": "r1",
+       "ordinal": 0,
+       "parent_id": null,
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-05T10:00:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Draft release notes for the browsing slice.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "r2",
+       "ordinal": 1,
+       "parent_id": "r1",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-05T10:01:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Added: conversation list with keyword search.\nAdded: transcript reader with per-path reading position.\nFixed: unknown activity no longer sorts as recent.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "r3",
+       "ordinal": 2,
+       "parent_id": "r2",
+       "kind": "configuration",
+       "role": "system",
+       "occurred_at": "2026-10-05T10:02:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Model changed from a fast tier to a higher reasoning tier.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "r4",
+       "ordinal": 3,
+       "parent_id": "r3",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-05T10:03:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Now tighten the wording and keep it under 80 words.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "r5",
+       "ordinal": 4,
+       "parent_id": "r4",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-05T10:04:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Browse and search imported conversations, read long sessions with a collapsible outline, and keep your place on each branch. Unknown activity times now sort last instead of appearing recent.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "source_id": "fixture-source-pi-failed",
+   "source_kind": "pi",
+   "batch_id": "demo-pi-2",
+   "captured_at": "2026-10-06T00:00:00+00:00",
+   "conversations": [
+    {
+     "native_id": "demo-import-duplicates",
+     "title": "Investigate duplicate Hermes sessions in nightly import",
+     "coverage": {
+      "messages": "available",
+      "tool_calls": "available",
+      "usage": "unknown"
+     },
+     "events": [
+      {
+       "native_id": "u0",
+       "ordinal": 0,
+       "parent_id": null,
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:00:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Why does the nightly import report duplicate Hermes sessions?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a0",
+       "ordinal": 1,
+       "parent_id": "u0",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:01:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "I'll compare the session IDs in the last two batches before changing anything, so we can tell a real duplicate from a second revision of the same session.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 3'\"}",
+         "tool_call_id": "call-0",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t0",
+       "ordinal": 2,
+       "parent_id": "a0",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:02:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-0-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-0-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-0-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions\nbatch-0-03 | succeeded | 2026-10-04T03:00:00Z | 13 sessions\nbatch-0-04 | succeeded | 2026-10-05T04:00:00Z | 14 sessions\nbatch-0-05 | succeeded | 2026-10-06T05:00:00Z | 15 sessions\nbatch-0-06 | succeeded | 2026-10-07T06:00:00Z | 16 sessions\nbatch-0-07 | succeeded | 2026-10-08T07:00:00Z | 17 sessions\nbatch-0-08 | succeeded | 2026-10-09T08:00:00Z | 18 sessions\nbatch-0-09 | succeeded | 2026-10-01T09:00:00Z | 19 sessions\nbatch-0-10 | succeeded | 2026-10-02T00:00:00Z | 20 sessions\nbatch-0-11 | succeeded | 2026-10-03T01:00:00Z | 21 sessions\nbatch-0-12 | succeeded | 2026-10-04T02:00:00Z | 22 sessions\nbatch-0-13 | succeeded | 2026-10-05T03:00:00Z | 23 sessions\nbatch-0-14 | succeeded | 2026-10-06T04:00:00Z | 24 sessions\nbatch-0-15 | succeeded | 2026-10-07T05:00:00Z | 25 sessions\nbatch-0-16 | succeeded | 2026-10-08T06:00:00Z | 26 sessions\nbatch-0-17 | succeeded | 2026-10-09T07:00:00Z | 27 sessions\nbatch-0-18 | succeeded | 2026-10-01T08:00:00Z | 28 sessions\nbatch-0-19 | succeeded | 2026-10-02T09:00:00Z | 29 sessions\nbatch-0-20 | succeeded | 2026-10-03T00:00:00Z | 30 sessions\nbatch-0-21 | succeeded | 2026-10-04T01:00:00Z | 31 sessions\nbatch-0-22 | succeeded | 2026-10-05T02:00:00Z | 32 sessions\nbatch-0-23 | succeeded | 2026-10-06T03:00:00Z | 33 sessions",
+         "tool_call_id": "call-0",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u1",
+       "ordinal": 3,
+       "parent_id": "t0",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:07:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Can you check whether the cursor resets after an interrupted batch?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a1",
+       "ordinal": 4,
+       "parent_id": "u1",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:08:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "The cursor is only written when a batch commits. An interrupted batch leaves the previous cursor in place, so the next run re-reads the same window.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 4'\"}",
+         "tool_call_id": "call-1",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t1",
+       "ordinal": 5,
+       "parent_id": "a1",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:09:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-1-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-1-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-1-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions",
+         "tool_call_id": "call-1",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u2",
+       "ordinal": 6,
+       "parent_id": "t1",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:14:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Show me the batches table for the last three runs.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a2",
+       "ordinal": 7,
+       "parent_id": "u2",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:15:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "Here are the recent batches. Two runs overlap on the same window, which explains the repeated sessions in the report.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 5'\"}",
+         "tool_call_id": "call-2",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t2",
+       "ordinal": 8,
+       "parent_id": "a2",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:16:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-2-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-2-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-2-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions\nbatch-2-03 | succeeded | 2026-10-04T03:00:00Z | 13 sessions\nbatch-2-04 | succeeded | 2026-10-05T04:00:00Z | 14 sessions\nbatch-2-05 | succeeded | 2026-10-06T05:00:00Z | 15 sessions\nbatch-2-06 | succeeded | 2026-10-07T06:00:00Z | 16 sessions\nbatch-2-07 | succeeded | 2026-10-08T07:00:00Z | 17 sessions\nbatch-2-08 | succeeded | 2026-10-09T08:00:00Z | 18 sessions\nbatch-2-09 | succeeded | 2026-10-01T09:00:00Z | 19 sessions\nbatch-2-10 | succeeded | 2026-10-02T00:00:00Z | 20 sessions\nbatch-2-11 | succeeded | 2026-10-03T01:00:00Z | 21 sessions\nbatch-2-12 | succeeded | 2026-10-04T02:00:00Z | 22 sessions\nbatch-2-13 | succeeded | 2026-10-05T03:00:00Z | 23 sessions\nbatch-2-14 | succeeded | 2026-10-06T04:00:00Z | 24 sessions\nbatch-2-15 | succeeded | 2026-10-07T05:00:00Z | 25 sessions\nbatch-2-16 | succeeded | 2026-10-08T06:00:00Z | 26 sessions\nbatch-2-17 | succeeded | 2026-10-09T07:00:00Z | 27 sessions\nbatch-2-18 | succeeded | 2026-10-01T08:00:00Z | 28 sessions\nbatch-2-19 | succeeded | 2026-10-02T09:00:00Z | 29 sessions\nbatch-2-20 | succeeded | 2026-10-03T00:00:00Z | 30 sessions\nbatch-2-21 | succeeded | 2026-10-04T01:00:00Z | 31 sessions\nbatch-2-22 | succeeded | 2026-10-05T02:00:00Z | 32 sessions\nbatch-2-23 | succeeded | 2026-10-06T03:00:00Z | 33 sessions",
+         "tool_call_id": "call-2",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "compaction-1",
+       "ordinal": 9,
+       "parent_id": "t2",
+       "kind": "compaction",
+       "role": "unknown",
+       "occurred_at": "2026-10-02T09:17:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Earlier turns were summarized by the harness to fit the context window.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u3",
+       "ordinal": 10,
+       "parent_id": "compaction-1",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:21:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "So the retry path re-reads the WAL snapshot. Is that safe?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a3",
+       "ordinal": 11,
+       "parent_id": "u3",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:22:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "Yes. The reader opens the database read-only and copies a consistent snapshot, so re-reading cannot modify Hermes or skip committed rows.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 6'\"}",
+         "tool_call_id": "call-3",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t3",
+       "ordinal": 12,
+       "parent_id": "a3",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:23:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-3-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-3-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-3-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions",
+         "tool_call_id": "call-3",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u4",
+       "ordinal": 13,
+       "parent_id": "t3",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:28:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Let's write a regression test for the interrupted import.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a4",
+       "ordinal": 14,
+       "parent_id": "u4",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:29:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "I'll add a test that interrupts a batch after the snapshot is written and asserts that the retry produces no new revision when nothing changed.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"sqlite3 library.db 'select * from import_batches limit 7'\"}",
+         "tool_call_id": "call-4",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t4",
+       "ordinal": 15,
+       "parent_id": "a4",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-02T09:30:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "batch-4-00 | succeeded | 2026-10-01T00:00:00Z | 10 sessions\nbatch-4-01 | succeeded | 2026-10-02T01:00:00Z | 11 sessions\nbatch-4-02 | succeeded | 2026-10-03T02:00:00Z | 12 sessions\nbatch-4-03 | succeeded | 2026-10-04T03:00:00Z | 13 sessions\nbatch-4-04 | succeeded | 2026-10-05T04:00:00Z | 14 sessions\nbatch-4-05 | succeeded | 2026-10-06T05:00:00Z | 15 sessions\nbatch-4-06 | succeeded | 2026-10-07T06:00:00Z | 16 sessions\nbatch-4-07 | succeeded | 2026-10-08T07:00:00Z | 17 sessions\nbatch-4-08 | succeeded | 2026-10-09T08:00:00Z | 18 sessions\nbatch-4-09 | succeeded | 2026-10-01T09:00:00Z | 19 sessions\nbatch-4-10 | succeeded | 2026-10-02T00:00:00Z | 20 sessions\nbatch-4-11 | succeeded | 2026-10-03T01:00:00Z | 21 sessions\nbatch-4-12 | succeeded | 2026-10-04T02:00:00Z | 22 sessions\nbatch-4-13 | succeeded | 2026-10-05T03:00:00Z | 23 sessions\nbatch-4-14 | succeeded | 2026-10-06T04:00:00Z | 24 sessions\nbatch-4-15 | succeeded | 2026-10-07T05:00:00Z | 25 sessions\nbatch-4-16 | succeeded | 2026-10-08T06:00:00Z | 26 sessions\nbatch-4-17 | succeeded | 2026-10-09T07:00:00Z | 27 sessions\nbatch-4-18 | succeeded | 2026-10-01T08:00:00Z | 28 sessions\nbatch-4-19 | succeeded | 2026-10-02T09:00:00Z | 29 sessions\nbatch-4-20 | succeeded | 2026-10-03T00:00:00Z | 30 sessions\nbatch-4-21 | succeeded | 2026-10-04T01:00:00Z | 31 sessions\nbatch-4-22 | succeeded | 2026-10-05T02:00:00Z | 32 sessions\nbatch-4-23 | succeeded | 2026-10-06T03:00:00Z | 33 sessions",
+         "tool_call_id": "call-4",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u5",
+       "ordinal": 16,
+       "parent_id": "t4",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:35:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "The test passes locally. Does it cover edited messages too?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a5",
+       "ordinal": 17,
+       "parent_id": "u5",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:36:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "Not yet. An edited message changes the revision hash, so I'll add a second case that expects exactly one new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u6",
+       "ordinal": 18,
+       "parent_id": "a5",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:42:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Can you summarize what changed and what is still unverified?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a6",
+       "ordinal": 19,
+       "parent_id": "u6",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:43:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "Separate duplicates from revisions first.\nRevision hashes ignore capture time, so identical content means no new revision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "Retries no longer create duplicate revisions, and edited messages produce exactly one new revision. Still unverified: a run against real Hermes data on the source device.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "alt-u",
+       "ordinal": 20,
+       "parent_id": "t3",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-02T09:24:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Actually, skip the test. Can we just dedupe in the list query instead?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "alt-a",
+       "ordinal": 21,
+       "parent_id": "alt-u",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-02T09:25:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "We could, but it would hide real revisions. Deduplicating in the query would make two captured revisions look like one conversation, which loses evidence.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "source_id": "fixture-source-hermes-partial",
+   "source_kind": "hermes",
+   "batch_id": "demo-hermes-1",
+   "captured_at": "2026-09-30T00:00:00+00:00",
+   "conversations": [
+    {
+     "native_id": "demo-migration-1",
+     "coverage": {
+      "messages": "partial",
+      "tool_calls": "unknown"
+     },
+     "events": [
+      {
+       "native_id": "m1",
+       "ordinal": 0,
+       "parent_id": null,
+       "kind": "message",
+       "role": "user",
+       "occurred_at": null,
+       "content": [
+        {
+         "kind": "text",
+         "text": "Plan the migration of the library database to the Mac mini.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "m2",
+       "ordinal": 1,
+       "parent_id": "m1",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": null,
+       "content": [
+        {
+         "kind": "text",
+         "text": null,
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      }
+     ]
+    },
+    {
+     "native_id": "demo-migration-2",
+     "relationships": [
+      {
+       "kind": "continuation",
+       "target_source_kind": "hermes",
+       "target_source_scope_id": "fixture-hermes-profile-a",
+       "target_native_id": "demo-migration-1",
+       "extensions": {}
+      }
+     ],
+     "events": [
+      {
+       "native_id": "n1",
+       "ordinal": 0,
+       "parent_id": null,
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-09-29T08:00:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Continue the migration plan from yesterday; the backup finished.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "n2",
+       "ordinal": 1,
+       "parent_id": "n1",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-09-29T08:01:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Good. Next we restore the backup into a scratch directory and verify it before switching the service over.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
