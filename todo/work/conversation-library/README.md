@@ -14,6 +14,17 @@ Blocked on [Hermes import](../hermes-import/README.md). Ratings and corrections 
 
 Search opens the matching evidence, branches and continuations stay distinct, and ratings, labels, notes, and their revisions survive restart. The main reading path works on desktop and mobile. Basic charting follows as a separate slice so browsing does not wait for a reporting implementation.
 
+## Interaction design
+
+Follow the accepted
+[long-conversation reading model](../evaluation-workbench-ui/decisions/long-conversation-navigation.md#resolution)
+and its [wireframe](../evaluation-workbench-ui/decisions/long-conversation-navigation-wireframe.md):
+the transcript is the main surface, the contents outline is behind a left-drawer
+toggle, details open on demand rather than in a fixed drawer, and each branch
+keeps its own reading position. Settle the
+[annotation grammar](../evaluation-workbench-ui/decisions/anchored-annotation-grammar.md)
+questions while implementing the annotation slice.
+
 ## Work
 
 - [ ] Browse conversations and search their text and metadata

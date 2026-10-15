@@ -1,10 +1,12 @@
 # Design the evidence-to-evaluation workbench UI
 
-Status: In progress. The decision map is charted; no production UI work is
-authorized by this record.
+Status: Stopped on 2026-10-15 after the first decision. The user chose to proceed
+to implementation instead of further Markdown prototypes. The remaining decision
+records stay as reference questions for the implementing work records; they are
+no longer a gate.
 
-Current role: Prototype long-conversation navigation. Existing work records
-remain authoritative for implementation.
+Current role: None claimed. Existing work records remain authoritative for
+implementation.
 
 ## Destination
 
@@ -95,7 +97,11 @@ complete.
 
 ## Decision frontier
 
-- [ ] [Shape long-conversation reading and navigation](decisions/long-conversation-navigation.md) — claimed for prototype
+The unresolved records below are not being worked as standalone prototypes.
+Settle each question inside the work record that implements it, starting with
+[Browse, search, and annotate conversations](../conversation-library/README.md).
+
+- [x] [Shape long-conversation reading and navigation](decisions/long-conversation-navigation.md)
   - Type: Prototype, human in the loop
   - Blocked by: Nothing
 - [ ] [Define the anchored annotation grammar](decisions/anchored-annotation-grammar.md)

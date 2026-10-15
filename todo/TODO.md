@@ -21,7 +21,7 @@ No current tasks at this priority.
 - [x] [Finish the application foundation](work/application-foundation/README.md)
 - [ ] [Import Hermes conversations reliably](work/hermes-import/README.md)
 - [ ] [Verify additional conversation sources](work/additional-source-research/README.md)
-- [ ] [Design the evidence-to-evaluation workbench UI](work/evaluation-workbench-ui/README.md)
+- [x] [Design the evidence-to-evaluation workbench UI](work/evaluation-workbench-ui/README.md)
 - [ ] [Browse, search, and annotate conversations](work/conversation-library/README.md)
 - [ ] [Build history, usage, and cost dashboards](work/history-and-cost-dashboards/README.md)
 - [ ] [Define evidence references and review conversation bundles](work/evidence-bundles/README.md)
