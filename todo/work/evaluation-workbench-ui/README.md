@@ -131,8 +131,10 @@ complete.
 
 ## Decisions so far
 
-No decision record has been resolved. The commitments above define the map's
-starting boundary rather than claiming answers to its open questions.
+- [Shape long-conversation reading and navigation](decisions/long-conversation-navigation.md):
+  The outline is hidden behind a left-drawer toggle. Suggested chapters appear
+  inline with an edit control, and details open on demand rather than in a
+  persistent drawer. Each branch remembers its own reading position.
 
 ## Not yet specified
 

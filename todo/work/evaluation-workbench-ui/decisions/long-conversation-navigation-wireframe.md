@@ -1,6 +1,6 @@
 # Long conversation navigation wireframe
 
-Status: Draft for human review\
+Status: Reviewed; defaults recorded in the decision\
 Decision: [Shape long-conversation reading and navigation](long-conversation-navigation.md)
 
 ## Interaction proposal
@@ -21,38 +21,61 @@ captured message.
 
 ## Desktop: reading a long conversation
 
+The contents outline is closed by default. The `▤` drawer icon at the far left
+of the header opens and closes it.
+
 ```text
+Outline closed (default)
 ┌────────────────────────────────────────────────────────────────────────────────────┐
-│ Conversations / Refund investigation · 184 turns · 3 branches      Find in chat  ⋯ │
-├─────────────────────────┬────────────────────────────────────────────┬─────────────┤
-│ CONTENTS                │ TRANSCRIPT                                 │ AT THIS SPOT│
-│                         │                                            │             │
-│ Overview                │ User · 10:42                               │ Anchor      │
-│ ▾ Refund investigation  │ I need to return the second item, but…     │ Turn 48     │
-│   1. Return policy      │                                            │ Branch A    │
-│   2. Order lookup       │ Assistant · 10:43                          │             │
-│   3. Item mismatch      │ I can help check that. Which item…          │ Selection   │
-│   4. Refund options     │                                            │ 2 messages  │
-│   5. Escalation         │ Tool · order_lookup · 2.1s                 │             │
-│                         │   Order found; item names differ…          │ Evidence    │
-│ Branches                │   [Expand output · 14 lines]                │ In 1 bundle │
-│   Main path             │                                            │             │
-│   ├─ A · refund check ◉ │ Assistant · 10:44                          │ Annotation  │
-│   └─ B · replacement    │ The order shows two items…                 │ 1 note      │
-│                         │                                            │             │
-│ Captured events         │ ── Compacted context · source marker ──     │ [Open note]│
-│   Compaction · turn 91  │                                            │ [Add note] │
-│   Continued · turn 132  │ User · 11:18                               │             │
-│   Gap · turns unknown   │ The first item was correct; the second…     │             │
-│                         │                                            │             │
-│ Suggested chapters · 2  │ [Jump to next match: “refund” · 3 of 8]    │             │
-│   Review suggestions    │                                            │             │
-│                         │                                            │             │
-│                         │                    [← Prev] 48 / 184 [Next →]│             │
-└─────────────────────────┴────────────────────────────────────────────┴─────────────┘
+│ ▤  Conversations / Refund investigation · 184 turns · 3 branches   Find in chat  ⋯ │
+├────────────────────────────────────────────────────────────────────────────────────┤
+│                 User · 10:42                                                       │
+│                 I need to return the second item, but…                             │
+│                                                                                    │
+│                 Assistant · 10:43                                                  │
+│                 I can help check that. Which item…                    ◆ 1 note     │
+│                                                                       ▣ 1 bundle   │
+│                 Tool · order_lookup · 2.1s                                         │
+│                   Order found; item names differ…                                  │
+│                   [Expand output · 14 lines]                                       │
+│                                                                                    │
+│                 ── Compacted context · source marker ──                            │
+│                                                                                    │
+│                 User · 11:18                                                       │
+│                 The first item was correct; the second…                            │
+│                                                                                    │
+│                 [Jump to next match: “refund” · 3 of 8]                            │
+│                                                  [← Prev] 48 / 184 [Next →]        │
+└────────────────────────────────────────────────────────────────────────────────────┘
+
+Outline open, with a note opened from its marker
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│ ▤  Conversations / Refund investigation · 184 turns · 3 branches   Find in chat  ⋯ │
+├─────────────────────────┬──────────────────────────────────────────────────────────┤
+│ CONTENTS          [Edit]│ User · 10:42                                             │
+│                         │ I need to return the second item, but…                   │
+│ Overview                │                                                          │
+│ ▾ Refund investigation  │ Assistant · 10:43                                        │
+│   1. Return policy      │ I can help check that. Which item…   ◆ 1 note ┌──────────┴──┐
+│   2. Order lookup ·sugg.│                                      ▣ 1 bundle│ Note · Turn 48│
+│   3. Item mismatch      │ Tool · order_lookup · 2.1s                     │ Branch A      │
+│   4. Refund options     │   Order found; item names differ…              │ “Lookup used  │
+│   5. Escalation         │   [Expand output · 14 lines]                   │  wrong SKU”   │
+│                         │                                                │ [Open] [Edit] │
+│ Branches                │ ── Compacted context · source marker ──        └──────────┬──┘
+│   Main path             │                                                          │
+│   ├─ A · refund check ◉ │ User · 11:18                                             │
+│   └─ B · replacement    │ The first item was correct; the second…                  │
+│                         │                                                          │
+│ Captured events         │                                                          │
+│   Compaction · turn 91  │                                                          │
+│   Continued · turn 132  │                                                          │
+│   Gap · turns unknown   │                                                          │
+│                         │                          [← Prev] 48 / 184 [Next →]      │
+└─────────────────────────┴──────────────────────────────────────────────────────────┘
 ```
 
-The left outline is scrollable independently from the transcript. Its hierarchy
+When open, the outline scrolls independently from the transcript. Its hierarchy
 is: conversation, captured branch/continuation paths, then optional chapters.
 Captured structural events appear in their own small section rather than being
 invented as messages or chapter titles. A gap is shown at its actual position
@@ -60,11 +83,12 @@ with the coverage state (for example, “content unavailable” or “turn count
 unknown”). Long tool activity is collapsed to a readable summary of captured
 metadata, with the original output one action away.
 
-The right context panel follows the selected source anchor. It reports the
-active branch, annotation, and existing evidence-bundle membership. It is
-contextual, not a second conversation pane; closing it gives the transcript more
-room. Selecting a different anchor updates the panel without changing the
-outline's expansion state.
+There is no persistent context drawer. Messages with annotations or evidence
+membership carry small markers. Activating a marker opens a floating element
+anchored to that message, or a separate panel for longer work. Closing it
+returns focus to the marker and leaves the transcript where it was. The exact
+inspector form belongs to the annotation grammar and evidence selection
+prototypes.
 
 ### Outline labels and provenance
 
@@ -76,8 +100,9 @@ outline's expansion state.
 
 Only captured structural facts are presented without an origin label. A human
 can add, rename, reorder, or remove a heading without changing source content.
-A model may suggest chapter boundaries and short labels, but those remain in a
-review queue, visibly marked as suggestions. Accepting one adds a navigation
+A model may suggest chapter boundaries and short labels. They appear inline in
+the outline, visibly marked as pending suggestions, and the outline's Edit
+control gives quick access to accepting, renaming, or removing them. Accepting one adds a navigation
 label; it does not create an annotation, evidence bundle, or task.
 
 ### Jumping and keeping your place
@@ -85,8 +110,8 @@ label; it does not create an annotation, evidence bundle, or task.
 - Selecting a chapter, branch event, search result, annotation, or evidence link
   jumps to its source anchor and highlights the target briefly.
 - The outline stays at its current scroll position and keeps the same branches
-  expanded. The transcript's current anchor remains in view when the side panel
-  opens or closes.
+  expanded. The transcript's current anchor remains in view when the outline or
+  an inspector opens or closes.
 - Search results show message/turn anchors and branch identity. Moving to a hit
   does not filter source messages out of the transcript.
 - Back/forward returns to the previous source anchor, branch, and transcript
@@ -130,6 +155,8 @@ assistive technology. Search and notes use similarly focused sheets so the
 transcript remains readable at phone width. Branch selection is always visible
 near the current turn; switching branches asks before discarding an active
 selection, and otherwise preserves the last reading position in each branch.
+If per-branch positions prove complex or unidiomatic to implement, fall back to
+one position per conversation and record why.
 
 ## Short conversation
 
@@ -153,16 +180,8 @@ interaction should not force a chapter hierarchy onto a five-message exchange.
 | Search with no hits | Keep the transcript position and show “No matches in this conversation.” |
 | Anchor removed by revision | Offer nearest surviving source location and explain the changed revision. |
 
-## Questions for review
+## Review outcome
 
-1. Does the persistent left table of contents plus central transcript match how
-   you want to move through a long history, or should the outline be a
-   show/hide overlay by default?
-2. Should suggested chapters appear inline in the outline as above, or in a
-   separate review-only area until accepted?
-3. Is the contextual right panel useful while reading, or should annotations
-   and evidence membership stay in a separate inspector opened on demand?
-4. When switching branches, should each branch remember its own last position?
-
-This prototype remains open until the reading model is reviewed and the selected
-defaults are recorded in the decision file.
+The user answered the review questions; see the
+[decision record](long-conversation-navigation.md#resolution) for the recorded
+defaults.
