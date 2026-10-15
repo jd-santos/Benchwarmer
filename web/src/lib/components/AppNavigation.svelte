@@ -69,6 +69,12 @@
 					<a href={resolve('/')} aria-current={isCurrent('/') ? 'page' : undefined}>Overview</a>
 				</li>
 				<li>
+					<a
+						href={resolve('/conversations')}
+						aria-current={isCurrent('/conversations') ? 'page' : undefined}>Conversations</a
+					>
+				</li>
+				<li>
 					<a href={sourcesHref} aria-current={isCurrent('/sources') ? 'page' : undefined}>Sources</a
 					>
 				</li>

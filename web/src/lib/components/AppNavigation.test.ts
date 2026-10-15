@@ -41,6 +41,7 @@ describe('AppNavigation', () => {
 		).toEqual([
 			{ name: 'Benchwarmer', href: '/' },
 			{ name: 'Overview', href: '/' },
+			{ name: 'Conversations', href: '/conversations' },
 			{ name: 'Sources', href: '/sources' }
 		]);
 	});

@@ -28,7 +28,13 @@ Search opens the matching evidence, branches and continuations stay distinct, an
     `tests/api/test_conversation_api.py` and all repository checks.
   - [ ] Replace the per-request search scan with an SQLite FTS5 index before
     real library volumes
-  - [ ] Conversation list and transcript screens
+  - [x] Conversation list with keyword search, source filter, and anchored
+    hits; transcript reader with drawer-toggled outline, per-path reading
+    position, fork switching, capture gaps, revisions, continuations, and j/k
+    navigation. Verified with unit tests and rendered desktop and phone checks
+    against a seeded synthetic library.
+  - [ ] Add a Playwright end-to-end spec for browsing once the pinned Chromium
+    is installed locally
 
 - [ ] Add ratings, labels, notes, and annotation revision history
   - Dependencies: [Browse conversations and search their text and metadata](../conversation-library/README.md)
