@@ -32,6 +32,20 @@ questions while implementing the annotation slice.
   - Scope: readable transcripts, branches/continuations, source freshness,
     coverage, filters and evidence-linked keyword search; usage/cost as metadata,
     no chart dependency
+  - [x] List, filter, and keyword-search latest revisions; read a conversation
+    with branch paths, revision history, and two-way continuation links
+    (`GET /api/v1/conversations`, `GET /api/v1/conversations/{id}`) on
+    `task/conversation-browsing`. Verified with synthetic imports in
+    `tests/api/test_conversation_api.py` and all repository checks.
+  - [ ] Replace the per-request search scan with an SQLite FTS5 index before
+    real library volumes
+  - [x] Conversation list with keyword search, source filter, and anchored
+    hits; transcript reader with drawer-toggled outline, per-path reading
+    position, fork switching, capture gaps, revisions, continuations, and j/k
+    navigation. Verified with unit tests and rendered desktop and phone checks
+    against a seeded synthetic library.
+  - [ ] Add a Playwright end-to-end spec for browsing once the pinned Chromium
+    is installed locally
 
 - [ ] Add ratings, labels, notes, and annotation revision history
   - Dependencies: [Browse conversations and search their text and metadata](../conversation-library/README.md)

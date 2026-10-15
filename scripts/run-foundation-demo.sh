@@ -68,6 +68,8 @@ printf 'Preparing sanitized fixture data...\n'
 uv run alembic upgrade head
 uv run python -m benchwarmer.services.fixtures \
   --load tests/fixtures/sources.json
+uv run python -m benchwarmer.services.demo_conversations \
+  --load tests/fixtures/demo-conversations.json
 
 printf '\nBenchwarmer foundation demo\n'
 printf '  URL: http://127.0.0.1:%s\n' "$port"
