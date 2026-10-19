@@ -453,7 +453,7 @@
         },
         {
          "kind": "text",
-         "text": "Retries no longer create duplicate revisions. Edited messages still need a test on real Hermes data.",
+         "text": "## What changed\nRetries no longer create duplicate revisions.\n\n## Still unverified\nEdited messages still need a test on real Hermes data.",
          "tool_call_id": null,
          "artifact_id": null,
          "extensions": {}
@@ -669,6 +669,287 @@
         {
          "kind": "text",
          "text": "Browse and search imported conversations, read long sessions with a collapsible outline, and keep your place on each branch. Unknown activity times now sort last instead of appearing recent.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      }
+     ]
+    },
+    {
+     "native_id": "demo-event-kinds",
+     "title": "Plan the evaluation report layout",
+     "coverage": {
+      "messages": "available",
+      "tool_calls": "available",
+      "usage": "unknown"
+     },
+     "events": [
+      {
+       "native_id": "s0",
+       "ordinal": 0,
+       "parent_id": null,
+       "kind": "message",
+       "role": "system",
+       "occurred_at": "2026-10-07T13:00:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "You are helping plan a report. Keep answers short.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "d0",
+       "ordinal": 1,
+       "parent_id": "s0",
+       "kind": "message",
+       "role": "developer",
+       "occurred_at": "2026-10-07T13:00:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Prefer tables for comparisons.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u0",
+       "ordinal": 2,
+       "parent_id": "d0",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-07T13:01:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Outline the evaluation report. What sections do we need?",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a0",
+       "ordinal": 3,
+       "parent_id": "u0",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-07T13:02:00Z",
+       "content": [
+        {
+         "kind": "reasoning",
+         "text": "List the decisions a reader makes, then one section per decision.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "text",
+         "text": "# Report outline\n\n## Summary\nOne paragraph on what was compared and the headline result.\n\n## Method\nTasks, configurations, repetitions, and judges.\n\n### Judges\nEach criterion scored 0 to 1; unjudged stays blank.\n\n## Results\nA task by configuration grid with quality, tokens, cost, and time in separate columns.\n\n## Limitations\nWhat the sample does not cover.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "c0",
+       "ordinal": 4,
+       "parent_id": "a0",
+       "kind": "configuration",
+       "role": "system",
+       "occurred_at": "2026-10-07T13:03:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Model changed from the fast tier to the deep tier.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {
+        "pi_entry_type": "model_change"
+       }
+      },
+      {
+       "native_id": "u1",
+       "ordinal": 5,
+       "parent_id": "c0",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-07T13:04:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Check how long the results table would be for 12 tasks and 3 configurations.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a1",
+       "ordinal": 6,
+       "parent_id": "u1",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-07T13:05:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "I'll compute the grid size.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        },
+        {
+         "kind": "tool_call",
+         "text": "{\"command\": \"python3 -c 'print(12*3)'\"}",
+         "tool_call_id": "call-k0",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "t1",
+       "ordinal": 7,
+       "parent_id": "a1",
+       "kind": "message",
+       "role": "tool",
+       "occurred_at": "2026-10-07T13:05:00Z",
+       "content": [
+        {
+         "kind": "tool_result",
+         "text": "36",
+         "tool_call_id": "call-k0",
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a2",
+       "ordinal": 8,
+       "parent_id": "t1",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-07T13:06:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "## Table size\n36 cells, so the grid fits on one screen at desktop width.\n\n## Recommendation\nGroup rows by task family and keep configurations as columns.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "c1",
+       "ordinal": 9,
+       "parent_id": "a2",
+       "kind": "configuration",
+       "role": "system",
+       "occurred_at": "2026-10-07T13:07:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Thinking level raised to high.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {
+        "pi_entry_type": "thinking_level_change"
+       }
+      },
+      {
+       "native_id": "x0",
+       "ordinal": 10,
+       "parent_id": "c1",
+       "kind": "unknown",
+       "role": "unknown",
+       "occurred_at": "2026-10-07T13:07:00Z",
+       "content": [
+        {
+         "kind": "unknown",
+         "text": null,
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "k0",
+       "ordinal": 11,
+       "parent_id": "x0",
+       "kind": "compaction",
+       "role": "unknown",
+       "occurred_at": "2026-10-07T13:08:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Earlier turns were summarized by the harness to fit the context window.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "u2",
+       "ordinal": 12,
+       "parent_id": "k0",
+       "kind": "message",
+       "role": "user",
+       "occurred_at": "2026-10-07T13:09:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "Good. Draft the Limitations section.",
+         "tool_call_id": null,
+         "artifact_id": null,
+         "extensions": {}
+        }
+       ],
+       "extensions": {}
+      },
+      {
+       "native_id": "a3",
+       "ordinal": 13,
+       "parent_id": "u2",
+       "kind": "message",
+       "role": "assistant",
+       "occurred_at": "2026-10-07T13:10:00Z",
+       "content": [
+        {
+         "kind": "text",
+         "text": "## Limitations\n\n### Sample\nTwelve tasks from one person's history.\n\n### Judges\nDeterministic checks only; no model judges yet.\n\n### Cost\nList prices, not actual charges.",
          "tool_call_id": null,
          "artifact_id": null,
          "extensions": {}
@@ -1131,7 +1412,7 @@
         },
         {
          "kind": "text",
-         "text": "Retries no longer create duplicate revisions, and edited messages produce exactly one new revision. Still unverified: a run against real Hermes data on the source device.",
+         "text": "## What changed\nRetries no longer create duplicate revisions, and edited messages produce exactly one new revision.\n\n## Still unverified\nA run against real Hermes data on the source device.",
          "tool_call_id": null,
          "artifact_id": null,
          "extensions": {}

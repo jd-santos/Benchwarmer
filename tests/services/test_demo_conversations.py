@@ -37,14 +37,14 @@ def test_demo_library_covers_browsing_states(tmp_path: Path) -> None:
     load_fixture(settings, _REPOSITORY_ROOT / "tests/fixtures/sources.json")
     fixture = _REPOSITORY_ROOT / "tests/fixtures/demo-conversations.json"
 
-    assert load_demo_conversations(settings, fixture) == 6
+    assert load_demo_conversations(settings, fixture) == 7
     assert load_demo_conversations(settings, fixture) == 0
 
     engine = create_engine(settings)
     try:
         with create_session_factory(engine)() as session:
             page = list_conversations(session)
-            assert page.total == 5
+            assert page.total == 6
             by_native = {item.native_id: item for item in page.items}
             long = get_conversation(session, by_native["demo-import-duplicates"].id)
             parent = get_conversation(session, by_native["demo-migration-1"].id)
@@ -57,6 +57,8 @@ def test_demo_library_covers_browsing_states(tmp_path: Path) -> None:
     assert by_native["demo-migration-1"].last_activity_at is None
     assert [item.kind for item in parent.referenced_by] == ["continuation"]
     assert by_native["demo-model-switch"].event_count == 5
+    kinds = by_native["demo-event-kinds"]
+    assert kinds.event_count == 14 and kinds.coverage["usage"] == "unknown"
 
 
 def test_branches_describe_how_each_path_differs(tmp_path: Path) -> None:

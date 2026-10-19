@@ -76,7 +76,7 @@ export const detail: ConversationDetail = {
 				{
 					id: 'e3:b0',
 					kind: 'text',
-					text: 'I can offer a replacement instead.',
+					text: '## Options\nI can offer a replacement instead.',
 					tool_call_id: null,
 					artifact_id: null,
 					extensions: {}

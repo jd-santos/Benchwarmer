@@ -55,6 +55,23 @@ describe('conversation reader', () => {
 		vi.unstubAllGlobals();
 	});
 
+	it('lists reply headings under their user turn and jumps to them', async () => {
+		const user = userEvent.setup();
+		const { getByRole } = render(ConversationReader, { props: { detail } });
+		const outline = getByRole('navigation', { name: 'Conversation contents' });
+		const child = within(outline).getByRole('link', { name: 'Options' });
+
+		expect(child.closest('.outline__children')?.previousElementSibling?.textContent).toContain(
+			'I need a refund'
+		);
+		expect(getByRole('heading', { name: /Options/, level: 3 }).id).toBe(
+			decodeURIComponent(child.getAttribute('href')!.slice(1))
+		);
+
+		await user.click(child);
+		expect(child.getAttribute('aria-current')).toBe('location');
+	});
+
 	it('switches paths from the fork point', async () => {
 		const user = userEvent.setup();
 		const { getByRole, getByText } = render(ConversationReader, { props: { detail } });

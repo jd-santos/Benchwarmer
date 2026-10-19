@@ -731,6 +731,24 @@ mark {
 	font-weight: 650;
 }
 
+.outline__children {
+	margin: 0 0 0.2rem 0.5rem;
+	padding: 0 0 0 0.6rem;
+	border-inline-start: 1px solid #d9dee5;
+	list-style: none;
+}
+
+.outline__item--child {
+	min-block-size: 1.75rem;
+	padding-block: 0.2rem;
+	color: #3f4d5b;
+	font-size: 0.8rem;
+}
+
+.outline__item--deep {
+	padding-inline-start: 1.1rem;
+}
+
 .outline__item--marker {
 	min-block-size: 1.75rem;
 	padding-block: 0.15rem;
@@ -970,6 +988,31 @@ mark {
 
 .block-text {
 	white-space: pre-wrap;
+}
+
+.block-heading {
+	margin: 0.7rem 0 0.15rem;
+	color: #17324d;
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1.3;
+	scroll-margin-block-start: 5rem;
+	white-space: normal;
+}
+
+.block-heading:first-child {
+	margin-block-start: 0;
+}
+
+.block-heading--3 {
+	font-size: 0.925rem;
+}
+
+.md-mark {
+	margin-inline-end: 0.15em;
+	color: #aeb8c4;
+	font-size: 0.75em;
+	font-weight: 500;
 }
 
 .event > :is(.block, .block-text, .block-gap) + :is(.block, .block-text, .block-gap) {

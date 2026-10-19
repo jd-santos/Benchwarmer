@@ -20,6 +20,12 @@
 	import MenuPicker from '$lib/components/MenuPicker.svelte';
 	import { describePaths, pathOptions } from '$lib/conversations/paths';
 	import {
+		outlineEntries as buildOutline,
+		segmentText,
+		turnOf,
+		type Heading
+	} from '$lib/conversations/structure';
+	import {
 		captureGaps,
 		formatDate,
 		gapLabel,
@@ -99,9 +105,16 @@
 		}
 		return null;
 	});
-	// Contents: user turns and captured markers in conversation order.
-	const outlineEntries = $derived(
-		visibleEvents.filter((event) => event.kind !== 'message' || event.role === 'user')
+	// Contents: user turns (with the headings of their replies) and captured
+	// markers, in conversation order.
+	const outlineEntries = $derived(buildOutline(visibleEvents));
+	const turnByEvent = $derived(turnOf(visibleEvents));
+	let currentHeading = $state<{ id: string; eventId: string } | null>(null);
+	let targetHeading = $state<{ id: string; eventId: string } | null>(null);
+	const currentHeadingId = $derived(
+		currentHeading && turnByEvent.get(currentHeading.eventId) === currentTurnId
+			? currentHeading.id
+			: null
 	);
 	const gaps = $derived(captureGaps(summary.coverage));
 	const continues = $derived(detail.relationships.filter((item) => item.kind === 'continuation'));
@@ -242,10 +255,20 @@
 		if (isNarrow()) outlineOpen = false;
 	}
 
+	function jumpToHeading(heading: Heading): void {
+		closeOutlineOnNarrow();
+		targetEventId = heading.eventId;
+		currentEventId = heading.eventId;
+		currentHeading = { id: heading.id, eventId: heading.eventId };
+		targetHeading = currentHeading;
+	}
+
 	function jumpTo(eventId: string): void {
 		closeOutlineOnNarrow();
 		targetEventId = eventId;
 		currentEventId = eventId;
+		currentHeading = null;
+		targetHeading = null;
 	}
 
 	function followHash(): void {
@@ -355,6 +378,18 @@
 						: (visible.at(-1) ?? current);
 			}
 			current ??= ids[0] ?? null;
+			let heading: { id: string; eventId: string } | null = null;
+			for (const element of document.querySelectorAll<HTMLElement>('.block-heading[id]')) {
+				if (element.getBoundingClientRect().top > line) break;
+				const owner = element.closest<HTMLElement>('[data-event]')?.id;
+				if (owner) heading = { id: element.id, eventId: owner };
+			}
+			// At the end of the page the last headings never reach the line either.
+			if (atEnd && targetHeading) {
+				const top = document.getElementById(targetHeading.id)?.getBoundingClientRect().top;
+				if (top !== undefined && top < window.innerHeight) heading = targetHeading;
+			}
+			if (heading?.id !== currentHeading?.id) currentHeading = heading;
 			if (current === null || current === currentEventId) return;
 			currentEventId = current;
 			positions.set(activeBranch, current);
@@ -485,7 +520,22 @@
 		{#if item.text === null || item.text === ''}
 			<p class="block-gap">Text not captured</p>
 		{:else}
-			<div class="block-text" data-block-id={item.id}>{@render text(item.text)}</div>
+			<div class="block-text" data-block-id={item.id}>
+				{#each segmentText(item.text, item.id) as segment, index (index)}
+					{#if segment.kind === 'heading'}
+						<svelte:element
+							this={segment.level <= 2 ? 'h3' : 'h4'}
+							id={segment.id}
+							class="block-heading block-heading--{Math.min(segment.level, 3)}"
+							><span class="md-mark">{segment.marks}</span>{@render text(
+								segment.text
+							)}{segment.tail}</svelte:element
+						>
+					{:else}
+						<span class="block-run">{@render text(segment.text)}</span>
+					{/if}
+				{/each}
+			</div>
 		{/if}
 	{:else if item.text === null}
 		<p class="block block--{item.kind} block--missing">
@@ -606,24 +656,41 @@
 				<p class="outline__empty">No user messages on this path.</p>
 			{:else}
 				<ol class="outline__list">
-					{#each outlineEntries as event (event.id)}
+					{#each outlineEntries as entry (entry.event.id)}
 						<li>
-							{#if event.kind === 'message'}
+							{#if entry.kind === 'turn'}
 								<a
 									class="outline__item"
-									href={`#${encodeURIComponent(event.id)}`}
-									aria-current={event.id === currentTurnId ? 'location' : undefined}
-									onclick={() => jumpTo(event.id)}
+									href={`#${encodeURIComponent(entry.event.id)}`}
+									aria-current={entry.event.id === currentTurnId ? 'location' : undefined}
+									onclick={() => jumpTo(entry.event.id)}
 								>
-									{outlineText(event)}
+									{outlineText(entry.event)}
 								</a>
+								{#if entry.headings.length > 0}
+									<ol class="outline__children">
+										{#each entry.headings as heading (heading.id)}
+											<li>
+												<a
+													class="outline__item outline__item--child"
+													class:outline__item--deep={heading.level >= 3}
+													href={`#${encodeURIComponent(heading.id)}`}
+													aria-current={heading.id === currentHeadingId ? 'location' : undefined}
+													onclick={() => jumpToHeading(heading)}
+												>
+													{heading.label}
+												</a>
+											</li>
+										{/each}
+									</ol>
+								{/if}
 							{:else}
 								<a
 									class="outline__item outline__item--marker"
-									href={`#${encodeURIComponent(event.id)}`}
-									onclick={() => jumpTo(event.id)}
+									href={`#${encodeURIComponent(entry.event.id)}`}
+									onclick={() => jumpTo(entry.event.id)}
 								>
-									— {markerLabel(event)} —
+									— {markerLabel(entry.event)} —
 								</a>
 							{/if}
 						</li>
