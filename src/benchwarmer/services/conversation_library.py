@@ -78,12 +78,22 @@ class ConversationPage:
 
 @dataclass(frozen=True)
 class Branch:
-    """One root-to-leaf path through a conversation's event tree."""
+    """One root-to-leaf path through a conversation's event tree.
+
+    ``is_original`` marks the path that follows the earliest-captured child at
+    every fork. ``divergent_event_id`` is the first event after the last fork.
+    ``models`` lists models the source recorded for events on this path; it is
+    empty when the source captured none. Every path here is captured history;
+    Benchwarmer trials will be recorded separately.
+    """
 
     id: str
     leaf_event_id: str
     event_ids: tuple[str, ...]
     fork_event_id: str | None
+    divergent_event_id: str | None
+    is_original: bool
+    models: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -180,33 +190,75 @@ def _preview(events: list[dict[str, Any]]) -> str | None:
     return None
 
 
-def _branches(events: list[dict[str, Any]]) -> tuple[Branch, ...]:
+def _event_models(document: dict[str, Any] | None) -> dict[str, str]:
+    """Map native event ids to models recorded in imported usage observations."""
+    models: dict[str, str] = {}
+    if document is None:
+        return models
+    for entry in document["metadata"]:
+        if entry["name"] != "usage_observations" or not isinstance(
+            entry["value"], list
+        ):
+            continue
+        for observation in entry["value"]:
+            if not isinstance(observation, dict):
+                continue
+            native_id, model = observation.get("entry_id"), observation.get("model")
+            if isinstance(native_id, str) and isinstance(model, str) and model:
+                models[native_id] = model
+    return models
+
+
+def _branches(
+    events: list[dict[str, Any]], document: dict[str, Any] | None = None
+) -> tuple[Branch, ...]:
     """Return root-to-leaf paths in leaf order; validation guarantees a forest."""
     by_id = {event["id"]: event for event in events}
-    child_count: dict[str, int] = {event["id"]: 0 for event in events}
+    children: dict[str, list[dict[str, Any]]] = {event["id"]: [] for event in events}
     for event in events:
         if event["parent_id"] is not None:
-            child_count[event["parent_id"]] += 1
+            children[event["parent_id"]].append(event)
+    first_child = {
+        parent: min(items, key=lambda item: item["ordinal"])["id"]
+        for parent, items in children.items()
+        if items
+    }
+    event_models = _event_models(document)
     branches: list[Branch] = []
     for event in events:
-        if child_count[event["id"]] != 0:
+        if children[event["id"]]:
             continue
         path: list[str] = []
         fork: str | None = None
+        divergent: str | None = None
+        original = True
         current: dict[str, Any] | None = event
         while current is not None:
             path.append(current["id"])
             parent_id = current["parent_id"]
-            if parent_id is not None and fork is None and child_count[parent_id] > 1:
-                fork = parent_id
+            if parent_id is not None and len(children[parent_id]) > 1:
+                if fork is None:
+                    fork, divergent = parent_id, current["id"]
+                if first_child[parent_id] != current["id"]:
+                    original = False
             current = by_id[parent_id] if parent_id is not None else None
         path.reverse()
+        models = tuple(
+            dict.fromkeys(
+                event_models[by_id[item]["native_id"]]
+                for item in path
+                if by_id[item]["native_id"] in event_models
+            )
+        )
         branches.append(
             Branch(
                 id=event["id"],
                 leaf_event_id=event["id"],
                 event_ids=tuple(path),
                 fork_event_id=fork,
+                divergent_event_id=divergent,
+                is_original=original,
+                models=models,
             )
         )
     return tuple(branches)
@@ -465,5 +517,5 @@ def get_conversation(
             for item in relationships
         ),
         referenced_by=_referenced_by(session, source, latest_revision.native_id),
-        branches=_branches(events),
+        branches=_branches(events, document),
     )

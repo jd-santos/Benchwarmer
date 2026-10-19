@@ -57,3 +57,32 @@ def test_demo_library_covers_browsing_states(tmp_path: Path) -> None:
     assert by_native["demo-migration-1"].last_activity_at is None
     assert [item.kind for item in parent.referenced_by] == ["continuation"]
     assert by_native["demo-model-switch"].event_count == 5
+
+
+def test_branches_describe_how_each_path_differs(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    load_fixture(settings, _REPOSITORY_ROOT / "tests/fixtures/sources.json")
+    load_demo_conversations(
+        settings, _REPOSITORY_ROOT / "tests/fixtures/demo-conversations.json"
+    )
+    engine = create_engine(settings)
+    try:
+        with create_session_factory(engine)() as session:
+            page = list_conversations(session)
+            summary = next(
+                item
+                for item in page.items
+                if item.native_id == "demo-import-duplicates"
+            )
+            detail = get_conversation(session, summary.id)
+    finally:
+        engine.dispose()
+
+    original, alternate = sorted(detail.branches, key=lambda item: not item.is_original)
+    assert original.is_original and not alternate.is_original
+    assert original.fork_event_id == alternate.fork_event_id
+    events = {event["id"]: event for event in detail.events}
+    assert events[alternate.divergent_event_id]["native_id"] == "alt-u"
+    assert events[original.divergent_event_id]["native_id"] == "u4"
+    assert original.models == ("synthetic-fast-model",)
+    assert alternate.models == ("synthetic-fast-model", "synthetic-deep-model")

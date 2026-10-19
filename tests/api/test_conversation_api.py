@@ -337,12 +337,20 @@ def test_detail_returns_events_branches_and_revisions(tmp_path: Path) -> None:
             "leaf_event_id": f"{event}t1",
             "event_ids": [f"{event}u1", f"{event}a1", f"{event}t1"],
             "fork_event_id": f"{event}u1",
+            "divergent_event_id": f"{event}a1",
+            "is_original": True,
+            "origin": "captured",
+            "models": [],
         },
         {
             "id": f"{event}a2",
             "leaf_event_id": f"{event}a2",
             "event_ids": [f"{event}u1", f"{event}a2"],
             "fork_event_id": f"{event}u1",
+            "divergent_event_id": f"{event}a2",
+            "is_original": False,
+            "origin": "captured",
+            "models": [],
         },
     ]
 

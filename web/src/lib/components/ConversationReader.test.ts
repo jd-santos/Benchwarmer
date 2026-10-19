@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from '@testing-library/svelte';
+import { cleanup, render, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { detail } from '$lib/conversations/fixtures';
@@ -24,7 +24,7 @@ describe('conversation reader', () => {
 		});
 
 		expect(getByRole('heading', { name: 'Refund investigation', level: 1 })).toBeTruthy();
-		expect(getByText('Path 2 of 2')).toBeTruthy();
+		expect(getByRole('button', { name: /^Path Alternate 1/ })).toBeTruthy();
 		expect(getByText('I can offer a replacement instead.')).toBeTruthy();
 		expect(queryByText('Text not captured')).toBeNull();
 		expect(getByRole('navigation', { name: 'Paths from this message' })).toBeTruthy();
@@ -61,9 +61,27 @@ describe('conversation reader', () => {
 		const user = userEvent.setup();
 		const { getByRole, getByText } = render(ConversationReader, { props: { detail } });
 
-		await user.click(getByRole('button', { name: 'Path 1' }));
+		await user.click(getByRole('button', { name: 'Original' }));
 
-		expect(getByText('Path 1 of 2')).toBeTruthy();
+		expect(getByRole('button', { name: /^Path Original/ })).toBeTruthy();
+		expect(getByText('Text not captured')).toBeTruthy();
+	});
+
+	it('describes how each path differs and switches from the picker', async () => {
+		const user = userEvent.setup();
+		const { getByRole, getByText } = render(ConversationReader, { props: { detail } });
+		const picker = getByRole('button', { name: /^Path Alternate 1/ });
+
+		await user.click(picker);
+		const menu = getByRole('list', { name: 'Paths' });
+		expect(menu.textContent).toMatch(/Branches at .+ with a different assistant reply/);
+		expect(menu.textContent).toContain('model-b');
+		expect(menu.textContent).toContain('Earliest captured continuation');
+
+		await user.click(within(menu).getByRole('button', { name: /^Original/ }));
+
+		expect(picker.getAttribute('aria-expanded')).toBe('false');
+		expect(getByRole('button', { name: /^Path Original/ })).toBeTruthy();
 		expect(getByText('Text not captured')).toBeTruthy();
 	});
 

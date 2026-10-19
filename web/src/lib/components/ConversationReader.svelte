@@ -18,6 +18,8 @@
 	} from '$lib/bundles/selection';
 	import BackLink from '$lib/components/BackLink.svelte';
 	import EvidenceTray from '$lib/components/EvidenceTray.svelte';
+	import PathPicker from '$lib/components/PathPicker.svelte';
+	import { describePaths } from '$lib/conversations/paths';
 	import {
 		captureGaps,
 		conversationLabel,
@@ -79,6 +81,17 @@
 	const turns = $derived(
 		visibleEvents.filter((event) => event.kind === 'message' && event.role === 'user')
 	);
+	const paths = $derived(describePaths(detail.branches, eventsById));
+	// The user turn the reader is in: the current event's own turn on this path.
+	const currentTurnId = $derived.by(() => {
+		if (currentEventId === null) return null;
+		let turn: string | null = null;
+		for (const event of visibleEvents) {
+			if (event.kind === 'message' && event.role === 'user') turn = event.id;
+			if (event.id === currentEventId) return turn;
+		}
+		return null;
+	});
 	const capturedEvents = $derived(visibleEvents.filter((event) => event.kind !== 'message'));
 	const gaps = $derived(captureGaps(summary.coverage));
 	const continues = $derived(detail.relationships.filter((item) => item.kind === 'continuation'));
@@ -146,12 +159,8 @@
 		return detail.branches.filter((item) => item.event_ids.includes(eventId));
 	}
 
-	function messageCount(item: Branch): number {
-		return item.event_ids.filter((id) => eventsById.get(id)?.kind === 'message').length;
-	}
-
 	function pathLabel(item: Branch): string {
-		return `Path ${(branchIndex.get(item.id) ?? 0) + 1}`;
+		return paths.find((path) => path.branch.id === item.id)?.name ?? 'Path';
 	}
 
 	function blockText(event: ConversationEvent): string | null {
@@ -231,6 +240,7 @@
 	function jumpTo(eventId: string): void {
 		closeOutlineOnNarrow();
 		targetEventId = eventId;
+		currentEventId = eventId;
 	}
 
 	function followHash(): void {
@@ -306,32 +316,54 @@
 	});
 
 	// Track the top-most visible event as this path's reading position.
+	// The current event is the last one whose top has passed the reading line,
+	// so a jump that scrolls a message to the top makes that message current.
 	$effect(() => {
 		const ids = visibleEvents.map((event) => event.id);
 		const activeBranch = branch?.id;
-		if (activeBranch === undefined || typeof IntersectionObserver === 'undefined') return;
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- observer bookkeeping, not state
-		const visible = new Set<string>();
-		const observer = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					if (entry.isIntersecting) visible.add(entry.target.id);
-					else visible.delete(entry.target.id);
-				}
-				const first = ids.find((id) => visible.has(id));
-				if (first) {
-					currentEventId = first;
-					positions.set(activeBranch, first);
-					writeStorage(positionsKey, JSON.stringify(Object.fromEntries(positions)));
-				}
-			},
-			{ rootMargin: '-15% 0px -60% 0px' }
-		);
-		for (const id of ids) {
-			const element = document.getElementById(id);
-			if (element) observer.observe(element);
-		}
-		return () => observer.disconnect();
+		if (activeBranch === undefined) return;
+		let frame = 0;
+		const update = () => {
+			frame = 0;
+			const line = Math.max(120, window.innerHeight * 0.25);
+			let current: string | null = null;
+			for (const id of ids) {
+				const element = document.getElementById(id);
+				if (!element) continue;
+				if (element.getBoundingClientRect().top > line) break;
+				current = id;
+			}
+			// The last messages can never reach the reading line; at the end of the
+			// page, prefer a visible jump target, then the last visible event.
+			const atEnd =
+				window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+			if (atEnd) {
+				const visible = ids.filter((id) => {
+					const top = document.getElementById(id)?.getBoundingClientRect().top;
+					return top !== undefined && top < window.innerHeight;
+				});
+				current =
+					targetEventId !== null && visible.includes(targetEventId)
+						? targetEventId
+						: (visible.at(-1) ?? current);
+			}
+			current ??= ids[0] ?? null;
+			if (current === null || current === currentEventId) return;
+			currentEventId = current;
+			positions.set(activeBranch, current);
+			writeStorage(positionsKey, JSON.stringify(Object.fromEntries(positions)));
+		};
+		const schedule = () => {
+			if (frame === 0) frame = requestAnimationFrame(update);
+		};
+		schedule();
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', schedule);
+		return () => {
+			if (frame !== 0) cancelAnimationFrame(frame);
+			window.removeEventListener('scroll', schedule);
+			window.removeEventListener('resize', schedule);
+		};
 	});
 
 	function kindLabel(kind: ContentBlock['kind']): string {
@@ -468,32 +500,6 @@
 			</button>
 		</div>
 
-		{#if detail.branches.length > 1}
-			<section aria-labelledby="outline-paths">
-				<h3 id="outline-paths">Paths</h3>
-				<ul class="outline__list">
-					{#each detail.branches as item (item.id)}
-						<li>
-							<button
-								class="outline__item"
-								type="button"
-								aria-current={item.id === branch?.id ? 'true' : undefined}
-								onclick={() => {
-									closeOutlineOnNarrow();
-									void selectBranch(item.id);
-								}}
-							>
-								<span>{pathLabel(item)} · {plural(messageCount(item), 'message')}</span>
-								<span class="outline__secondary">
-									Ends: {outlineText(eventsById.get(item.leaf_event_id)!)}
-								</span>
-							</button>
-						</li>
-					{/each}
-				</ul>
-			</section>
-		{/if}
-
 		<section aria-labelledby="outline-turns">
 			<h3 id="outline-turns">User turns</h3>
 			{#if turns.length === 0}
@@ -505,7 +511,7 @@
 							<a
 								class="outline__item"
 								href={`#${encodeURIComponent(event.id)}`}
-								aria-current={event.id === currentEventId ? 'location' : undefined}
+								aria-current={event.id === currentTurnId ? 'location' : undefined}
 								onclick={() => jumpTo(event.id)}
 							>
 								{outlineText(event)}
@@ -590,10 +596,10 @@
 					<span>Start time not captured</span>
 				{/if}
 				<span>{plural(summary.message_count, 'message')}</span>
-				{#if detail.branches.length > 1 && branch}
-					<span>{pathLabel(branch)} of {detail.branches.length}</span>
-				{/if}
 			</p>
+			{#if paths.length > 1}
+				<PathPicker {paths} currentId={branch?.id} onselect={(id) => void selectBranch(id)} />
+			{/if}
 			{#if gaps.length > 0}
 				<p class="transcript__capture">
 					Capture: {gaps.map((gap) => `${gap.label} ${gap.state}`).join(', ')}

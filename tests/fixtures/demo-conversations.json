@@ -497,6 +497,48 @@
        ],
        "extensions": {}
       }
+     ],
+     "usage": [
+      {
+       "entry_id": "a0",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a1",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a2",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a3",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a4",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a5",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a6",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "alt-a",
+       "provider": "synthetic",
+       "model": "synthetic-deep-model"
+      }
      ]
     },
     {
@@ -1132,6 +1174,48 @@
         }
        ],
        "extensions": {}
+      }
+     ],
+     "usage": [
+      {
+       "entry_id": "a0",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a1",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a2",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a3",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a4",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a5",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "a6",
+       "provider": "synthetic",
+       "model": "synthetic-fast-model"
+      },
+      {
+       "entry_id": "alt-a",
+       "provider": "synthetic",
+       "model": "synthetic-deep-model"
       }
      ]
     }

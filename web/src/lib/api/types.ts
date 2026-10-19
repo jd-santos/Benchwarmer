@@ -120,6 +120,14 @@ export interface Branch {
 	leaf_event_id: string;
 	event_ids: string[];
 	fork_event_id: string | null;
+	/** First event after the last fork on this path. */
+	divergent_event_id: string | null;
+	/** Follows the earliest-captured continuation at every fork. */
+	is_original: boolean;
+	/** Captured history; Benchwarmer trials will add their own origin. */
+	origin: 'captured';
+	/** Models the source recorded on this path, in path order. */
+	models: string[];
 }
 
 export interface RevisionRef {
