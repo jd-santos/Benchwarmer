@@ -16,6 +16,7 @@
 		refKey,
 		type BlockRange
 	} from '$lib/bundles/selection';
+	import BackLink from '$lib/components/BackLink.svelte';
 	import EvidenceTray from '$lib/components/EvidenceTray.svelte';
 	import {
 		captureGaps,
@@ -378,6 +379,26 @@
 	{/each}
 {/snippet}
 
+{#snippet contentsToggle()}
+	<button
+		class="icon-button contents-toggle"
+		type="button"
+		aria-label={outlineOpen ? 'Hide contents' : 'Show contents'}
+		aria-expanded={outlineOpen}
+		aria-controls="conversation-outline"
+		title={outlineOpen ? 'Hide contents' : 'Show contents'}
+		onclick={() => setOutline(!outlineOpen)}
+	>
+		<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
+			<rect x="2.5" y="3.5" width="15" height="13" rx="1.5" fill="none" stroke="currentColor" />
+			<line x1="7.5" y1="3.5" x2="7.5" y2="16.5" stroke="currentColor" />
+			{#if outlineOpen}
+				<rect x="3" y="4" width="4.5" height="12" fill="currentColor" opacity="0.35" />
+			{/if}
+		</svg>
+	</button>
+{/snippet}
+
 {#snippet selectToggle(event: ConversationEvent)}
 	<label class="turn__select">
 		<input
@@ -429,33 +450,8 @@
 {/snippet}
 
 <div class="reader" class:reader--outline-open={outlineOpen}>
-	<div class="reader__toolbar">
-		<button
-			class="button reader__contents"
-			type="button"
-			aria-expanded={outlineOpen}
-			aria-controls="conversation-outline"
-			title={outlineOpen ? 'Hide contents' : 'Show contents'}
-			onclick={() => setOutline(!outlineOpen)}
-		>
-			<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
-				<rect x="2.5" y="3.5" width="15" height="13" rx="1.5" fill="none" stroke="currentColor" />
-				<line x1="7.5" y1="3.5" x2="7.5" y2="16.5" stroke="currentColor" />
-				{#if outlineOpen}
-					<rect x="3" y="4" width="4.5" height="12" fill="currentColor" opacity="0.35" />
-				{/if}
-			</svg>
-			Contents
-		</button>
-		<a class="reader__back" href={resolve('/conversations')}>Conversations</a>
-		<button
-			class="button reader__select"
-			type="button"
-			aria-pressed={selecting}
-			onclick={() => setSelecting(!selecting)}
-		>
-			{selecting ? 'Done selecting' : 'Select evidence'}
-		</button>
+	<div class="reader__back">
+		<BackLink href={resolve('/conversations')} label="Conversations" />
 	</div>
 
 	<nav
@@ -465,6 +461,7 @@
 		hidden={!outlineOpen}
 	>
 		<div class="outline__header">
+			{@render contentsToggle()}
 			<h2>Contents</h2>
 			<button class="text-button outline__close" type="button" onclick={() => setOutline(false)}>
 				Close
@@ -571,7 +568,20 @@
 
 	<article class="transcript" aria-labelledby="conversation-title">
 		<header class="transcript__header">
-			<h1 id="conversation-title">{conversationLabel(summary)}</h1>
+			<div class="transcript__title">
+				{#if !outlineOpen}
+					{@render contentsToggle()}
+				{/if}
+				<h1 id="conversation-title">{conversationLabel(summary)}</h1>
+				<button
+					class="button reader__select"
+					type="button"
+					aria-pressed={selecting}
+					onclick={() => setSelecting(!selecting)}
+				>
+					{selecting ? 'Done selecting' : 'Select evidence'}
+				</button>
+			</div>
 			<p class="transcript__meta">
 				<span>{summary.source.display_name}</span>
 				{#if summary.started_at}

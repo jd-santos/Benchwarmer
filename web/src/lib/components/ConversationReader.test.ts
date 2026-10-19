@@ -70,14 +70,16 @@ describe('conversation reader', () => {
 	it('opens the outline by default and remembers closing it', async () => {
 		const user = userEvent.setup();
 		const { getByRole } = render(ConversationReader, { props: { detail } });
-		const toggle = getByRole('button', { name: /Contents/ });
+		const hide = getByRole('button', { name: 'Hide contents' });
 
-		expect(toggle.getAttribute('aria-expanded')).toBe('true');
+		expect(hide.getAttribute('aria-expanded')).toBe('true');
 		expect(getByRole('navigation', { name: 'Conversation contents' })).toBeTruthy();
 
-		await user.click(toggle);
+		await user.click(hide);
 
-		expect(toggle.getAttribute('aria-expanded')).toBe('false');
+		const show = getByRole('button', { name: 'Show contents' });
+		expect(show.getAttribute('aria-expanded')).toBe('false');
+		expect(show.closest('.transcript__title')).not.toBeNull();
 		expect(document.getElementById('conversation-outline')?.hidden).toBe(true);
 		expect(sessionStorage.getItem('benchwarmer:outline-open')).toBe('false');
 	});

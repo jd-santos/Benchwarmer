@@ -41,29 +41,37 @@
 		{:else}
 			{@const library = overview.library}
 			<ol class="workflow" aria-label="Evaluation workflow">
-				<li class="workflow__step">
-					<a class="workflow__name" href={resolve('/conversations')}>Conversations</a>
-					<span class="workflow__count">{library ? library.conversations : '—'}</span>
-					<span class="workflow__detail">Imported sessions to read and search</span>
+				<li>
+					<a class="workflow__step" href={resolve('/conversations')}>
+						<span class="workflow__label">1 · Conversations</span>
+						<span class="workflow__count">{library ? library.conversations : '—'}</span>
+						<span class="workflow__detail">Imported sessions to read and search</span>
+					</a>
 				</li>
-				<li class="workflow__step">
-					<a class="workflow__name" href={resolve('/bundles')}>Evidence bundles</a>
-					<span class="workflow__count">{library ? library.bundles.length : '—'}</span>
-					<span class="workflow__detail">
-						{library && library.bundles.length > 0
-							? bundleBreakdown(library.bundles)
-							: 'Excerpts selected from conversations'}
-					</span>
+				<li>
+					<a class="workflow__step" href={resolve('/bundles')}>
+						<span class="workflow__label">2 · Evidence bundles</span>
+						<span class="workflow__count">{library ? library.bundles.length : '—'}</span>
+						<span class="workflow__detail">
+							{library && library.bundles.length > 0
+								? bundleBreakdown(library.bundles)
+								: 'Excerpts selected from conversations'}
+						</span>
+					</a>
 				</li>
-				<li class="workflow__step workflow__step--planned">
-					<span class="workflow__name">Tasks</span>
-					<span class="workflow__count">Not built yet</span>
-					<span class="workflow__detail">Prepared from reviewed bundles</span>
+				<li>
+					<div class="workflow__step workflow__step--planned">
+						<span class="workflow__label">3 · Tasks</span>
+						<span class="workflow__count">Not built yet</span>
+						<span class="workflow__detail">Prepared from reviewed bundles</span>
+					</div>
 				</li>
-				<li class="workflow__step workflow__step--planned">
-					<span class="workflow__name">Evaluations</span>
-					<span class="workflow__count">Not built yet</span>
-					<span class="workflow__detail">Tasks run and judged per configuration</span>
+				<li>
+					<div class="workflow__step workflow__step--planned">
+						<span class="workflow__label">4 · Evaluations</span>
+						<span class="workflow__count">Not built yet</span>
+						<span class="workflow__detail">Tasks run and judged per configuration</span>
+					</div>
 				</li>
 			</ol>
 			{#if library === null}

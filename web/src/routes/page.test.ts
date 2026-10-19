@@ -122,10 +122,12 @@ describe('overview page', () => {
 		const workflow = await findByRole('list', { name: 'Evaluation workflow' });
 		expect(workflow.textContent).toContain('5');
 		expect(getByText('1 reviewed · 1 draft')).toBeTruthy();
-		expect(getByRole('link', { name: 'Conversations' }).getAttribute('href')).toBe(
+		expect(getByRole('link', { name: /^1 · Conversations/ }).getAttribute('href')).toBe(
 			'/conversations'
 		);
-		expect(getByRole('link', { name: 'Evidence bundles' }).getAttribute('href')).toBe('/bundles');
+		expect(getByRole('link', { name: /^2 · Evidence bundles/ }).getAttribute('href')).toBe(
+			'/bundles'
+		);
 		expect(getByRole('rowheader', { name: 'Hermes profile' })).toBeTruthy();
 		expect(getByText('Never imported')).toBeTruthy();
 		expect(getByRole('link', { name: 'Coverage details' }).getAttribute('href')).toBe('/sources');
