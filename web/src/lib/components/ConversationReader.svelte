@@ -575,11 +575,11 @@
 		hidden={!outlineOpen}
 	>
 		<div class="outline__header">
-			{@render contentsToggle()}
 			<h2>Contents</h2>
 			<button class="text-button outline__close" type="button" onclick={() => setOutline(false)}>
 				Close
 			</button>
+			{@render contentsToggle()}
 		</div>
 
 		<section aria-labelledby="outline-turns">

@@ -634,15 +634,11 @@ mark {
 	border-radius: 999px;
 }
 
-/* Lines up with the "User" label of the first turn, below the path note. */
-.reader__rail .contents-toggle {
-	margin-block-start: 3.65rem;
-}
-
-@media (max-width: 63.999rem) {
-	.reader__rail .contents-toggle {
-		margin-block-start: 0;
-	}
+/* Collapsed, the toggle keeps the drawer header's spot: top, beside the transcript. */
+.reader__rail {
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-end;
 }
 
 @media (min-width: 64rem) {
@@ -676,8 +672,8 @@ mark {
 	gap: 0.6rem;
 }
 
-.outline__close {
-	margin-inline-start: auto;
+.outline__header h2 {
+	flex: 1;
 }
 
 .outline h2 {
@@ -688,6 +684,12 @@ mark {
 
 .outline__close {
 	display: none;
+}
+
+@media (max-width: 63.999rem) {
+	.outline .contents-toggle {
+		display: none;
+	}
 }
 
 .outline h3 {
