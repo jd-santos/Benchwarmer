@@ -10,6 +10,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
+from benchwarmer.api.routes.bundles import create_bundles_router
 from benchwarmer.api.routes.conversations import create_conversations_router
 from benchwarmer.api.routes.sources import create_sources_router
 from benchwarmer.config import BenchwarmerSettings, ConfigurationError
@@ -54,6 +55,7 @@ def create_app(
 
     router.include_router(create_sources_router(resolved_settings))
     router.include_router(create_conversations_router(resolved_settings))
+    router.include_router(create_bundles_router(resolved_settings))
     app.include_router(router)
 
     if resolved_ui_root is not None:

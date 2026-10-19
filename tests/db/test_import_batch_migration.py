@@ -216,7 +216,7 @@ def test_import_batch_migration_round_trips_schema_and_revision(
 
     upgrade = _run_alembic(root, "upgrade", "head")
     assert upgrade.returncode == 0, upgrade.stderr
-    assert _revision(root) == "0003"
+    assert _revision(root) == "0004"
     _assert_import_batch_schema(root)
     _assert_hermes_schema(root)
 
@@ -236,6 +236,8 @@ def test_import_batch_migration_round_trips_schema_and_revision(
                 "conversation_revisions",
                 "source_presence",
                 "source_import_states",
+                "evidence_bundles",
+                "evidence_bundle_revisions",
             }
             & tables
         )
@@ -245,6 +247,6 @@ def test_import_batch_migration_round_trips_schema_and_revision(
 
     upgrade_again = _run_alembic(root, "upgrade", "head")
     assert upgrade_again.returncode == 0, upgrade_again.stderr
-    assert _revision(root) == "0003"
+    assert _revision(root) == "0004"
     _assert_import_batch_schema(root)
     _assert_hermes_schema(root)
