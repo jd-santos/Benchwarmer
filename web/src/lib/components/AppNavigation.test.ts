@@ -42,6 +42,7 @@ describe('AppNavigation', () => {
 			{ name: 'Benchwarmer', href: '/' },
 			{ name: 'Overview', href: '/' },
 			{ name: 'Conversations', href: '/conversations' },
+			{ name: 'Bundles', href: '/bundles' },
 			{ name: 'Sources', href: '/sources' }
 		]);
 	});

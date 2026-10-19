@@ -1,5 +1,10 @@
 import type {
 	Branch,
+	BundleDetail,
+	BundleDocument,
+	BundlesResponse,
+	BundleSummary,
+	EvidenceIssue,
 	ContentBlock,
 	ConversationDetail,
 	ConversationEvent,
@@ -18,17 +23,32 @@ interface ApiClientErrorOptions {
 	kind: ApiErrorKind;
 	status?: number;
 	cause?: unknown;
+	body?: unknown;
 }
 
 export class ApiClientError extends Error {
 	readonly kind: ApiErrorKind;
 	readonly status?: number;
+	readonly body?: unknown;
 
-	constructor(message: string, { kind, status, cause }: ApiClientErrorOptions) {
+	constructor(message: string, { kind, status, cause, body }: ApiClientErrorOptions) {
 		super(message, { cause });
 		this.name = 'ApiClientError';
 		this.kind = kind;
 		this.status = status;
+		this.body = body;
+	}
+
+	/** Evidence problems reported by a rejected bundle save, if any. */
+	get issues(): EvidenceIssue[] {
+		if (!isRecord(this.body) || !Array.isArray(this.body.issues)) return [];
+		return this.body.issues.filter(
+			(item): item is EvidenceIssue =>
+				isRecord(item) &&
+				(item.item_index === null || isCount(item.item_index)) &&
+				typeof item.code === 'string' &&
+				typeof item.message === 'string'
+		);
 	}
 }
 
@@ -238,11 +258,24 @@ async function getJson(
 	signal: AbortSignal | undefined,
 	request: typeof globalThis.fetch = globalThis.fetch
 ): Promise<unknown> {
+	return requestJson(path, { method: 'GET' }, signal, request);
+}
+
+async function requestJson(
+	path: string,
+	init: { method: 'GET' | 'POST' | 'PUT'; body?: unknown },
+	signal: AbortSignal | undefined,
+	request: typeof globalThis.fetch = globalThis.fetch
+): Promise<unknown> {
 	let response: Response;
 	try {
 		response = await request(path, {
-			method: 'GET',
-			headers: { Accept: 'application/json' },
+			method: init.method,
+			headers:
+				init.body === undefined
+					? { Accept: 'application/json' }
+					: { Accept: 'application/json', 'Content-Type': 'application/json' },
+			body: init.body === undefined ? undefined : JSON.stringify(init.body),
 			signal
 		});
 	} catch (error) {
@@ -256,9 +289,14 @@ async function getJson(
 	}
 
 	if (!response.ok) {
+		let body: unknown;
+		if (response.status === 409 || response.status === 422) {
+			body = await response.json().catch(() => undefined);
+		}
 		throw new ApiClientError(`The API returned HTTP ${response.status}.`, {
 			kind: 'http',
-			status: response.status
+			status: response.status,
+			body
 		});
 	}
 
@@ -348,4 +386,153 @@ export async function getConversation(
 		});
 	}
 	return value;
+}
+
+const evidenceRoles: ReadonlySet<string> = new Set([
+	'requirement',
+	'action',
+	'result',
+	'correction',
+	'context'
+]);
+const bundleStatuses: ReadonlySet<string> = new Set(['draft', 'reviewed', 'analysis_only']);
+
+function isBundleDocument(value: unknown): value is BundleDocument {
+	return (
+		isRecord(value) &&
+		typeof value.objective === 'string' &&
+		typeof value.status === 'string' &&
+		bundleStatuses.has(value.status) &&
+		isNullableString(value.rationale) &&
+		Array.isArray(value.missing_evidence) &&
+		value.missing_evidence.every((item) => typeof item === 'string') &&
+		Array.isArray(value.items) &&
+		value.items.every(
+			(item) =>
+				isRecord(item) &&
+				typeof item.role === 'string' &&
+				evidenceRoles.has(item.role) &&
+				isRecord(item.ref) &&
+				typeof item.ref.conversation_id === 'string' &&
+				typeof item.ref.revision === 'string' &&
+				typeof item.ref.event_id === 'string' &&
+				isNullableString(item.ref.block_id)
+		)
+	);
+}
+
+function isBundleDetail(value: unknown): value is BundleDetail {
+	return (
+		isRecord(value) &&
+		typeof value.id === 'string' &&
+		isCount(value.revision) &&
+		isCount(value.latest_revision) &&
+		typeof value.updated_at === 'string' &&
+		isBundleDocument(value.document) &&
+		Array.isArray(value.items) &&
+		value.items.length === value.document.items.length &&
+		value.items.every(
+			(item) =>
+				isRecord(item) &&
+				isRecord(item.item) &&
+				isNullableString(item.conversation_title) &&
+				typeof item.conversation_is_latest === 'boolean' &&
+				typeof item.event_role === 'string' &&
+				typeof item.event_kind === 'string' &&
+				isNullableString(item.occurred_at) &&
+				isNullableString(item.block_kind) &&
+				isNullableString(item.excerpt) &&
+				(item.omitted_before === null || isCount(item.omitted_before))
+		) &&
+		Array.isArray(value.revisions) &&
+		value.revisions.every(
+			(item) => isRecord(item) && isCount(item.number) && typeof item.created_at === 'string'
+		)
+	);
+}
+
+function isBundleSummary(value: unknown): value is BundleSummary {
+	return (
+		isRecord(value) &&
+		typeof value.id === 'string' &&
+		isCount(value.revision) &&
+		typeof value.objective === 'string' &&
+		typeof value.status === 'string' &&
+		bundleStatuses.has(value.status) &&
+		isCount(value.item_count) &&
+		Array.isArray(value.conversation_ids) &&
+		value.conversation_ids.every((item) => typeof item === 'string') &&
+		typeof value.updated_at === 'string'
+	);
+}
+
+function bundleDetail(value: unknown): BundleDetail {
+	if (!isBundleDetail(value)) {
+		throw new ApiClientError('The API bundle response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
+}
+
+export async function getBundles(
+	conversationId: string | null = null,
+	options: ApiRequestOptions = {}
+): Promise<BundlesResponse> {
+	const search = conversationId
+		? `?${new URLSearchParams({ conversation_id: conversationId })}`
+		: '';
+	const value = await getJson(`/api/v1/bundles${search}`, options.signal, options.fetch);
+	if (!isRecord(value) || !Array.isArray(value.items) || !value.items.every(isBundleSummary)) {
+		throw new ApiClientError('The API bundles response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return { items: value.items };
+}
+
+export async function getBundle(
+	id: string,
+	revision: number | null = null,
+	options: ApiRequestOptions = {}
+): Promise<BundleDetail> {
+	const search = revision ? `?${new URLSearchParams({ revision: String(revision) })}` : '';
+	return bundleDetail(
+		await getJson(
+			`/api/v1/bundles/${encodeURIComponent(id)}${search}`,
+			options.signal,
+			options.fetch
+		)
+	);
+}
+
+export async function createBundle(
+	document: BundleDocument,
+	options: ApiRequestOptions = {}
+): Promise<BundleDetail> {
+	return bundleDetail(
+		await requestJson(
+			'/api/v1/bundles',
+			{ method: 'POST', body: { document } },
+			options.signal,
+			options.fetch
+		)
+	);
+}
+
+/** Save a new revision; rejects with HTTP 409 if `baseRevision` is stale. */
+export async function updateBundle(
+	id: string,
+	document: BundleDocument,
+	baseRevision: number,
+	options: ApiRequestOptions = {}
+): Promise<BundleDetail> {
+	return bundleDetail(
+		await requestJson(
+			`/api/v1/bundles/${encodeURIComponent(id)}`,
+			{ method: 'PUT', body: { document, base_revision: baseRevision } },
+			options.signal,
+			options.fetch
+		)
+	);
 }
