@@ -1,22 +1,24 @@
 import type { CaptureState, ConversationSummary, EventRole } from '$lib/api/types';
 
-const timestampFormat = new Intl.DateTimeFormat('en-US', {
+// Times read in the viewer's own locale and time zone. Full timestamps name the
+// zone so a date copied elsewhere stays unambiguous.
+const timestampFormat = new Intl.DateTimeFormat(undefined, {
 	dateStyle: 'medium',
-	timeStyle: 'short',
-	timeZone: 'UTC'
+	timeStyle: 'short'
 });
 
-const timeFormat = new Intl.DateTimeFormat('en-US', {
-	timeStyle: 'short',
-	timeZone: 'UTC'
-});
+const zoneFormat = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' });
+
+const timeFormat = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
 
 export function formatTimestamp(value: string): string {
-	return `${timestampFormat.format(new Date(value))} UTC`;
+	const date = new Date(value);
+	const zone = zoneFormat.formatToParts(date).find((part) => part.type === 'timeZoneName');
+	return zone ? `${timestampFormat.format(date)} ${zone.value}` : timestampFormat.format(date);
 }
 
 export function formatTime(value: string): string {
-	return `${timeFormat.format(new Date(value))} UTC`;
+	return timeFormat.format(new Date(value));
 }
 
 /** Captured title, else quoted captured opening text; never a generated label. */

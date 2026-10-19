@@ -47,7 +47,7 @@ describe('conversation reader', () => {
 
 		await user.click(getByRole('button', { name: 'Select evidence' }));
 		expect(getByText('Pick messages or highlight text')).toBeTruthy();
-		await user.click(getAllByRole('checkbox', { name: 'Select' })[0]!);
+		await user.click(getAllByRole('checkbox', { name: /^Select user/ })[0]!);
 
 		expect(getByText('1 item selected')).toBeTruthy();
 		expect(getByRole('button', { name: 'Create bundle' }).hasAttribute('disabled')).toBe(false);
@@ -67,20 +67,19 @@ describe('conversation reader', () => {
 		expect(getByText('Text not captured')).toBeTruthy();
 	});
 
-	it('keeps the outline hidden until the drawer toggle opens it', async () => {
+	it('opens the outline by default and remembers closing it', async () => {
 		const user = userEvent.setup();
 		const { getByRole } = render(ConversationReader, { props: { detail } });
-		const toggle = getByRole('button', { name: 'Show contents' });
+		const toggle = getByRole('button', { name: /Contents/ });
 
-		expect(toggle.getAttribute('aria-expanded')).toBe('false');
-		expect(document.getElementById('conversation-outline')?.hidden).toBe(true);
+		expect(toggle.getAttribute('aria-expanded')).toBe('true');
+		expect(getByRole('navigation', { name: 'Conversation contents' })).toBeTruthy();
 
 		await user.click(toggle);
 
-		expect(getByRole('button', { name: 'Hide contents' }).getAttribute('aria-expanded')).toBe(
-			'true'
-		);
-		expect(getByRole('navigation', { name: 'Conversation contents' })).toBeTruthy();
+		expect(toggle.getAttribute('aria-expanded')).toBe('false');
+		expect(document.getElementById('conversation-outline')?.hidden).toBe(true);
+		expect(sessionStorage.getItem('benchwarmer:outline-open')).toBe('false');
 	});
 
 	it('warns when an earlier revision is shown', () => {

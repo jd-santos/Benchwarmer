@@ -48,7 +48,8 @@
 	);
 	const positionsKey = $derived(`benchwarmer:positions:${summary.id}`);
 
-	let outlineOpen = $state(readStorage(outlineKey) === 'true');
+	// Open unless the reader closed it; narrow screens start closed in onMount.
+	let outlineOpen = $state(readStorage(outlineKey) !== 'false');
 	let branchId = $state('');
 	let currentEventId = $state<string | null>(null);
 	let targetEventId = $state<string | null>(null);
@@ -332,6 +333,21 @@
 		return () => observer.disconnect();
 	});
 
+	function kindLabel(kind: ContentBlock['kind']): string {
+		const labels: Record<string, string> = {
+			reasoning: 'Reasoning',
+			tool_call: 'Tool call',
+			tool_result: 'Output',
+			attachment: 'Attachment'
+		};
+		return labels[kind] ?? 'Unrecognized content';
+	}
+
+	function turnKind(event: ConversationEvent): 'user' | 'reply' | 'marker' {
+		if (event.kind !== 'message') return 'marker';
+		return event.role === 'user' ? 'user' : 'reply';
+	}
+
 	function collapsible(block: ContentBlock): boolean {
 		return block.text !== null && lineCount(block.text) > COLLAPSE_LINES;
 	}
@@ -363,14 +379,24 @@
 {/snippet}
 
 {#snippet selectToggle(event: ConversationEvent)}
-	<label class="event__select">
+	<label class="turn__select">
 		<input
 			type="checkbox"
 			checked={selection.has(refKey(evidenceRef(event.id)))}
 			onchange={(change) => toggleEvent(event, change.currentTarget.checked)}
 		/>
-		Select
+		<span class="visually-hidden">
+			Select {event.kind === 'message'
+				? roleLabel(event.role).toLowerCase()
+				: 'event'}{event.occurred_at ? ` at ${formatTime(event.occurred_at)}` : ''}
+		</span>
 	</label>
+{/snippet}
+
+{#snippet blockHead(item: ContentBlock, meta: string | null)}
+	<span class="block__kind">{kindLabel(item.kind)}</span>
+	{#if item.tool_call_id}<span class="block__meta block__meta--code">{item.tool_call_id}</span>{/if}
+	{#if meta}<span class="block__meta">{meta}</span>{/if}
 {/snippet}
 
 {#snippet block(item: ContentBlock)}
@@ -381,15 +407,22 @@
 			<div class="block-text" data-block-id={item.id}>{@render text(item.text)}</div>
 		{/if}
 	{:else if item.text === null}
-		<p class="block-gap">{blockLabel(item)} · content not captured</p>
-	{:else if item.kind === 'reasoning' || collapsible(item)}
-		<details class="block-detail">
-			<summary>{blockLabel(item)} · {plural(lineCount(item.text), 'line')}</summary>
+		<p class="block block--{item.kind} block--missing">
+			{@render blockHead(item, 'content not captured')}
+		</p>
+	{:else if item.kind === 'reasoning'}
+		<details class="block block--reasoning">
+			<summary>{@render blockHead(item, plural(lineCount(item.text), 'line'))}</summary>
+			<div class="block__body" data-block-id={item.id}>{@render text(item.text)}</div>
+		</details>
+	{:else if collapsible(item)}
+		<details class="block block--{item.kind}">
+			<summary>{@render blockHead(item, plural(lineCount(item.text), 'line'))}</summary>
 			<pre data-block-id={item.id}>{@render text(item.text)}</pre>
 		</details>
 	{:else}
-		<div class="block-detail block-detail--inline">
-			<span class="block-detail__label">{blockLabel(item)}</span>
+		<div class="block block--{item.kind}">
+			<p class="block__head">{@render blockHead(item, null)}</p>
 			<pre data-block-id={item.id}>{@render text(item.text)}</pre>
 		</div>
 	{/if}
@@ -398,11 +431,11 @@
 <div class="reader" class:reader--outline-open={outlineOpen}>
 	<div class="reader__toolbar">
 		<button
-			class="icon-button"
+			class="button reader__contents"
 			type="button"
-			aria-label={outlineOpen ? 'Hide contents' : 'Show contents'}
 			aria-expanded={outlineOpen}
 			aria-controls="conversation-outline"
+			title={outlineOpen ? 'Hide contents' : 'Show contents'}
 			onclick={() => setOutline(!outlineOpen)}
 		>
 			<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
@@ -412,6 +445,7 @@
 					<rect x="3" y="4" width="4.5" height="12" fill="currentColor" opacity="0.35" />
 				{/if}
 			</svg>
+			Contents
 		</button>
 		<a class="reader__back" href={resolve('/conversations')}>Conversations</a>
 		<button
@@ -593,9 +627,12 @@
 		{#if visibleEvents.length === 0}
 			<p class="status-panel">This conversation has no captured events.</p>
 		{:else}
-			<ol class="events">
+			<ol class="events" class:events--selecting={selecting}>
 				{#each visibleEvents as event (event.id)}
-					<li>
+					<li class="turn turn--{turnKind(event)}">
+						{#if selecting}
+							{@render selectToggle(event)}
+						{/if}
 						{#if event.kind === 'message'}
 							<section
 								id={event.id}
@@ -612,9 +649,6 @@
 									<span class="event__role">{roleLabel(event.role)}</span>
 									{#if event.occurred_at}
 										<time datetime={event.occurred_at}>{formatTime(event.occurred_at)}</time>
-									{/if}
-									{#if selecting}
-										{@render selectToggle(event)}
 									{/if}
 								</header>
 								{#if event.content.length === 0}
@@ -635,9 +669,6 @@
 								tabindex="-1"
 								aria-label={event.kind === 'compaction' ? 'Compaction' : 'Captured event'}
 							>
-								{#if selecting}
-									{@render selectToggle(event)}
-								{/if}
 								<p class="event__marker">
 									{event.kind === 'compaction'
 										? 'Context compacted'
