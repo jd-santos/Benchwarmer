@@ -427,11 +427,16 @@
 		onclick={() => setOutline(!outlineOpen)}
 	>
 		<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
-			<rect x="2.5" y="3.5" width="15" height="13" rx="1.5" fill="none" stroke="currentColor" />
-			<line x1="7.5" y1="3.5" x2="7.5" y2="16.5" stroke="currentColor" />
-			{#if outlineOpen}
-				<rect x="3" y="4" width="4.5" height="12" fill="currentColor" opacity="0.35" />
-			{/if}
+			<circle cx="4" cy="5" r="1.4" fill="currentColor" />
+			<circle cx="4" cy="10" r="1.4" fill="currentColor" />
+			<circle cx="4" cy="15" r="1.4" fill="currentColor" />
+			<path
+				d="M8 5h9M8 10h9M8 15h9"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.75"
+				stroke-linecap="round"
+			/>
 		</svg>
 	</button>
 {/snippet}
@@ -500,46 +505,60 @@
 				/>
 			{/if}
 		</div>
-		<p class="meta-line">
-			{#if summary.started_at}
-				<span>Started {formatTimestamp(summary.started_at)}</span>
-			{:else}
-				<span>Start time not captured</span>
-			{/if}
-			<span>{plural(currentPath?.messageCount ?? summary.message_count, 'message')}</span>
-			<span>
-				{#if versionOptions.length > 1}
-					<MenuPicker
-						label="Version"
-						note="Benchwarmer stores a new version of a conversation only when it changed since the previous import. Bundles link to one specific version."
-						options={versionOptions}
-						currentId={summary.revision}
-						buttonLabel="Imported {formatDate(summary.captured_at)} · {plural(
-							versionOptions.length,
-							'version'
-						)}"
-						compact
-					/>
-				{:else}
-					Imported {formatTimestamp(summary.captured_at)}
-				{/if}
-			</span>
-		</p>
-		<p class="meta-line">
-			<span>{summary.source.display_name}</span>
+		<dl class="facts">
+			<div>
+				<dt>Started</dt>
+				<dd>{summary.started_at ? formatTimestamp(summary.started_at) : 'Not captured'}</dd>
+			</div>
+			<div>
+				<dt>Messages</dt>
+				<dd>{currentPath?.messageCount ?? summary.message_count}</dd>
+			</div>
+			<div>
+				<dt>Source</dt>
+				<dd>{summary.source.display_name}</dd>
+			</div>
 			{#if currentPath && currentPath.models.length > 0}
-				<span>{currentPath.models.join(', ')}</span>
+				<div>
+					<dt>{currentPath.models.length === 1 ? 'Model' : 'Models'}</dt>
+					<dd>{currentPath.models.join(', ')}</dd>
+				</div>
 			{/if}
-			{#each gaps as gap (gap.label)}
-				{@const hint = gapLabel(gap)}
-				<span class="hint" title={hint.explanation}>
-					{hint.text}<span class="visually-hidden">. {hint.explanation}</span>
-				</span>
-			{/each}
-		</p>
-		{#if currentPath?.divergence}
-			<p class="reader__divergence">{currentPath.divergence}</p>
-		{/if}
+			<div>
+				<dt>Imported</dt>
+				<dd>
+					{#if versionOptions.length > 1}
+						<MenuPicker
+							label="Version"
+							note="Benchwarmer stores a new version of a conversation only when it changed since the previous import. Bundles link to one specific version."
+							options={versionOptions}
+							currentId={summary.revision}
+							buttonLabel="{formatDate(summary.captured_at)} · {plural(
+								versionOptions.length,
+								'version'
+							)}"
+							compact
+						/>
+					{:else}
+						{formatDate(summary.captured_at)}
+					{/if}
+				</dd>
+			</div>
+			{#if gaps.length > 0}
+				<div>
+					<dt>Not captured</dt>
+					<dd>
+						{#each gaps as gap, index (gap.label)}
+							{@const hint = gapLabel(gap)}
+							{#if index > 0},{/if}
+							<span class="hint" title={hint.explanation}
+								>{gap.label}<span class="visually-hidden">. {hint.explanation}</span></span
+							>
+						{/each}
+					</dd>
+				</div>
+			{/if}
+		</dl>
 		{#if !detail.is_latest}
 			<p class="notice" role="status">
 				Viewing the version imported {formatTimestamp(summary.captured_at)}; the conversation
@@ -651,6 +670,17 @@
 	</nav>
 
 	<article class="transcript" aria-labelledby="conversation-title">
+		{#if currentPath && paths.length > 1}
+			<p class="transcript__path">
+				{#if currentPath.divergence}
+					<strong>{currentPath.name}</strong>
+					<span>{currentPath.divergence}</span>
+				{:else}
+					<strong>Original conversation</strong>
+					<span>Follows the earliest captured reply at every branch point</span>
+				{/if}
+			</p>
+		{/if}
 		{#if visibleEvents.length === 0}
 			<p class="status-panel">This conversation has no captured events.</p>
 		{:else}
@@ -677,6 +707,9 @@
 									<span class="event__role">{roleLabel(event.role)}</span>
 									{#if event.occurred_at}
 										<time datetime={event.occurred_at}>{formatTime(event.occurred_at)}</time>
+									{/if}
+									{#if currentPath?.divergence && event.id === currentPath.branch.divergent_event_id}
+										<span class="event__tag">Path diverges here</span>
 									{/if}
 								</header>
 								{#if event.content.length === 0}
