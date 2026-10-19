@@ -82,6 +82,7 @@
 		visibleEvents.filter((event) => event.kind === 'message' && event.role === 'user')
 	);
 	const paths = $derived(describePaths(detail.branches, eventsById));
+	const currentPath = $derived(paths.find((path) => path.branch.id === branch?.id));
 	// The user turn the reader is in: the current event's own turn on this path.
 	const currentTurnId = $derived.by(() => {
 		if (currentEventId === null) return null;
@@ -220,7 +221,7 @@
 		}
 	}
 
-	/** Switch paths; keep the reader at the given anchor or this path's last position. */
+	/** Switch paths. The scroll position only moves when an anchor is given. */
 	async function selectBranch(id: string, anchor: string | null = null): Promise<void> {
 		if (id === branch?.id) {
 			if (anchor) await scrollToEvent(anchor);
@@ -228,9 +229,7 @@
 		}
 		branchId = id;
 		rememberBranch(id);
-		const target = anchor ?? positions.get(id) ?? null;
-		if (target) await scrollToEvent(target);
-		else window.scrollTo({ top: 0 });
+		if (anchor) await scrollToEvent(anchor);
 	}
 
 	function closeOutlineOnNarrow(): void {
@@ -482,8 +481,85 @@
 {/snippet}
 
 <div class="reader" class:reader--outline-open={outlineOpen}>
-	<div class="reader__back">
+	<header class="reader__header">
 		<BackLink href={resolve('/conversations')} label="Conversations" />
+		<div class="reader__headline">
+			<div class="reader__title">
+				<h1 id="conversation-title">{conversationLabel(summary)}</h1>
+				<button
+					class="button reader__select"
+					type="button"
+					aria-pressed={selecting}
+					onclick={() => setSelecting(!selecting)}
+				>
+					{selecting ? 'Done selecting' : 'Select evidence'}
+				</button>
+			</div>
+			<div class="reader__meta">
+				{#if paths.length > 1}
+					<PathPicker {paths} currentId={branch?.id} onselect={(id) => void selectBranch(id)} />
+				{/if}
+				<p class="meta-line">
+					<span>{summary.source.display_name}</span>
+					{#if summary.started_at}
+						<span>Started {formatTimestamp(summary.started_at)}</span>
+					{:else}
+						<span>Start time not captured</span>
+					{/if}
+					<span>{plural(currentPath?.messageCount ?? summary.message_count, 'message')}</span>
+					{#if currentPath && currentPath.models.length > 0}
+						<span>{currentPath.models.join(', ')}</span>
+					{/if}
+				</p>
+			</div>
+			{#if currentPath?.divergence}
+				<p class="reader__divergence">{currentPath.divergence}</p>
+			{/if}
+			{#if gaps.length > 0}
+				<p class="transcript__capture">
+					Capture: {gaps.map((gap) => `${gap.label} ${gap.state}`).join(', ')}
+				</p>
+			{/if}
+			{#if !detail.is_latest}
+				<p class="notice" role="status">
+					Viewing an earlier revision captured {formatTimestamp(summary.captured_at)}.
+					<a href={revisionHref(null)}>View latest</a>
+				</p>
+			{/if}
+			{#if detail.revisions.length > 1}
+				<details class="revisions">
+					<summary>{plural(detail.revisions.length, 'revision')}</summary>
+					<ol>
+						{#each detail.revisions as item, index (item.revision)}
+							<li>
+								{#if item.revision === summary.revision}
+									<span aria-current="true">{formatTimestamp(item.captured_at)} (shown)</span>
+								{:else}
+									<a href={revisionHref(index === 0 ? null : item.revision)}>
+										{formatTimestamp(item.captured_at)}
+									</a>
+								{/if}
+							</li>
+						{/each}
+					</ol>
+				</details>
+			{/if}
+			{#each continues as item, index (index)}
+				<p class="relation">
+					{#if item.target_conversation_id}
+						Continues <a href={conversationHref(item.target_conversation_id)}>an earlier session</a>
+					{:else}
+						Continues a session that is not in the library ({item.target_native_id})
+					{/if}
+				</p>
+			{/each}
+		</div>
+	</header>
+
+	<div class="reader__rail">
+		{#if !outlineOpen}
+			{@render contentsToggle()}
+		{/if}
 	</div>
 
 	<nav
@@ -573,73 +649,6 @@
 	</nav>
 
 	<article class="transcript" aria-labelledby="conversation-title">
-		<header class="transcript__header">
-			<div class="transcript__title">
-				{#if !outlineOpen}
-					{@render contentsToggle()}
-				{/if}
-				<h1 id="conversation-title">{conversationLabel(summary)}</h1>
-				<button
-					class="button reader__select"
-					type="button"
-					aria-pressed={selecting}
-					onclick={() => setSelecting(!selecting)}
-				>
-					{selecting ? 'Done selecting' : 'Select evidence'}
-				</button>
-			</div>
-			<p class="transcript__meta">
-				<span>{summary.source.display_name}</span>
-				{#if summary.started_at}
-					<span>Started {formatTimestamp(summary.started_at)}</span>
-				{:else}
-					<span>Start time not captured</span>
-				{/if}
-				<span>{plural(summary.message_count, 'message')}</span>
-			</p>
-			{#if paths.length > 1}
-				<PathPicker {paths} currentId={branch?.id} onselect={(id) => void selectBranch(id)} />
-			{/if}
-			{#if gaps.length > 0}
-				<p class="transcript__capture">
-					Capture: {gaps.map((gap) => `${gap.label} ${gap.state}`).join(', ')}
-				</p>
-			{/if}
-			{#if !detail.is_latest}
-				<p class="notice" role="status">
-					Viewing an earlier revision captured {formatTimestamp(summary.captured_at)}.
-					<a href={revisionHref(null)}>View latest</a>
-				</p>
-			{/if}
-			{#if detail.revisions.length > 1}
-				<details class="revisions">
-					<summary>{plural(detail.revisions.length, 'revision')}</summary>
-					<ol>
-						{#each detail.revisions as item, index (item.revision)}
-							<li>
-								{#if item.revision === summary.revision}
-									<span aria-current="true">{formatTimestamp(item.captured_at)} (shown)</span>
-								{:else}
-									<a href={revisionHref(index === 0 ? null : item.revision)}>
-										{formatTimestamp(item.captured_at)}
-									</a>
-								{/if}
-							</li>
-						{/each}
-					</ol>
-				</details>
-			{/if}
-			{#each continues as item, index (index)}
-				<p class="relation">
-					{#if item.target_conversation_id}
-						Continues <a href={conversationHref(item.target_conversation_id)}>an earlier session</a>
-					{:else}
-						Continues a session that is not in the library ({item.target_native_id})
-					{/if}
-				</p>
-			{/each}
-		</header>
-
 		{#if visibleEvents.length === 0}
 			<p class="status-panel">This conversation has no captured events.</p>
 		{:else}

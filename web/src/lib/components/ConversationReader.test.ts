@@ -74,9 +74,11 @@ describe('conversation reader', () => {
 
 		await user.click(picker);
 		const menu = getByRole('list', { name: 'Paths' });
-		expect(menu.textContent).toMatch(/Branches at .+ with a different assistant reply/);
+		expect(menu.textContent).toContain(
+			'Diverges from Original at turn 1: the assistant replies differently'
+		);
 		expect(menu.textContent).toContain('model-b');
-		expect(menu.textContent).toContain('Earliest captured continuation');
+		expect(menu.textContent).toContain('Follows the earliest captured reply');
 
 		await user.click(within(menu).getByRole('button', { name: /^Original/ }));
 
@@ -97,7 +99,7 @@ describe('conversation reader', () => {
 
 		const show = getByRole('button', { name: 'Show contents' });
 		expect(show.getAttribute('aria-expanded')).toBe('false');
-		expect(show.closest('.transcript__title')).not.toBeNull();
+		expect(show.closest('.reader__rail')).not.toBeNull();
 		expect(document.getElementById('conversation-outline')?.hidden).toBe(true);
 		expect(sessionStorage.getItem('benchwarmer:outline-open')).toBe('false');
 	});

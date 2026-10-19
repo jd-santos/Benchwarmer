@@ -43,19 +43,16 @@
 </script>
 
 <div class="path-picker" bind:this={root}>
-	<span class="path-picker__label" id="path-picker-label">Path</span>
 	<button
 		bind:this={button}
-		id="path-picker-button"
 		class="path-picker__button"
 		type="button"
 		aria-expanded={open}
 		aria-controls="path-picker-menu"
-		aria-labelledby="path-picker-label path-picker-button"
 		onclick={() => (open = !open)}
 	>
+		<span class="visually-hidden">Path</span>
 		<span class="path-picker__name">{current.name}</span>
-		<span class="path-picker__summary">{pathSummary(current)}</span>
 		<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
 			<path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.75" />
 		</svg>
@@ -75,7 +72,7 @@
 						{#if selected}<span class="path-option__viewing">Viewing</span>{/if}
 					</span>
 					<span class="path-option__detail">
-						{path.divergence ?? 'Earliest captured continuation at every branch point'}
+						{path.divergence ?? 'Follows the earliest captured reply at every branch point'}
 					</span>
 					<span class="path-option__detail">{pathSummary(path)}</span>
 				</button>
