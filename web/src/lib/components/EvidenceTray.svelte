@@ -85,13 +85,9 @@
 <section class="evidence-tray" aria-label="Selected evidence">
 	<div class="evidence-tray__selection">
 		<p class="evidence-tray__count" aria-live="polite">
-			{items.length === 0
-				? 'Pick messages or highlight text'
-				: `${plural(items.length, 'item')} selected`}
+			{items.length === 0 ? 'Text highlighted' : `${plural(items.length, 'item')} selected`}
 		</p>
-		{#if items.length > 0}
-			<button class="text-button" type="button" onclick={onclear}>Clear</button>
-		{/if}
+		<button class="text-button" type="button" onclick={onclear}>Clear</button>
 		<button
 			class="text-button"
 			type="button"

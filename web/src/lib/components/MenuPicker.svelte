@@ -15,6 +15,7 @@
 		options,
 		currentId,
 		compact = false,
+		buttonLabel,
 		onselect
 	}: {
 		/** Accessible name prefix, such as "Path"; never shown. */
@@ -24,6 +25,8 @@
 		options: MenuOption[];
 		currentId: string | undefined;
 		compact?: boolean;
+		/** Button text when it should differ from the current option's title. */
+		buttonLabel?: string;
 		onselect?: (id: string) => void;
 	} = $props();
 
@@ -69,7 +72,7 @@
 		onclick={() => (open = !open)}
 	>
 		<span class="visually-hidden">{label}</span>
-		<span class="menu-picker__current">{current.title}</span>
+		<span class="menu-picker__current">{buttonLabel ?? current.title}</span>
 		<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
 			<path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.75" />
 		</svg>

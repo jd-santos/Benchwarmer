@@ -30,7 +30,7 @@ describe('conversation reader', () => {
 		expect(getByRole('navigation', { name: 'Paths from this message' })).toBeTruthy();
 	});
 
-	it('selects messages as evidence for a bundle', async () => {
+	it('selects messages as evidence without entering a mode', async () => {
 		vi.stubGlobal(
 			'fetch',
 			vi.fn<typeof fetch>().mockResolvedValue(
@@ -43,17 +43,15 @@ describe('conversation reader', () => {
 		const { getByRole, getAllByRole, getByText, queryByRole } = render(ConversationReader, {
 			props: { detail }
 		});
-		expect(queryByRole('checkbox')).toBeNull();
+		expect(queryByRole('region', { name: 'Selected evidence' })).toBeNull();
 
-		await user.click(getByRole('button', { name: 'Select evidence' }));
-		expect(getByText('Pick messages or highlight text')).toBeTruthy();
 		await user.click(getAllByRole('checkbox', { name: /^Select user/ })[0]!);
 
 		expect(getByText('1 item selected')).toBeTruthy();
 		expect(getByRole('button', { name: 'Create bundle' }).hasAttribute('disabled')).toBe(false);
 
-		await user.click(getByRole('button', { name: 'Done selecting' }));
-		expect(queryByRole('checkbox')).toBeNull();
+		await user.click(getByRole('button', { name: 'Clear' }));
+		expect(queryByRole('region', { name: 'Selected evidence' })).toBeNull();
 		vi.unstubAllGlobals();
 	});
 
@@ -109,7 +107,7 @@ describe('conversation reader', () => {
 			props: { detail: { ...detail, is_latest: false } }
 		});
 
-		expect(getByRole('status').textContent).toContain('Viewing an earlier capture');
+		expect(getByRole('status').textContent).toContain('Viewing the version imported');
 		expect(getByRole('link', { name: 'View latest' }).getAttribute('href')).toBe(
 			'/conversations/conversation-a'
 		);

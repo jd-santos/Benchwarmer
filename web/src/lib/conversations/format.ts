@@ -11,6 +11,12 @@ const zoneFormat = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
 
 const timeFormat = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
 
+const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+
+export function formatDate(value: string): string {
+	return dateFormat.format(new Date(value));
+}
+
 export function formatTimestamp(value: string): string {
 	const date = new Date(value);
 	const zone = zoneFormat.formatToParts(date).find((part) => part.type === 'timeZoneName');

@@ -17,7 +17,6 @@
 		statusLabel,
 		statusOptions
 	} from '$lib/bundles/format';
-	import BackLink from '$lib/components/BackLink.svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { refKey } from '$lib/bundles/selection';
 	import { formatTime, formatTimestamp, plural, roleLabel } from '$lib/conversations/format';
@@ -151,8 +150,6 @@
 </script>
 
 <div class="bundle-editor">
-	<BackLink href={resolve('/bundles')} label="Bundles" />
-
 	<header class="bundle-editor__header">
 		<h1 class:untitled={!current.document.objective}>{bundleLabel(current.document.objective)}</h1>
 		<p class="meta-line">

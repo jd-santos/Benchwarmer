@@ -16,12 +16,12 @@
 		refKey,
 		type BlockRange
 	} from '$lib/bundles/selection';
-	import BackLink from '$lib/components/BackLink.svelte';
 	import EvidenceTray from '$lib/components/EvidenceTray.svelte';
 	import MenuPicker from '$lib/components/MenuPicker.svelte';
 	import { describePaths, pathOptions } from '$lib/conversations/paths';
 	import {
 		captureGaps,
+		formatDate,
 		gapLabel,
 		conversationLabel,
 		formatTime,
@@ -58,7 +58,6 @@
 	let currentEventId = $state<string | null>(null);
 	let targetEventId = $state<string | null>(null);
 	const positions = new SvelteMap<string, string>();
-	let selecting = $state(false);
 	let highlighted = $state<BlockRange | null>(null);
 	const selection = new SvelteMap<string, BundleItem>();
 	const selectedItems = $derived(
@@ -84,14 +83,15 @@
 	);
 	const paths = $derived(describePaths(detail.branches, eventsById));
 	const currentPath = $derived(paths.find((path) => path.branch.id === branch?.id));
-	const captureOptions = $derived(
+	const versionOptions = $derived(
 		detail.revisions.map((item, index) => ({
 			id: item.revision,
-			title: `Captured ${formatTimestamp(item.captured_at)}`,
-			details: index === 0 ? ['Latest capture'] : [],
+			title: `Imported ${formatTimestamp(item.captured_at)}`,
+			details: index === 0 ? ['Latest version'] : [],
 			href: revisionHref(index === 0 ? null : item.revision)
 		}))
 	);
+	const showTray = $derived(selectedItems.length > 0 || highlighted !== null);
 	// The user turn the reader is in: the current event's own turn on this path.
 	const currentTurnId = $derived.by(() => {
 		if (currentEventId === null) return null;
@@ -134,16 +134,13 @@
 		window.getSelection()?.removeAllRanges();
 	}
 
-	function setSelecting(next: boolean): void {
-		selecting = next;
-		if (!next) {
-			selection.clear();
-			highlighted = null;
-		}
+	function clearSelection(): void {
+		selection.clear();
+		highlighted = null;
+		window.getSelection()?.removeAllRanges();
 	}
 
 	$effect(() => {
-		if (!selecting) return;
 		const update = () => (highlighted = blockRangeFromSelection(window.getSelection()));
 		document.addEventListener('selectionchange', update);
 		return () => document.removeEventListener('selectionchange', update);
@@ -491,26 +488,12 @@
 
 <div class="reader" class:reader--outline-open={outlineOpen}>
 	<header class="reader__header">
-		<div class="reader__strip">
-			<BackLink href={resolve('/conversations')} label="Conversations" />
-			{#if captureOptions.length > 1}
-				<MenuPicker
-					label="Capture"
-					note="Snapshots of this conversation from each import. Paths are branches within one capture."
-					options={captureOptions}
-					currentId={summary.revision}
-					compact
-				/>
-			{:else}
-				<span class="reader__capture">Captured {formatTimestamp(summary.captured_at)}</span>
-			{/if}
-		</div>
 		<div class="reader__title">
 			<h1 id="conversation-title">{conversationLabel(summary)}</h1>
 			{#if paths.length > 1}
 				<MenuPicker
 					label="Path"
-					note="Branches within this capture. Each path is one way the conversation continued."
+					note="Branches within this conversation. Each path is one way it continued."
 					options={pathOptions(paths)}
 					currentId={branch?.id}
 					onselect={(id) => void selectBranch(id)}
@@ -524,6 +507,23 @@
 				<span>Start time not captured</span>
 			{/if}
 			<span>{plural(currentPath?.messageCount ?? summary.message_count, 'message')}</span>
+			<span>
+				{#if versionOptions.length > 1}
+					<MenuPicker
+						label="Version"
+						note="Benchwarmer stores a new version of a conversation only when it changed since the previous import. Bundles link to one specific version."
+						options={versionOptions}
+						currentId={summary.revision}
+						buttonLabel="Imported {formatDate(summary.captured_at)} · {plural(
+							versionOptions.length,
+							'version'
+						)}"
+						compact
+					/>
+				{:else}
+					Imported {formatTimestamp(summary.captured_at)}
+				{/if}
+			</span>
 		</p>
 		<p class="meta-line">
 			<span>{summary.source.display_name}</span>
@@ -542,7 +542,8 @@
 		{/if}
 		{#if !detail.is_latest}
 			<p class="notice" role="status">
-				Viewing an earlier capture from {formatTimestamp(summary.captured_at)}.
+				Viewing the version imported {formatTimestamp(summary.captured_at)}; the conversation
+				changed in a later import.
 				<a href={revisionHref(null)}>View latest</a>
 			</p>
 		{/if}
@@ -650,28 +651,16 @@
 	</nav>
 
 	<article class="transcript" aria-labelledby="conversation-title">
-		<div class="transcript__tools">
-			{#if !outlineOpen}
-				<span class="transcript__tools-toggle">{@render contentsToggle()}</span>
-			{/if}
-			<button
-				class="button reader__select"
-				type="button"
-				aria-pressed={selecting}
-				onclick={() => setSelecting(!selecting)}
-			>
-				{selecting ? 'Done selecting' : 'Select evidence'}
-			</button>
-		</div>
 		{#if visibleEvents.length === 0}
 			<p class="status-panel">This conversation has no captured events.</p>
 		{:else}
-			<ol class="events" class:events--selecting={selecting}>
+			<ol class="events">
 				{#each visibleEvents as event (event.id)}
-					<li class="turn turn--{turnKind(event)}">
-						{#if selecting}
-							{@render selectToggle(event)}
-						{/if}
+					<li
+						class="turn turn--{turnKind(event)}"
+						class:turn--selected={selectedEvents.has(event.id)}
+					>
+						{@render selectToggle(event)}
 						{#if event.kind === 'message'}
 							<section
 								id={event.id}
@@ -750,13 +739,13 @@
 			</footer>
 		{/if}
 	</article>
-	{#if selecting}
+	{#if showTray}
 		<EvidenceTray
 			conversationId={summary.id}
 			items={selectedItems}
 			canAddText={highlighted !== null}
 			onaddtext={addHighlightedText}
-			onclear={() => selection.clear()}
+			onclear={clearSelection}
 		/>
 	{/if}
 </div>
