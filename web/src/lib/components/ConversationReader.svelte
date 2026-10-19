@@ -2,7 +2,21 @@
 	import { afterNavigate, replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
-	import type { Branch, ContentBlock, ConversationDetail, ConversationEvent } from '$lib/api/types';
+	import type {
+		Branch,
+		BundleItem,
+		ContentBlock,
+		ConversationDetail,
+		ConversationEvent,
+		EvidenceRef
+	} from '$lib/api/types';
+	import {
+		blockRangeFromSelection,
+		defaultRole,
+		refKey,
+		type BlockRange
+	} from '$lib/bundles/selection';
+	import EvidenceTray from '$lib/components/EvidenceTray.svelte';
 	import {
 		captureGaps,
 		conversationLabel,
@@ -39,6 +53,18 @@
 	let currentEventId = $state<string | null>(null);
 	let targetEventId = $state<string | null>(null);
 	const positions = new SvelteMap<string, string>();
+	let selecting = $state(false);
+	let highlighted = $state<BlockRange | null>(null);
+	const selection = new SvelteMap<string, BundleItem>();
+	const selectedItems = $derived(
+		[...selection.values()].sort(
+			(a, b) =>
+				(eventsById.get(a.ref.event_id)?.ordinal ?? 0) -
+					(eventsById.get(b.ref.event_id)?.ordinal ?? 0) ||
+				(a.ref.text_start ?? -1) - (b.ref.text_start ?? -1)
+		)
+	);
+	const selectedEvents = $derived(new Set(selectedItems.map((item) => item.ref.event_id)));
 
 	const branch = $derived(
 		detail.branches.find((item) => item.id === branchId) ?? detail.branches.at(-1)
@@ -55,6 +81,48 @@
 	const gaps = $derived(captureGaps(summary.coverage));
 	const continues = $derived(detail.relationships.filter((item) => item.kind === 'continuation'));
 	const continuedIn = $derived(detail.referenced_by.filter((item) => item.kind === 'continuation'));
+
+	function evidenceRef(eventId: string, range: BlockRange | null = null): EvidenceRef {
+		return {
+			conversation_id: summary.id,
+			revision: summary.revision,
+			event_id: eventId,
+			block_id: range?.blockId ?? null,
+			text_start: range?.start ?? null,
+			text_end: range?.end ?? null
+		};
+	}
+
+	function toggleEvent(event: ConversationEvent, checked: boolean): void {
+		const ref = evidenceRef(event.id);
+		if (checked) selection.set(refKey(ref), { ref, role: defaultRole(event.role) });
+		else selection.delete(refKey(ref));
+	}
+
+	function addHighlightedText(): void {
+		const range = highlighted;
+		const event = range ? eventsById.get(range.eventId) : undefined;
+		if (!range || !event) return;
+		const ref = evidenceRef(event.id, range);
+		const kind = event.content.find((item) => item.id === range.blockId)?.kind ?? null;
+		selection.set(refKey(ref), { ref, role: defaultRole(event.role, kind) });
+		window.getSelection()?.removeAllRanges();
+	}
+
+	function setSelecting(next: boolean): void {
+		selecting = next;
+		if (!next) {
+			selection.clear();
+			highlighted = null;
+		}
+	}
+
+	$effect(() => {
+		if (!selecting) return;
+		const update = () => (highlighted = blockRangeFromSelection(window.getSelection()));
+		document.addEventListener('selectionchange', update);
+		return () => document.removeEventListener('selectionchange', update);
+	});
 
 	function readStorage(key: string): string | null {
 		try {
@@ -294,24 +362,35 @@
 	{/each}
 {/snippet}
 
+{#snippet selectToggle(event: ConversationEvent)}
+	<label class="event__select">
+		<input
+			type="checkbox"
+			checked={selection.has(refKey(evidenceRef(event.id)))}
+			onchange={(change) => toggleEvent(event, change.currentTarget.checked)}
+		/>
+		Select
+	</label>
+{/snippet}
+
 {#snippet block(item: ContentBlock)}
 	{#if item.kind === 'text'}
 		{#if item.text === null || item.text === ''}
 			<p class="block-gap">Text not captured</p>
 		{:else}
-			<div class="block-text">{@render text(item.text)}</div>
+			<div class="block-text" data-block-id={item.id}>{@render text(item.text)}</div>
 		{/if}
 	{:else if item.text === null}
 		<p class="block-gap">{blockLabel(item)} · content not captured</p>
 	{:else if item.kind === 'reasoning' || collapsible(item)}
 		<details class="block-detail">
 			<summary>{blockLabel(item)} · {plural(lineCount(item.text), 'line')}</summary>
-			<pre>{@render text(item.text)}</pre>
+			<pre data-block-id={item.id}>{@render text(item.text)}</pre>
 		</details>
 	{:else}
 		<div class="block-detail block-detail--inline">
 			<span class="block-detail__label">{blockLabel(item)}</span>
-			<pre>{@render text(item.text)}</pre>
+			<pre data-block-id={item.id}>{@render text(item.text)}</pre>
 		</div>
 	{/if}
 {/snippet}
@@ -335,6 +414,14 @@
 			</svg>
 		</button>
 		<a class="reader__back" href={resolve('/conversations')}>Conversations</a>
+		<button
+			class="text-button reader__select"
+			type="button"
+			aria-pressed={selecting}
+			onclick={() => setSelecting(!selecting)}
+		>
+			{selecting ? 'Done selecting' : 'Select evidence'}
+		</button>
 	</div>
 
 	<nav
@@ -514,6 +601,7 @@
 								id={event.id}
 								class="event event--{event.role}"
 								class:event--target={event.id === targetEventId}
+								class:event--selected={selectedEvents.has(event.id)}
 								data-event
 								tabindex="-1"
 								aria-label="{roleLabel(event.role)}{event.occurred_at
@@ -524,6 +612,9 @@
 									<span class="event__role">{roleLabel(event.role)}</span>
 									{#if event.occurred_at}
 										<time datetime={event.occurred_at}>{formatTime(event.occurred_at)}</time>
+									{/if}
+									{#if selecting}
+										{@render selectToggle(event)}
 									{/if}
 								</header>
 								{#if event.content.length === 0}
@@ -539,10 +630,14 @@
 								id={event.id}
 								class="event event--marker"
 								class:event--target={event.id === targetEventId}
+								class:event--selected={selectedEvents.has(event.id)}
 								data-event
 								tabindex="-1"
 								aria-label={event.kind === 'compaction' ? 'Compaction' : 'Captured event'}
 							>
+								{#if selecting}
+									{@render selectToggle(event)}
+								{/if}
 								<p class="event__marker">
 									{event.kind === 'compaction'
 										? 'Context compacted'
@@ -585,4 +680,13 @@
 			</footer>
 		{/if}
 	</article>
+	{#if selecting}
+		<EvidenceTray
+			conversationId={summary.id}
+			items={selectedItems}
+			canAddText={highlighted !== null}
+			onaddtext={addHighlightedText}
+			onclear={() => selection.clear()}
+		/>
+	{/if}
 </div>

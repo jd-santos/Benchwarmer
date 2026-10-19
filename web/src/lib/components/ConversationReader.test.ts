@@ -30,6 +30,33 @@ describe('conversation reader', () => {
 		expect(getByRole('navigation', { name: 'Paths from this message' })).toBeTruthy();
 	});
 
+	it('selects messages as evidence for a bundle', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn<typeof fetch>().mockResolvedValue(
+				new Response(JSON.stringify({ items: [] }), {
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+		const user = userEvent.setup();
+		const { getByRole, getAllByRole, getByText, queryByRole } = render(ConversationReader, {
+			props: { detail }
+		});
+		expect(queryByRole('checkbox')).toBeNull();
+
+		await user.click(getByRole('button', { name: 'Select evidence' }));
+		expect(getByText('Select messages or highlight text')).toBeTruthy();
+		await user.click(getAllByRole('checkbox', { name: 'Select' })[0]!);
+
+		expect(getByText('1 item selected')).toBeTruthy();
+		expect(getByRole('button', { name: 'Create bundle' }).hasAttribute('disabled')).toBe(false);
+
+		await user.click(getByRole('button', { name: 'Done selecting' }));
+		expect(queryByRole('checkbox')).toBeNull();
+		vi.unstubAllGlobals();
+	});
+
 	it('switches paths from the fork point', async () => {
 		const user = userEvent.setup();
 		const { getByRole, getByText } = render(ConversationReader, { props: { detail } });

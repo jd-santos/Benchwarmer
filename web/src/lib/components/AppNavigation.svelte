@@ -75,6 +75,11 @@
 					>
 				</li>
 				<li>
+					<a href={resolve('/bundles')} aria-current={isCurrent('/bundles') ? 'page' : undefined}
+						>Bundles</a
+					>
+				</li>
+				<li>
 					<a href={sourcesHref} aria-current={isCurrent('/sources') ? 'page' : undefined}>Sources</a
 					>
 				</li>

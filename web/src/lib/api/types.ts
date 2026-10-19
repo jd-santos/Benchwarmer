@@ -138,3 +138,82 @@ export interface ConversationDetail {
 	referenced_by: IncomingRelationship[];
 	branches: Branch[];
 }
+
+export type EvidenceRole = 'requirement' | 'action' | 'result' | 'correction' | 'context';
+export type BundleStatus = 'draft' | 'reviewed' | 'analysis_only';
+
+export interface EvidenceRef {
+	conversation_id: string;
+	revision: string;
+	event_id: string;
+	block_id: string | null;
+	text_start?: number | null;
+	text_end?: number | null;
+}
+
+export interface BundleItem {
+	ref: EvidenceRef;
+	role: EvidenceRole;
+	note?: string | null;
+}
+
+export interface BundleDocument {
+	schema_version?: 1;
+	objective: string;
+	status: BundleStatus;
+	items: BundleItem[];
+	rationale: string | null;
+	missing_evidence: string[];
+}
+
+export interface ResolvedBundleItem {
+	item: BundleItem;
+	conversation_title: string | null;
+	conversation_is_latest: boolean;
+	event_role: string;
+	event_kind: string;
+	occurred_at: string | null;
+	block_kind: string | null;
+	excerpt: string | null;
+	omitted_before: number | null;
+}
+
+export interface BundleRevision {
+	number: number;
+	origin: 'human' | 'generated';
+	producer: string;
+	created_at: string;
+}
+
+export interface BundleDetail {
+	id: string;
+	revision: number;
+	latest_revision: number;
+	origin: 'human' | 'generated';
+	producer: string;
+	created_at: string;
+	updated_at: string;
+	document: BundleDocument;
+	items: ResolvedBundleItem[];
+	revisions: BundleRevision[];
+}
+
+export interface BundleSummary {
+	id: string;
+	revision: number;
+	objective: string;
+	status: BundleStatus;
+	item_count: number;
+	conversation_ids: string[];
+	updated_at: string;
+}
+
+export interface BundlesResponse {
+	items: BundleSummary[];
+}
+
+export interface EvidenceIssue {
+	item_index: number | null;
+	code: string;
+	message: string;
+}
