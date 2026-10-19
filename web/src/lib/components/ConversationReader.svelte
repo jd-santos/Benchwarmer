@@ -18,10 +18,11 @@
 	} from '$lib/bundles/selection';
 	import BackLink from '$lib/components/BackLink.svelte';
 	import EvidenceTray from '$lib/components/EvidenceTray.svelte';
-	import PathPicker from '$lib/components/PathPicker.svelte';
-	import { describePaths } from '$lib/conversations/paths';
+	import MenuPicker from '$lib/components/MenuPicker.svelte';
+	import { describePaths, pathOptions } from '$lib/conversations/paths';
 	import {
 		captureGaps,
+		gapLabel,
 		conversationLabel,
 		formatTime,
 		formatTimestamp,
@@ -83,6 +84,14 @@
 	);
 	const paths = $derived(describePaths(detail.branches, eventsById));
 	const currentPath = $derived(paths.find((path) => path.branch.id === branch?.id));
+	const captureOptions = $derived(
+		detail.revisions.map((item, index) => ({
+			id: item.revision,
+			title: `Captured ${formatTimestamp(item.captured_at)}`,
+			details: index === 0 ? ['Latest capture'] : [],
+			href: revisionHref(index === 0 ? null : item.revision)
+		}))
+	);
 	// The user turn the reader is in: the current event's own turn on this path.
 	const currentTurnId = $derived.by(() => {
 		if (currentEventId === null) return null;
@@ -482,78 +491,70 @@
 
 <div class="reader" class:reader--outline-open={outlineOpen}>
 	<header class="reader__header">
-		<BackLink href={resolve('/conversations')} label="Conversations" />
-		<div class="reader__headline">
-			<div class="reader__title">
-				<h1 id="conversation-title">{conversationLabel(summary)}</h1>
-				<button
-					class="button reader__select"
-					type="button"
-					aria-pressed={selecting}
-					onclick={() => setSelecting(!selecting)}
-				>
-					{selecting ? 'Done selecting' : 'Select evidence'}
-				</button>
-			</div>
-			<div class="reader__meta">
-				{#if paths.length > 1}
-					<PathPicker {paths} currentId={branch?.id} onselect={(id) => void selectBranch(id)} />
-				{/if}
-				<p class="meta-line">
-					<span>{summary.source.display_name}</span>
-					{#if summary.started_at}
-						<span>Started {formatTimestamp(summary.started_at)}</span>
-					{:else}
-						<span>Start time not captured</span>
-					{/if}
-					<span>{plural(currentPath?.messageCount ?? summary.message_count, 'message')}</span>
-					{#if currentPath && currentPath.models.length > 0}
-						<span>{currentPath.models.join(', ')}</span>
-					{/if}
-				</p>
-			</div>
-			{#if currentPath?.divergence}
-				<p class="reader__divergence">{currentPath.divergence}</p>
+		<div class="reader__strip">
+			<BackLink href={resolve('/conversations')} label="Conversations" />
+			{#if captureOptions.length > 1}
+				<MenuPicker
+					label="Capture"
+					note="Snapshots of this conversation from each import. Paths are branches within one capture."
+					options={captureOptions}
+					currentId={summary.revision}
+					compact
+				/>
+			{:else}
+				<span class="reader__capture">Captured {formatTimestamp(summary.captured_at)}</span>
 			{/if}
-			{#if gaps.length > 0}
-				<p class="transcript__capture">
-					Capture: {gaps.map((gap) => `${gap.label} ${gap.state}`).join(', ')}
-				</p>
-			{/if}
-			{#if !detail.is_latest}
-				<p class="notice" role="status">
-					Viewing an earlier revision captured {formatTimestamp(summary.captured_at)}.
-					<a href={revisionHref(null)}>View latest</a>
-				</p>
-			{/if}
-			{#if detail.revisions.length > 1}
-				<details class="revisions">
-					<summary>{plural(detail.revisions.length, 'revision')}</summary>
-					<ol>
-						{#each detail.revisions as item, index (item.revision)}
-							<li>
-								{#if item.revision === summary.revision}
-									<span aria-current="true">{formatTimestamp(item.captured_at)} (shown)</span>
-								{:else}
-									<a href={revisionHref(index === 0 ? null : item.revision)}>
-										{formatTimestamp(item.captured_at)}
-									</a>
-								{/if}
-							</li>
-						{/each}
-					</ol>
-				</details>
-			{/if}
-			{#each continues as item, index (index)}
-				<p class="relation">
-					{#if item.target_conversation_id}
-						Continues <a href={conversationHref(item.target_conversation_id)}>an earlier session</a>
-					{:else}
-						Continues a session that is not in the library ({item.target_native_id})
-					{/if}
-				</p>
-			{/each}
 		</div>
+		<div class="reader__title">
+			<h1 id="conversation-title">{conversationLabel(summary)}</h1>
+			{#if paths.length > 1}
+				<MenuPicker
+					label="Path"
+					note="Branches within this capture. Each path is one way the conversation continued."
+					options={pathOptions(paths)}
+					currentId={branch?.id}
+					onselect={(id) => void selectBranch(id)}
+				/>
+			{/if}
+		</div>
+		<p class="meta-line">
+			{#if summary.started_at}
+				<span>Started {formatTimestamp(summary.started_at)}</span>
+			{:else}
+				<span>Start time not captured</span>
+			{/if}
+			<span>{plural(currentPath?.messageCount ?? summary.message_count, 'message')}</span>
+		</p>
+		<p class="meta-line">
+			<span>{summary.source.display_name}</span>
+			{#if currentPath && currentPath.models.length > 0}
+				<span>{currentPath.models.join(', ')}</span>
+			{/if}
+			{#each gaps as gap (gap.label)}
+				{@const hint = gapLabel(gap)}
+				<span class="hint" title={hint.explanation}>
+					{hint.text}<span class="visually-hidden">. {hint.explanation}</span>
+				</span>
+			{/each}
+		</p>
+		{#if currentPath?.divergence}
+			<p class="reader__divergence">{currentPath.divergence}</p>
+		{/if}
+		{#if !detail.is_latest}
+			<p class="notice" role="status">
+				Viewing an earlier capture from {formatTimestamp(summary.captured_at)}.
+				<a href={revisionHref(null)}>View latest</a>
+			</p>
+		{/if}
+		{#each continues as item, index (index)}
+			<p class="relation">
+				{#if item.target_conversation_id}
+					Continues <a href={conversationHref(item.target_conversation_id)}>an earlier session</a>
+				{:else}
+					Continues a session that is not in the library ({item.target_native_id})
+				{/if}
+			</p>
+		{/each}
 	</header>
 
 	<div class="reader__rail">
@@ -649,6 +650,19 @@
 	</nav>
 
 	<article class="transcript" aria-labelledby="conversation-title">
+		<div class="transcript__tools">
+			{#if !outlineOpen}
+				<span class="transcript__tools-toggle">{@render contentsToggle()}</span>
+			{/if}
+			<button
+				class="button reader__select"
+				type="button"
+				aria-pressed={selecting}
+				onclick={() => setSelecting(!selecting)}
+			>
+				{selecting ? 'Done selecting' : 'Select evidence'}
+			</button>
+		</div>
 		{#if visibleEvents.length === 0}
 			<p class="status-panel">This conversation has no captured events.</p>
 		{:else}

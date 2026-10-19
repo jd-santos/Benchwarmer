@@ -63,3 +63,17 @@ export function pathSummary(path: PathDescription): string {
 	if (path.models.length > 0) parts.push(path.models.join(', '));
 	return parts.join(' · ');
 }
+
+/** Menu options for the path picker. */
+export function pathOptions(
+	paths: PathDescription[]
+): { id: string; title: string; details: string[] }[] {
+	return paths.map((path) => ({
+		id: path.branch.id,
+		title: path.name,
+		details: [
+			path.divergence ?? 'Follows the earliest captured reply at every branch point',
+			pathSummary(path)
+		]
+	}));
+}

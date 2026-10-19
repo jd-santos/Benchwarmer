@@ -94,3 +94,41 @@ export function highlightParts(text: string, query: string | null): TextPart[] {
 export function lineCount(text: string): number {
 	return text.split('\n').length;
 }
+
+const gapNouns: Record<string, string> = {
+	messages: 'messages',
+	tool_calls: 'tool calls',
+	usage: 'usage',
+	prompts: 'prompts'
+};
+
+/** Short label and explanation for one capture gap, for a hover or hidden hint. */
+export function gapLabel(gap: { label: string; state: CaptureState }): {
+	text: string;
+	explanation: string;
+} {
+	const noun = gapNouns[gap.label] ?? gap.label;
+	const capitalized = noun.charAt(0).toUpperCase() + noun.slice(1);
+	switch (gap.state) {
+		case 'partial':
+			return {
+				text: `Some ${noun} missing`,
+				explanation: `The source captured only part of the ${noun} for this conversation.`
+			};
+		case 'redacted':
+			return {
+				text: `${capitalized} redacted`,
+				explanation: `The source removed ${noun} before Benchwarmer imported this conversation.`
+			};
+		case 'unavailable':
+			return {
+				text: `${capitalized} not captured`,
+				explanation: `The source does not record ${noun}, so they are unknown rather than zero.`
+			};
+		default:
+			return {
+				text: `${capitalized} not captured`,
+				explanation: `The source did not report ${noun} for this conversation, so they are unknown rather than zero.`
+			};
+	}
+}

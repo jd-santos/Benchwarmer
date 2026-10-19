@@ -89,7 +89,7 @@ describe('conversation reader', () => {
 
 	it('opens the outline by default and remembers closing it', async () => {
 		const user = userEvent.setup();
-		const { getByRole } = render(ConversationReader, { props: { detail } });
+		const { getByRole, getAllByRole } = render(ConversationReader, { props: { detail } });
 		const hide = getByRole('button', { name: 'Hide contents' });
 
 		expect(hide.getAttribute('aria-expanded')).toBe('true');
@@ -97,7 +97,7 @@ describe('conversation reader', () => {
 
 		await user.click(hide);
 
-		const show = getByRole('button', { name: 'Show contents' });
+		const show = getAllByRole('button', { name: 'Show contents' })[0]!;
 		expect(show.getAttribute('aria-expanded')).toBe('false');
 		expect(show.closest('.reader__rail')).not.toBeNull();
 		expect(document.getElementById('conversation-outline')?.hidden).toBe(true);
@@ -109,7 +109,7 @@ describe('conversation reader', () => {
 			props: { detail: { ...detail, is_latest: false } }
 		});
 
-		expect(getByRole('status').textContent).toContain('Viewing an earlier revision');
+		expect(getByRole('status').textContent).toContain('Viewing an earlier capture');
 		expect(getByRole('link', { name: 'View latest' }).getAttribute('href')).toBe(
 			'/conversations/conversation-a'
 		);
