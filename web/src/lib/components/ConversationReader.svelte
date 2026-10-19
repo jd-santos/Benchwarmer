@@ -78,9 +78,6 @@
 			.map((id) => eventsById.get(id))
 			.filter((event): event is ConversationEvent => event !== undefined)
 	);
-	const turns = $derived(
-		visibleEvents.filter((event) => event.kind === 'message' && event.role === 'user')
-	);
 	const paths = $derived(describePaths(detail.branches, eventsById));
 	const currentPath = $derived(paths.find((path) => path.branch.id === branch?.id));
 	const versionOptions = $derived(
@@ -102,7 +99,10 @@
 		}
 		return null;
 	});
-	const capturedEvents = $derived(visibleEvents.filter((event) => event.kind !== 'message'));
+	// Contents: user turns and captured markers in conversation order.
+	const outlineEntries = $derived(
+		visibleEvents.filter((event) => event.kind !== 'message' || event.role === 'user')
+	);
 	const gaps = $derived(captureGaps(summary.coverage));
 	const continues = $derived(detail.relationships.filter((item) => item.kind === 'continuation'));
 	const continuedIn = $derived(detail.referenced_by.filter((item) => item.kind === 'continuation'));
@@ -330,7 +330,9 @@
 		let frame = 0;
 		const update = () => {
 			frame = 0;
-			const line = Math.max(120, window.innerHeight * 0.25);
+			// Just below where a jumped-to event lands (scroll-margin 5rem), so the
+			// event you jumped to is current rather than the one after it.
+			const line = 112;
 			let current: string | null = null;
 			for (const id of ids) {
 				const element = document.getElementById(id);
@@ -379,6 +381,22 @@
 			attachment: 'Attachment'
 		};
 		return labels[kind] ?? 'Unrecognized content';
+	}
+
+	/** A short name for a non-message event, specific when the source said what changed. */
+	function markerLabel(event: ConversationEvent): string {
+		const native = event.extensions?.pi_entry_type;
+		const specific: Record<string, string> = {
+			model_change: 'model changed',
+			thinking_level_change: 'thinking level changed',
+			session_info: 'session info',
+			label: 'label',
+			branch_summary: 'branch summary'
+		};
+		if (typeof native === 'string' && specific[native]) return specific[native];
+		if (event.kind === 'compaction') return 'compaction';
+		if (event.kind === 'configuration') return 'configuration changed';
+		return 'unrecognized event';
 	}
 
 	function turnKind(event: ConversationEvent): 'user' | 'reply' | 'marker' {
@@ -583,49 +601,36 @@
 		</div>
 
 		<section aria-labelledby="outline-turns">
-			<h3 id="outline-turns">User turns</h3>
-			{#if turns.length === 0}
+			<h3 id="outline-turns" class="visually-hidden">Turns and captured events</h3>
+			{#if outlineEntries.length === 0}
 				<p class="outline__empty">No user messages on this path.</p>
 			{:else}
 				<ol class="outline__list">
-					{#each turns as event (event.id)}
+					{#each outlineEntries as event (event.id)}
 						<li>
-							<a
-								class="outline__item"
-								href={`#${encodeURIComponent(event.id)}`}
-								aria-current={event.id === currentTurnId ? 'location' : undefined}
-								onclick={() => jumpTo(event.id)}
-							>
-								{outlineText(event)}
-							</a>
+							{#if event.kind === 'message'}
+								<a
+									class="outline__item"
+									href={`#${encodeURIComponent(event.id)}`}
+									aria-current={event.id === currentTurnId ? 'location' : undefined}
+									onclick={() => jumpTo(event.id)}
+								>
+									{outlineText(event)}
+								</a>
+							{:else}
+								<a
+									class="outline__item outline__item--marker"
+									href={`#${encodeURIComponent(event.id)}`}
+									onclick={() => jumpTo(event.id)}
+								>
+									— {markerLabel(event)} —
+								</a>
+							{/if}
 						</li>
 					{/each}
 				</ol>
 			{/if}
 		</section>
-
-		{#if capturedEvents.length > 0}
-			<section aria-labelledby="outline-captured">
-				<h3 id="outline-captured">Captured events</h3>
-				<ul class="outline__list">
-					{#each capturedEvents as event (event.id)}
-						<li>
-							<a
-								class="outline__item"
-								href={`#${encodeURIComponent(event.id)}`}
-								onclick={() => jumpTo(event.id)}
-							>
-								{event.kind === 'compaction'
-									? 'Compaction'
-									: event.kind === 'configuration'
-										? 'Configuration change'
-										: 'Unrecognized event'}
-							</a>
-						</li>
-					{/each}
-				</ul>
-			</section>
-		{/if}
 
 		{#if continues.length > 0 || continuedIn.length > 0}
 			<section aria-labelledby="outline-related">
@@ -715,13 +720,7 @@
 								tabindex="-1"
 								aria-label={event.kind === 'compaction' ? 'Compaction' : 'Captured event'}
 							>
-								<p class="event__marker">
-									{event.kind === 'compaction'
-										? 'Context compacted'
-										: event.kind === 'configuration'
-											? 'Configuration changed'
-											: 'Unrecognized event'}
-								</p>
+								<p class="event__marker">{markerLabel(event)}</p>
 								{#each event.content as item (item.id)}
 									{@render block(item)}
 								{/each}
