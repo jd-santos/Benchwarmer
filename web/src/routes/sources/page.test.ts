@@ -68,13 +68,13 @@ describe('source status page', () => {
 		expect(getByText('Reading source and coverage status…')).toBeTruthy();
 	});
 
-	it('shows source freshness and every coverage dimension', async () => {
-		const { findByText, getByRole, getAllByText, getByText } = render(Page, {
+	it('compares freshness and every coverage dimension across sources', async () => {
+		const { container, findByText, getByRole, getByText } = render(Page, {
 			props: { data: { sources: Promise.resolve(sources) }, params: {} }
 		});
 
 		expect(await findByText('2 sources configured')).toBeTruthy();
-		expect(getByRole('heading', { name: 'Hermes profile' })).toBeTruthy();
+		expect(getByRole('columnheader', { name: /Hermes profile/ })).toBeTruthy();
 		expect(getByText('Sep 16, 2026, 11:55 AM UTC')).toBeTruthy();
 		expect(getByText('Never imported')).toBeTruthy();
 		for (const label of [
@@ -89,11 +89,11 @@ describe('source status page', () => {
 			'Prompts',
 			'Classifications'
 		]) {
-			expect(getAllByText(label).length).toBe(2);
+			expect(getByRole('rowheader', { name: label })).toBeTruthy();
 		}
-		expect(getAllByText('Partial').length).toBe(2);
-		expect(getAllByText('Unavailable').length).toBe(2);
-		expect(getAllByText('Unknown').length).toBe(14);
+		expect(container.querySelectorAll('.coverage--partial').length).toBe(2);
+		expect(container.querySelectorAll('.coverage--unavailable').length).toBe(2);
+		expect(container.querySelectorAll('.coverage--unknown').length).toBe(14);
 	});
 
 	it('shows an actionable empty state', async () => {

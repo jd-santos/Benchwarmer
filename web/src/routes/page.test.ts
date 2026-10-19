@@ -2,14 +2,16 @@
 
 import { cleanup, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getHealth, getSources } from '$lib/api/client';
-import type { HealthResponse, SourcesResponse } from '$lib/api/types';
+import { getBundles, getConversations, getHealth, getSources } from '$lib/api/client';
+import type { BundleSummary, HealthResponse, SourcesResponse } from '$lib/api/types';
 import Page from './+page.svelte';
 import { _loadFoundationOverview } from './+page';
 
 vi.mock('$lib/api/client', () => ({
 	getHealth: vi.fn(),
-	getSources: vi.fn()
+	getSources: vi.fn(),
+	getConversations: vi.fn(),
+	getBundles: vi.fn()
 }));
 
 const migratedHealth: HealthResponse = {
@@ -74,46 +76,87 @@ afterEach(() => {
 	vi.resetAllMocks();
 });
 
+const bundles: BundleSummary[] = [
+	{
+		id: 'bundle-1',
+		revision: 2,
+		objective: 'Refund handling',
+		status: 'reviewed',
+		item_count: 3,
+		conversation_ids: ['conversation-a'],
+		updated_at: '2026-10-19T10:00:00Z'
+	},
+	{
+		id: 'bundle-2',
+		revision: 1,
+		objective: '',
+		status: 'draft',
+		item_count: 1,
+		conversation_ids: ['conversation-a'],
+		updated_at: '2026-10-19T11:00:00Z'
+	}
+];
+
+const library = { conversations: 5, bundles };
+
 describe('overview page', () => {
 	it('announces a stable loading state while status is pending', () => {
-		const overview = deferred<{ health: HealthResponse; sources: SourcesResponse | null }>();
+		const overview = deferred<never>();
 		const { getByRole, getByText } = render(Page, {
 			props: { data: { overview: overview.promise }, params: {} }
 		});
 
-		expect(getByRole('heading', { name: 'System overview' })).toBeTruthy();
-		expect(getByRole('heading', { name: 'Checking system status' })).toBeTruthy();
-		expect(getByText('Reading service, database, and source state…')).toBeTruthy();
+		expect(getByRole('heading', { name: 'Overview', level: 1 })).toBeTruthy();
+		expect(getByRole('heading', { name: 'Loading overview' })).toBeTruthy();
+		expect(getByText('Reading the library and source status…')).toBeTruthy();
 	});
 
-	it('shows healthy service, migration, source, and explicit coverage state', async () => {
-		const { findByText, getByRole, getAllByText, getByText } = render(Page, {
+	it('shows the workflow with counts, sources, and a quiet system line', async () => {
+		const { findByRole, getByRole, getByText } = render(Page, {
 			props: {
-				data: { overview: Promise.resolve({ health: migratedHealth, sources }) },
+				data: { overview: Promise.resolve({ health: migratedHealth, sources, library }) },
 				params: {}
 			}
 		});
 
-		expect(await findByText('Revision 0002')).toBeTruthy();
-		expect(getByText('2 configured')).toBeTruthy();
-		expect(getByText('1 of 2 imported successfully')).toBeTruthy();
-		expect(getAllByText('Partial').length).toBe(1);
-		expect(getAllByText('Unavailable').length).toBe(1);
-		expect(getAllByText('Unknown').length).toBe(1);
-		expect(getByRole('link', { name: 'Review sources' }).getAttribute('href')).toBe('/sources');
+		const workflow = await findByRole('list', { name: 'Evaluation workflow' });
+		expect(workflow.textContent).toContain('5');
+		expect(getByText('1 reviewed · 1 draft')).toBeTruthy();
+		expect(getByRole('link', { name: 'Conversations' }).getAttribute('href')).toBe(
+			'/conversations'
+		);
+		expect(getByRole('link', { name: 'Evidence bundles' }).getAttribute('href')).toBe('/bundles');
+		expect(getByRole('rowheader', { name: 'Hermes profile' })).toBeTruthy();
+		expect(getByText('Never imported')).toBeTruthy();
+		expect(getByRole('link', { name: 'Coverage details' }).getAttribute('href')).toBe('/sources');
+		expect(getByText('Database revision 0002')).toBeTruthy();
 	});
 
-	it('labels an unmigrated database without fabricating source status', async () => {
+	it('says what to run when the database is not migrated', async () => {
 		const health: HealthResponse = { ...migratedHealth, alembic_revision: null };
 		const { findByText, getByText, queryByRole } = render(Page, {
-			props: { data: { overview: Promise.resolve({ health, sources: null }) }, params: {} }
+			props: {
+				data: { overview: Promise.resolve({ health, sources: null, library: null }) },
+				params: {}
+			}
 		});
 
-		expect(await findByText('Migration required')).toBeTruthy();
-		expect(getByText('Setup required')).toBeTruthy();
-		expect(getByText('No database revision is installed.')).toBeTruthy();
-		expect(getByText('Migrate the database to read sources.')).toBeTruthy();
-		expect(queryByRole('heading', { name: 'Source coverage' })).toBeNull();
+		expect(await findByText('Database setup required')).toBeTruthy();
+		expect(getByText('uv run alembic upgrade head')).toBeTruthy();
+		expect(getByText('Database not migrated')).toBeTruthy();
+		expect(queryByRole('list', { name: 'Evaluation workflow' })).toBeNull();
+	});
+
+	it('marks counts unknown rather than zero when the library cannot be read', async () => {
+		const { findByText, getByRole } = render(Page, {
+			props: {
+				data: { overview: Promise.resolve({ health: migratedHealth, sources, library: null }) },
+				params: {}
+			}
+		});
+
+		expect(await findByText('Library counts could not be loaded.')).toBeTruthy();
+		expect(getByRole('list', { name: 'Evaluation workflow' }).textContent).toContain('—');
 	});
 
 	it('shows a clear unavailable state when the API request fails', async () => {
@@ -124,29 +167,48 @@ describe('overview page', () => {
 		});
 
 		expect(await findByRole('alert')).toBeTruthy();
-		expect(getByText('Status unavailable')).toBeTruthy();
+		expect(getByText('API unavailable')).toBeTruthy();
 		expect(getByText(/Check that it is running/)).toBeTruthy();
 	});
 });
 
 describe('overview data loading', () => {
-	it('loads sources after confirming that the database is migrated', async () => {
+	it('loads sources and library counts after confirming the database is migrated', async () => {
 		vi.mocked(getHealth).mockResolvedValue(migratedHealth);
 		vi.mocked(getSources).mockResolvedValue(sources);
+		vi.mocked(getConversations).mockResolvedValue({ items: [], total: 5, limit: 1, offset: 0 });
+		vi.mocked(getBundles).mockResolvedValue({ items: bundles });
 
 		await expect(_loadFoundationOverview()).resolves.toEqual({
 			health: migratedHealth,
-			sources
+			sources,
+			library
 		});
-		expect(getHealth).toHaveBeenCalledOnce();
-		expect(getSources).toHaveBeenCalledOnce();
 	});
 
-	it('does not request source records from an unmigrated database', async () => {
+	it('keeps status when library counts fail', async () => {
+		vi.mocked(getHealth).mockResolvedValue(migratedHealth);
+		vi.mocked(getSources).mockResolvedValue(sources);
+		vi.mocked(getConversations).mockRejectedValue(new Error('offline'));
+		vi.mocked(getBundles).mockResolvedValue({ items: bundles });
+
+		await expect(_loadFoundationOverview()).resolves.toEqual({
+			health: migratedHealth,
+			sources,
+			library: null
+		});
+	});
+
+	it('does not request records from an unmigrated database', async () => {
 		const health: HealthResponse = { ...migratedHealth, alembic_revision: null };
 		vi.mocked(getHealth).mockResolvedValue(health);
 
-		await expect(_loadFoundationOverview()).resolves.toEqual({ health, sources: null });
+		await expect(_loadFoundationOverview()).resolves.toEqual({
+			health,
+			sources: null,
+			library: null
+		});
 		expect(getSources).not.toHaveBeenCalled();
+		expect(getConversations).not.toHaveBeenCalled();
 	});
 });

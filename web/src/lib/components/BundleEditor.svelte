@@ -10,7 +10,14 @@
 		EvidenceRole,
 		ResolvedBundleItem
 	} from '$lib/api/types';
-	import { bundleLabel, roleOptions, scopeLabel, statusOptions } from '$lib/bundles/format';
+	import {
+		bundleLabel,
+		roleOptions,
+		scopeLabel,
+		statusLabel,
+		statusOptions
+	} from '$lib/bundles/format';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { refKey } from '$lib/bundles/selection';
 	import { formatTime, formatTimestamp, plural, roleLabel } from '$lib/conversations/format';
 
@@ -62,6 +69,11 @@
 	});
 	const dirty = $derived(JSON.stringify(draft) !== JSON.stringify(normalized(current.document)));
 	const needsObjective = $derived(status !== 'draft' && draft.objective === '');
+	const statusHint = $derived(statusOptions.find((option) => option.value === status)?.hint);
+	const conversations = $derived([
+		...new Map(current.items.map((item) => [item.item.ref.conversation_id, item])).values()
+	]);
+	const openNotes = new SvelteSet<string>();
 
 	function normalized(document: BundleDocument): BundleDocument {
 		return {
@@ -138,14 +150,25 @@
 </script>
 
 <div class="bundle-editor">
-	<p class="reader__toolbar"><a class="reader__back" href={resolve('/bundles')}>Bundles</a></p>
+	<a class="back-link" href={resolve('/bundles')}>Bundles</a>
 
 	<header class="bundle-editor__header">
 		<h1 class:untitled={!current.document.objective}>{bundleLabel(current.document.objective)}</h1>
-		<p class="transcript__meta">
-			<span>Revision {current.revision} of {current.latest_revision}</span>
+		<p class="meta-line">
+			<span>{statusLabel(current.document.status)}</span>
 			<span>{plural(current.items.length, 'item')}</span>
-			<span>Updated {formatTimestamp(current.updated_at)}</span>
+			{#if conversations.length === 1}
+				<span>
+					From <a href={sourceHref(conversations[0])}
+						>{conversations[0].conversation_title ?? 'an untitled conversation'}</a
+					>
+				</span>
+			{:else}
+				<span>From {plural(conversations.length, 'conversation')}</span>
+			{/if}
+			{#if current.latest_revision > 1}
+				<span>Revision {current.revision}</span>
+			{/if}
 		</p>
 		{#if readOnly}
 			<p class="notice" role="status">
@@ -155,127 +178,154 @@
 	</header>
 
 	<form
-		class="bundle-form"
+		class="bundle-layout"
 		onsubmit={(event) => {
 			event.preventDefault();
 			void save();
 		}}
 	>
-		<fieldset class="bundle-form__fields" disabled={readOnly}>
+		<fieldset class="bundle-summary" disabled={readOnly}>
+			<legend class="visually-hidden">Summary</legend>
 			<div class="field">
 				<label for="bundle-objective">Objective</label>
-				<input
+				<textarea
 					id="bundle-objective"
-					type="text"
+					rows="2"
 					maxlength="4000"
 					bind:value={objective}
-					aria-describedby={needsObjective ? 'bundle-objective-error' : undefined}
-					aria-invalid={needsObjective}
-				/>
-				{#if needsObjective}
-					<p id="bundle-objective-error" class="field__error">
-						Add an objective before marking the bundle {status === 'reviewed'
-							? 'reviewed'
-							: 'analysis only'}.
-					</p>
-				{/if}
+					aria-describedby="bundle-objective-hint"
+					aria-invalid={needsObjective}></textarea>
+				<p id="bundle-objective-hint" class={needsObjective ? 'field__error' : 'field__hint'}>
+					{needsObjective
+						? 'Add an objective before changing the status.'
+						: 'What this evidence shows, in a sentence.'}
+				</p>
 			</div>
 
-			<fieldset class="field field--choices">
+			<fieldset class="field">
 				<legend>Status</legend>
-				{#each statusOptions as option (option.value)}
-					<label class="choice">
-						<input type="radio" name="status" value={option.value} bind:group={status} />
-						<span>{option.label}</span>
-						<span class="choice__hint">{option.hint}</span>
-					</label>
-				{/each}
-			</fieldset>
-
-			<section class="bundle-evidence" aria-labelledby="bundle-evidence-heading">
-				<h2 id="bundle-evidence-heading">Evidence</h2>
-				{#if entries.length === 0}
-					<p class="field__error">A bundle needs at least one item. Undo by reloading the page.</p>
-				{/if}
-				<ol class="evidence-list">
-					{#each entries as entry, index (refKey(entry.resolved.item.ref))}
-						{@const item = entry.resolved}
-						{#if item.omitted_before}
-							<li class="evidence-gap">
-								{plural(item.omitted_before, 'event')} not included
-							</li>
-						{/if}
-						<li class="evidence-item" class:evidence-item--invalid={itemIssues[index]}>
-							<div class="evidence-item__head">
-								<label class="evidence-item__role">
-									<span class="visually-hidden">Role of item {index + 1}</span>
-									<select
-										value={entry.role}
-										onchange={(event) =>
-											edit(index, { role: event.currentTarget.value as EvidenceRole })}
-									>
-										{#each roleOptions as option (option.value)}
-											<option value={option.value}>{option.label}</option>
-										{/each}
-									</select>
-								</label>
-								<p class="evidence-item__source">
-									<span>{roleLabel(item.event_role as never)}</span>
-									{#if item.occurred_at}<span>{formatTime(item.occurred_at)}</span>{/if}
-									<span>{scopeLabel(item)}</span>
-									<a href={sourceHref(item)}>{item.conversation_title ?? 'Open in conversation'}</a>
-								</p>
-							</div>
-							{#if item.excerpt === null}
-								<p class="block-gap">Text not captured</p>
-							{:else}
-								<blockquote class="evidence-item__excerpt">{item.excerpt}</blockquote>
-							{/if}
-							{#if itemIssues[index]}
-								<p class="field__error">{itemIssues[index]}</p>
-							{/if}
-							<div class="evidence-item__foot">
-								<label class="evidence-item__note">
-									<span>Note</span>
-									<input
-										type="text"
-										aria-label="Note for item {index + 1}"
-										maxlength="4000"
-										value={entry.note}
-										oninput={(event) => edit(index, { note: event.currentTarget.value })}
-									/>
-								</label>
-								<button
-									class="text-button"
-									type="button"
-									disabled={index === 0}
-									aria-label="Move item {index + 1} up"
-									onclick={() => move(index, -1)}>Up</button
-								>
-								<button
-									class="text-button"
-									type="button"
-									disabled={index === entries.length - 1}
-									aria-label="Move item {index + 1} down"
-									onclick={() => move(index, 1)}>Down</button
-								>
-								<button
-									class="text-button text-button--danger"
-									type="button"
-									aria-label="Remove item {index + 1}"
-									onclick={() => remove(index)}>Remove</button
-								>
-							</div>
-						</li>
+				<div class="segmented">
+					{#each statusOptions as option (option.value)}
+						<label>
+							<input type="radio" name="status" value={option.value} bind:group={status} />
+							<span>{option.label}</span>
+						</label>
 					{/each}
-				</ol>
-			</section>
+				</div>
+				<p class="field__hint">{statusHint}</p>
+			</fieldset>
+		</fieldset>
 
+		<section class="bundle-evidence" aria-labelledby="bundle-evidence-heading">
+			<h2 id="bundle-evidence-heading">Evidence</h2>
+			{#if entries.length === 0}
+				<p class="field__error">A bundle needs at least one item. Reload to undo.</p>
+			{/if}
+			<ol class="evidence-list">
+				{#each entries as entry, index (refKey(entry.resolved.item.ref))}
+					{@const item = entry.resolved}
+					{@const key = refKey(item.item.ref)}
+					{#if item.omitted_before}
+						<li class="evidence-gap">{plural(item.omitted_before, 'event')} not included</li>
+					{/if}
+					<li class="evidence-card" class:evidence-card--invalid={itemIssues[index]}>
+						<div class="evidence-card__bar">
+							<label class="evidence-card__role">
+								<span class="visually-hidden">Role of item {index + 1}</span>
+								<select
+									value={entry.role}
+									disabled={readOnly}
+									onchange={(event) =>
+										edit(index, { role: event.currentTarget.value as EvidenceRole })}
+								>
+									{#each roleOptions as option (option.value)}
+										<option value={option.value}>{option.label}</option>
+									{/each}
+								</select>
+							</label>
+							{#if !readOnly}
+								<div class="evidence-card__tools">
+									<button
+										class="tool-button"
+										type="button"
+										disabled={index === 0}
+										aria-label="Move item {index + 1} up"
+										title="Move up"
+										onclick={() => move(index, -1)}>↑</button
+									>
+									<button
+										class="tool-button"
+										type="button"
+										disabled={index === entries.length - 1}
+										aria-label="Move item {index + 1} down"
+										title="Move down"
+										onclick={() => move(index, 1)}>↓</button
+									>
+									<button
+										class="tool-button tool-button--danger"
+										type="button"
+										aria-label="Remove item {index + 1}"
+										title="Remove"
+										onclick={() => remove(index)}>×</button
+									>
+								</div>
+							{/if}
+						</div>
+
+						{#if item.excerpt === null}
+							<p class="block-gap">Text not captured</p>
+						{:else}
+							<blockquote class="evidence-card__excerpt">{item.excerpt}</blockquote>
+						{/if}
+
+						<p class="meta-line evidence-card__source">
+							<span>{roleLabel(item.event_role as never)}</span>
+							{#if item.occurred_at}<span>{formatTime(item.occurred_at)}</span>{/if}
+							<span>{scopeLabel(item)}</span>
+							<span>
+								<a href={sourceHref(item)}
+									>{conversations.length > 1
+										? (item.conversation_title ?? 'Open in conversation')
+										: 'View in conversation'}</a
+								>
+							</span>
+						</p>
+
+						{#if itemIssues[index]}
+							<p class="field__error">{itemIssues[index]}</p>
+						{/if}
+
+						{#if entry.note || openNotes.has(key)}
+							<label class="evidence-card__note">
+								<span>Note</span>
+								<input
+									type="text"
+									maxlength="4000"
+									value={entry.note}
+									disabled={readOnly}
+									oninput={(event) => edit(index, { note: event.currentTarget.value })}
+								/>
+							</label>
+						{:else if !readOnly}
+							<button
+								class="text-button evidence-card__add-note"
+								type="button"
+								onclick={() => openNotes.add(key)}
+							>
+								Add note
+							</button>
+						{/if}
+					</li>
+				{/each}
+			</ol>
+		</section>
+
+		<fieldset class="bundle-notes" disabled={readOnly}>
+			<legend class="visually-hidden">Review notes</legend>
 			<div class="field">
 				<label for="bundle-rationale">Why these items</label>
 				<textarea id="bundle-rationale" rows="3" maxlength="4000" bind:value={rationale}></textarea>
 			</div>
-
 			<div class="field">
 				<label for="bundle-missing">Missing evidence</label>
 				<textarea
@@ -283,14 +333,15 @@
 					rows="3"
 					aria-describedby="bundle-missing-hint"
 					bind:value={missing}></textarea>
-				<p id="bundle-missing-hint" class="field__hint">
-					One gap per line, such as files or output that were not captured.
-				</p>
+				<p id="bundle-missing-hint" class="field__hint">One gap per line.</p>
 			</div>
 		</fieldset>
 
 		{#if !readOnly}
-			<div class="bundle-form__actions">
+			<div class="save-bar" class:save-bar--dirty={dirty}>
+				<p class="save-bar__status" aria-live="polite">
+					{#if dirty}Unsaved changes{:else if confirmation}{confirmation}{:else}No changes{/if}
+				</p>
 				<button
 					class="button button--primary"
 					type="submit"
@@ -298,24 +349,21 @@
 				>
 					{saving ? 'Saving…' : 'Save revision'}
 				</button>
-				<p class="bundle-form__status" aria-live="polite">
-					{#if confirmation && !dirty}{confirmation}{:else if dirty}Unsaved changes{/if}
-				</p>
+				{#if conflict !== null}
+					<div class="notice save-bar__message" role="alert">
+						This bundle was changed elsewhere{conflict ? ` (now revision ${conflict})` : ''}. Your
+						edits are still here.
+						<button class="text-button" type="button" onclick={() => void invalidateAll()}>
+							Load the latest and discard my edits
+						</button>
+					</div>
+				{/if}
+				{#if messages.length > 0}
+					<ul class="field__error save-bar__message" role="alert">
+						{#each messages as message, index (index)}<li>{message}</li>{/each}
+					</ul>
+				{/if}
 			</div>
-			{#if conflict !== null}
-				<div class="notice" role="alert">
-					This bundle was changed elsewhere{conflict ? ` (now revision ${conflict})` : ''}. Your
-					edits are still here.
-					<button class="text-button" type="button" onclick={() => void invalidateAll()}>
-						Load the latest and discard my edits
-					</button>
-				</div>
-			{/if}
-			{#if messages.length > 0}
-				<ul class="field__error" role="alert">
-					{#each messages as message, index (index)}<li>{message}</li>{/each}
-				</ul>
-			{/if}
 		{/if}
 	</form>
 

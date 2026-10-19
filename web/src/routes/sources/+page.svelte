@@ -1,11 +1,13 @@
 <script lang="ts">
 	import type { CoverageValue, SourceCoverage } from '$lib/api/types';
+	import { formatTimestamp, plural } from '$lib/conversations/format';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const coverageFields: ReadonlyArray<{ key: keyof SourceCoverage; label: string }> = [
 		{ key: 'sessions', label: 'Sessions' },
+		{ key: 'prompts', label: 'Prompts' },
 		{ key: 'token_usage', label: 'Token usage' },
 		{ key: 'request_ids', label: 'Request IDs' },
 		{ key: 'actual_charges', label: 'Actual charges' },
@@ -13,37 +15,24 @@
 		{ key: 'subscription_expense', label: 'Subscription expense' },
 		{ key: 'quota', label: 'Quota' },
 		{ key: 'credits', label: 'Credits' },
-		{ key: 'prompts', label: 'Prompts' },
 		{ key: 'classifications', label: 'Classifications' }
 	];
 
-	function formatCoverage(value: CoverageValue): string {
-		return value.charAt(0).toUpperCase() + value.slice(1);
-	}
-
-	function formatImportedAt(value: string | null): string {
-		if (value === null) return 'Never imported';
-		return `${new Intl.DateTimeFormat('en-US', {
-			dateStyle: 'medium',
-			timeStyle: 'short',
-			timeZone: 'UTC'
-		}).format(new Date(value))} UTC`;
-	}
+	const coverageLabels: Record<CoverageValue, { symbol: string; label: string }> = {
+		available: { symbol: '●', label: 'Available' },
+		partial: { symbol: '◐', label: 'Partial' },
+		unavailable: { symbol: '○', label: 'Unavailable' },
+		unknown: { symbol: '?', label: 'Unknown' }
+	};
 </script>
 
 <svelte:head>
 	<title>Sources · Benchwarmer</title>
-	<meta
-		name="description"
-		content="Review import freshness and conversation, usage, and cost coverage by source."
-	/>
+	<meta name="description" content="Import freshness and coverage by source." />
 </svelte:head>
 
 <div class="sources-page">
-	<header class="sources-page__header">
-		<h1>Sources</h1>
-		<p>Review import freshness and the evidence each source can provide.</p>
-	</header>
+	<h1 class="page-title">Sources</h1>
 
 	{#await data.sources}
 		<section class="status-panel status-panel--loading" aria-live="polite" aria-busy="true">
@@ -52,54 +41,50 @@
 		</section>
 	{:then response}
 		{#if response.items.length === 0}
-			<section class="source-empty" aria-labelledby="no-sources-heading">
+			<section class="status-panel" aria-labelledby="no-sources-heading">
 				<h2 id="no-sources-heading">No sources configured</h2>
 				<p>Load a fixture or add an importer before reviewing source coverage.</p>
 			</section>
 		{:else}
-			<p class="source-count">
-				{response.items.length}
-				{response.items.length === 1 ? 'source' : 'sources'} configured
-			</p>
-			<div class="source-list">
-				{#each response.items as source (source.id)}
-					<article class="source-card" aria-labelledby={`source-${source.id}`}>
-						<header class="source-card__header">
-							<div>
-								<h2 id={`source-${source.id}`}>{source.display_name}</h2>
-								<p>{source.kind}</p>
-							</div>
-							<span
-								class:source-freshness--current={source.last_successful_import_at !== null}
-								class:source-freshness--missing={source.last_successful_import_at === null}
-								class="source-freshness"
-							>
-								{source.last_successful_import_at === null ? 'No successful import' : 'Imported'}
-							</span>
-						</header>
-
-						<div class="source-card__freshness">
-							<span>Last successful import</span>
-							<strong>{formatImportedAt(source.last_successful_import_at)}</strong>
-						</div>
-
-						<section class="source-coverage" aria-labelledby={`coverage-${source.id}`}>
-							<h3 id={`coverage-${source.id}`}>Coverage</h3>
-							<dl>
-								{#each coverageFields as field (field.key)}
-									<div>
-										<dt>{field.label}</dt>
-										<dd>
-											<span class={`coverage-state coverage-state--${source.coverage[field.key]}`}>
-												{formatCoverage(source.coverage[field.key])}
-											</span>
-										</dd>
-									</div>
+			<p class="result-count">{plural(response.items.length, 'source')} configured</p>
+			<div class="table-scroll">
+				<table class="data-table coverage-table">
+					<thead>
+						<tr>
+							<td></td>
+							{#each response.items as source (source.id)}
+								<th scope="col">
+									{source.display_name}
+									<span class="coverage-table__kind">{source.kind}</span>
+								</th>
+							{/each}
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<th scope="row">Last import</th>
+							{#each response.items as source (source.id)}
+								<td class:muted={source.last_successful_import_at === null}>
+									{source.last_successful_import_at === null
+										? 'Never imported'
+										: formatTimestamp(source.last_successful_import_at)}
+								</td>
+							{/each}
+						</tr>
+						{#each coverageFields as field (field.key)}
+							<tr>
+								<th scope="row">{field.label}</th>
+								{#each response.items as source (source.id)}
+									{@const state = coverageLabels[source.coverage[field.key]]}
+									<td class="coverage coverage--{source.coverage[field.key]}">
+										<span aria-hidden="true">{state.symbol}</span>
+										{state.label}
+									</td>
 								{/each}
-							</dl>
-						</section>
-					</article>
-				{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
 			</div>
 		{/if}
 	{:catch}
