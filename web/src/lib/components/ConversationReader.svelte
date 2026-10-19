@@ -493,8 +493,32 @@
 
 <div class="reader" class:reader--outline-open={outlineOpen}>
 	<header class="reader__header">
-		<div class="reader__title">
+		<div class="reader__main">
 			<h1 id="conversation-title">{conversationLabel(summary)}</h1>
+			<p class="byline">
+				<span class="byline__source">{summary.source.display_name}</span>
+				{#if summary.started_at}
+					<time datetime={summary.started_at}>{formatTimestamp(summary.started_at)}</time>
+				{:else}
+					<span>Start time not captured</span>
+				{/if}
+				<span>· {plural(currentPath?.messageCount ?? summary.message_count, 'message')}</span>
+			</p>
+			{#if (currentPath && currentPath.models.length > 0) || gaps.length > 0}
+				<ul class="tags" aria-label="Models and capture notes">
+					{#each currentPath?.models ?? [] as model (model)}
+						<li class="tag tag--code">{model}</li>
+					{/each}
+					{#each gaps as gap (gap.label)}
+						{@const hint = gapLabel(gap)}
+						<li class="tag tag--warn hint" title={hint.explanation}>
+							{hint.text}<span class="visually-hidden">. {hint.explanation}</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+		<div class="reader__aside">
 			{#if paths.length > 1}
 				<MenuPicker
 					label="Path"
@@ -504,61 +528,22 @@
 					onselect={(id) => void selectBranch(id)}
 				/>
 			{/if}
+			{#if versionOptions.length > 1}
+				<MenuPicker
+					label="Version"
+					note="Benchwarmer stores a new version of a conversation only when it changed since the previous import. Bundles link to one specific version."
+					options={versionOptions}
+					currentId={summary.revision}
+					buttonLabel="Imported {formatDate(summary.captured_at)} · {plural(
+						versionOptions.length,
+						'version'
+					)}"
+					compact
+				/>
+			{:else}
+				<span class="reader__imported">Imported {formatDate(summary.captured_at)}</span>
+			{/if}
 		</div>
-		<dl class="facts">
-			<div>
-				<dt>Started</dt>
-				<dd>{summary.started_at ? formatTimestamp(summary.started_at) : 'Not captured'}</dd>
-			</div>
-			<div>
-				<dt>Messages</dt>
-				<dd>{currentPath?.messageCount ?? summary.message_count}</dd>
-			</div>
-			<div>
-				<dt>Source</dt>
-				<dd>{summary.source.display_name}</dd>
-			</div>
-			{#if currentPath && currentPath.models.length > 0}
-				<div>
-					<dt>{currentPath.models.length === 1 ? 'Model' : 'Models'}</dt>
-					<dd>{currentPath.models.join(', ')}</dd>
-				</div>
-			{/if}
-			<div>
-				<dt>Imported</dt>
-				<dd>
-					{#if versionOptions.length > 1}
-						<MenuPicker
-							label="Version"
-							note="Benchwarmer stores a new version of a conversation only when it changed since the previous import. Bundles link to one specific version."
-							options={versionOptions}
-							currentId={summary.revision}
-							buttonLabel="{formatDate(summary.captured_at)} · {plural(
-								versionOptions.length,
-								'version'
-							)}"
-							compact
-						/>
-					{:else}
-						{formatDate(summary.captured_at)}
-					{/if}
-				</dd>
-			</div>
-			{#if gaps.length > 0}
-				<div>
-					<dt>Not captured</dt>
-					<dd>
-						{#each gaps as gap, index (gap.label)}
-							{@const hint = gapLabel(gap)}
-							{#if index > 0},{/if}
-							<span class="hint" title={hint.explanation}
-								>{gap.label}<span class="visually-hidden">. {hint.explanation}</span></span
-							>
-						{/each}
-					</dd>
-				</div>
-			{/if}
-		</dl>
 		{#if !detail.is_latest}
 			<p class="notice" role="status">
 				Viewing the version imported {formatTimestamp(summary.captured_at)}; the conversation
