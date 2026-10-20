@@ -33,6 +33,7 @@ No current tasks at this priority.
 - [ ] [Collect conversations from other machines](work/cross-machine-collection/README.md)
 - [ ] [Save collections and freeze reusable datasets](work/collections-and-datasets/README.md)
 - [ ] [Run approved model work with durable limits and recovery](work/bounded-model-work/README.md)
+- [ ] [Build the Pi Durable analysis harness](work/analysis-harness/README.md)
 - [ ] [Enrich conversations with evidence and measured model tiers](work/conversation-enrichment/README.md)
 - [ ] [Add the other conversation sources](work/additional-sources/README.md)
 - [ ] [Turn selected evidence into runnable tasks](work/task-preparation/README.md)

@@ -26,6 +26,14 @@ This project does not currently declare a Semantic Versioning policy.
   desktop and mobile browser tests.
 - Serve the built Svelte application and versioned API from one FastAPI origin
   with strict SPA fallback and API restart-persistence coverage.
+- Add deterministic conversation outlines (`GET /api/v1/conversations/{id}/outline`)
+  with per-event sizes, captured tool activity, heading ranges that double as
+  evidence references, and per-path exchanges and segments.
+- Accept generated-origin bundle revisions with a named producer, so
+  model-proposed bundles land as drafts beside human ones.
+- Add the `harness/` Pi Durable package with API-backed library tools and a
+  manually run `propose-bundles` workflow that writes a per-conversation usage
+  report.
 
 ### Changed
 
