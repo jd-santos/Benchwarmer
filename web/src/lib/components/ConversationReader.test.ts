@@ -46,7 +46,7 @@ describe('conversation reader', () => {
 		expect(queryByRole('checkbox')).toBeNull();
 
 		await user.click(getByRole('button', { name: 'Select evidence' }));
-		expect(getByText('Select messages or highlight text')).toBeTruthy();
+		expect(getByText('Pick messages or highlight text')).toBeTruthy();
 		await user.click(getAllByRole('checkbox', { name: 'Select' })[0]!);
 
 		expect(getByText('1 item selected')).toBeTruthy();

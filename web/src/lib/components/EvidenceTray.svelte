@@ -83,12 +83,15 @@
 </script>
 
 <section class="evidence-tray" aria-label="Selected evidence">
-	<p class="evidence-tray__count" aria-live="polite">
-		{items.length === 0
-			? 'Select messages or highlight text'
-			: `${plural(items.length, 'item')} selected`}
-	</p>
-	<div class="evidence-tray__actions">
+	<div class="evidence-tray__selection">
+		<p class="evidence-tray__count" aria-live="polite">
+			{items.length === 0
+				? 'Pick messages or highlight text'
+				: `${plural(items.length, 'item')} selected`}
+		</p>
+		{#if items.length > 0}
+			<button class="text-button" type="button" onclick={onclear}>Clear</button>
+		{/if}
 		<button
 			class="text-button"
 			type="button"
@@ -98,18 +101,19 @@
 		>
 			Add highlighted text
 		</button>
-		{#if items.length > 0}
-			<button class="text-button" type="button" onclick={onclear}>Clear</button>
+	</div>
+	<div class="evidence-tray__save">
+		{#if bundles.length > 0}
+			<label class="evidence-tray__target">
+				<span>Save to</span>
+				<select bind:value={target} disabled={pending}>
+					<option value="">New bundle</option>
+					{#each bundles as bundle (bundle.id)}
+						<option value={bundle.id}>{bundleLabel(bundle.objective)}</option>
+					{/each}
+				</select>
+			</label>
 		{/if}
-		<label class="evidence-tray__target">
-			<span class="visually-hidden">Bundle</span>
-			<select bind:value={target} disabled={pending}>
-				<option value="">New bundle</option>
-				{#each bundles as bundle (bundle.id)}
-					<option value={bundle.id}>Add to: {bundleLabel(bundle.objective)}</option>
-				{/each}
-			</select>
-		</label>
 		<button
 			class="button button--primary"
 			type="button"

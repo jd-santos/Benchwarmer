@@ -415,7 +415,7 @@
 		</button>
 		<a class="reader__back" href={resolve('/conversations')}>Conversations</a>
 		<button
-			class="text-button reader__select"
+			class="button reader__select"
 			type="button"
 			aria-pressed={selecting}
 			onclick={() => setSelecting(!selecting)}

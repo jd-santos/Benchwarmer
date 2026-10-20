@@ -38,7 +38,7 @@ describe('bundle editor', () => {
 
 		await user.click(getByRole('radio', { name: /Reviewed/ }));
 
-		expect(getByText(/Add an objective before marking the bundle reviewed/)).toBeTruthy();
+		expect(getByText('Add an objective before changing the status.')).toBeTruthy();
 		expect(getByRole('button', { name: 'Save revision' }).hasAttribute('disabled')).toBe(true);
 	});
 

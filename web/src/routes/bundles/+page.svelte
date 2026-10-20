@@ -12,10 +12,8 @@
 	<meta name="description" content="Review evidence bundles assembled from conversations." />
 </svelte:head>
 
-<div class="conversations-page">
-	<header class="conversations-page__header">
-		<h1>Evidence bundles</h1>
-	</header>
+<div class="bundles-page">
+	<h1 class="page-title">Evidence bundles</h1>
 
 	{#await data.bundles}
 		<section class="status-panel status-panel--loading" aria-live="polite" aria-busy="true">
@@ -27,33 +25,47 @@
 			<section class="status-panel" aria-labelledby="no-bundles-heading">
 				<h2 id="no-bundles-heading">No bundles yet</h2>
 				<p>
-					Open a <a href={resolve('/conversations')}>conversation</a>, choose Select evidence, and
-					create a bundle from the messages or text you pick.
+					In a <a href={resolve('/conversations')}>conversation</a>, choose
+					<strong>Select evidence</strong>, pick messages or highlight text, then create a bundle.
 				</p>
 			</section>
 		{:else}
-			<p class="result-count">{plural(response.items.length, 'bundle')}</p>
-			<ol class="conversation-list">
-				{#each response.items as bundle (bundle.id)}
-					<li class="conversation-row">
-						<a
-							class="conversation-row__title"
-							class:conversation-row__title--untitled={!bundle.objective.trim()}
-							href={resolve('/bundles/[id]', { id: bundle.id })}
-						>
-							{bundleLabel(bundle.objective)}
-						</a>
-						<p class="conversation-row__meta">
-							<span>{statusLabel(bundle.status)}</span>
-							<span>{plural(bundle.item_count, 'item')}</span>
-							{#if bundle.conversation_ids.length > 1}
-								<span>{plural(bundle.conversation_ids.length, 'conversation')}</span>
-							{/if}
-							<span>Updated {formatTimestamp(bundle.updated_at)}</span>
-						</p>
-					</li>
-				{/each}
-			</ol>
+			<table class="data-table bundle-table">
+				<thead>
+					<tr>
+						<th scope="col">Objective</th>
+						<th scope="col">Status</th>
+						<th scope="col" class="numeric">Items</th>
+						<th scope="col">Updated</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each response.items as bundle (bundle.id)}
+						<tr>
+							<th scope="row">
+								<a
+									class:untitled={!bundle.objective.trim()}
+									href={resolve('/bundles/[id]', { id: bundle.id })}
+								>
+									{bundleLabel(bundle.objective)}
+								</a>
+								{#if bundle.conversation_ids.length > 1}
+									<span class="bundle-table__note">
+										{plural(bundle.conversation_ids.length, 'conversation')}
+									</span>
+								{/if}
+							</th>
+							<td
+								><span class="bundle-status bundle-status--{bundle.status}"
+									>{statusLabel(bundle.status)}</span
+								></td
+							>
+							<td class="numeric">{bundle.item_count}</td>
+							<td class="muted">{formatTimestamp(bundle.updated_at)}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		{/if}
 	{:catch}
 		<section class="status-panel status-panel--error" role="alert">
