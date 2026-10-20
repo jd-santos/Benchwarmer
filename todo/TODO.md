@@ -38,6 +38,7 @@ No current tasks at this priority.
 - [ ] [Turn selected evidence into runnable tasks](work/task-preparation/README.md)
 - [ ] [Define judges, success measures, and test plans](work/evaluation-planning/README.md)
 - [ ] [Run, judge, and compare repeatable experiments](work/judged-experiments/README.md)
+- [ ] [Adopt the coding-agent eval learnings from the Hermes case](work/coding-agent-eval-learnings/README.md)
 
 ## P4: Low
 
