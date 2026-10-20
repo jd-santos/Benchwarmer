@@ -44,6 +44,11 @@ questions while implementing the annotation slice.
     position, fork switching, capture gaps, revisions, continuations, and j/k
     navigation. Verified with unit tests and rendered desktop and phone checks
     against a seeded synthetic library.
+  - [x] Contents outline lists user turns with the headings of their replies
+    as children, and captured events (compaction, configuration changes,
+    unrecognized events) as markers in order. `tests/fixtures/demo-conversations.json`
+    includes `demo-event-kinds`, one synthetic conversation with every event
+    kind, every role, and headed assistant replies.
   - [ ] Add a Playwright end-to-end spec for browsing once the pinned Chromium
     is installed locally
 

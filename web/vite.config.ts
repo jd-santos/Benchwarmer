@@ -53,6 +53,8 @@ export default defineConfig({
 	},
 	test: {
 		expect: { requireAssertions: true },
+		// Time formatting follows the viewer's zone; tests pin one for stable output.
+		env: { TZ: 'UTC' },
 		projects: [
 			{
 				extends: './vite.config.ts',

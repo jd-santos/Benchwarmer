@@ -17,8 +17,19 @@
 		type BlockRange
 	} from '$lib/bundles/selection';
 	import EvidenceTray from '$lib/components/EvidenceTray.svelte';
+	import Hint from '$lib/components/Hint.svelte';
+	import MenuPicker from '$lib/components/MenuPicker.svelte';
+	import { describePaths, pathOptions } from '$lib/conversations/paths';
+	import {
+		outlineEntries as buildOutline,
+		segmentText,
+		turnOf,
+		type Heading
+	} from '$lib/conversations/structure';
 	import {
 		captureGaps,
+		formatDate,
+		gapLabel,
 		conversationLabel,
 		formatTime,
 		formatTimestamp,
@@ -48,12 +59,12 @@
 	);
 	const positionsKey = $derived(`benchwarmer:positions:${summary.id}`);
 
-	let outlineOpen = $state(readStorage(outlineKey) === 'true');
+	// Open unless the reader closed it; narrow screens start closed in onMount.
+	let outlineOpen = $state(readStorage(outlineKey) !== 'false');
 	let branchId = $state('');
 	let currentEventId = $state<string | null>(null);
 	let targetEventId = $state<string | null>(null);
 	const positions = new SvelteMap<string, string>();
-	let selecting = $state(false);
 	let highlighted = $state<BlockRange | null>(null);
 	const selection = new SvelteMap<string, BundleItem>();
 	const selectedItems = $derived(
@@ -74,10 +85,38 @@
 			.map((id) => eventsById.get(id))
 			.filter((event): event is ConversationEvent => event !== undefined)
 	);
-	const turns = $derived(
-		visibleEvents.filter((event) => event.kind === 'message' && event.role === 'user')
+	const paths = $derived(describePaths(detail.branches, eventsById));
+	const currentPath = $derived(paths.find((path) => path.branch.id === branch?.id));
+	const versionOptions = $derived(
+		detail.revisions.map((item, index) => ({
+			id: item.revision,
+			title: `Imported ${formatTimestamp(item.captured_at)}`,
+			details: index === 0 ? ['Latest version'] : [],
+			href: revisionHref(index === 0 ? null : item.revision)
+		}))
 	);
-	const capturedEvents = $derived(visibleEvents.filter((event) => event.kind !== 'message'));
+	const showTray = $derived(selectedItems.length > 0 || highlighted !== null);
+	// The user turn the reader is in: the current event's own turn on this path.
+	const currentTurnId = $derived.by(() => {
+		if (currentEventId === null) return null;
+		let turn: string | null = null;
+		for (const event of visibleEvents) {
+			if (event.kind === 'message' && event.role === 'user') turn = event.id;
+			if (event.id === currentEventId) return turn;
+		}
+		return null;
+	});
+	// Contents: user turns (with the headings of their replies) and captured
+	// markers, in conversation order.
+	const outlineEntries = $derived(buildOutline(visibleEvents));
+	const turnByEvent = $derived(turnOf(visibleEvents));
+	let currentHeading = $state<{ id: string; eventId: string } | null>(null);
+	let targetHeading = $state<{ id: string; eventId: string } | null>(null);
+	const currentHeadingId = $derived(
+		currentHeading && turnByEvent.get(currentHeading.eventId) === currentTurnId
+			? currentHeading.id
+			: null
+	);
 	const gaps = $derived(captureGaps(summary.coverage));
 	const continues = $derived(detail.relationships.filter((item) => item.kind === 'continuation'));
 	const continuedIn = $derived(detail.referenced_by.filter((item) => item.kind === 'continuation'));
@@ -109,16 +148,13 @@
 		window.getSelection()?.removeAllRanges();
 	}
 
-	function setSelecting(next: boolean): void {
-		selecting = next;
-		if (!next) {
-			selection.clear();
-			highlighted = null;
-		}
+	function clearSelection(): void {
+		selection.clear();
+		highlighted = null;
+		window.getSelection()?.removeAllRanges();
 	}
 
 	$effect(() => {
-		if (!selecting) return;
 		const update = () => (highlighted = blockRangeFromSelection(window.getSelection()));
 		document.addEventListener('selectionchange', update);
 		return () => document.removeEventListener('selectionchange', update);
@@ -144,12 +180,8 @@
 		return detail.branches.filter((item) => item.event_ids.includes(eventId));
 	}
 
-	function messageCount(item: Branch): number {
-		return item.event_ids.filter((id) => eventsById.get(id)?.kind === 'message').length;
-	}
-
 	function pathLabel(item: Branch): string {
-		return `Path ${(branchIndex.get(item.id) ?? 0) + 1}`;
+		return paths.find((path) => path.branch.id === item.id)?.name ?? 'Path';
 	}
 
 	function blockText(event: ConversationEvent): string | null {
@@ -209,7 +241,7 @@
 		}
 	}
 
-	/** Switch paths; keep the reader at the given anchor or this path's last position. */
+	/** Switch paths. The scroll position only moves when an anchor is given. */
 	async function selectBranch(id: string, anchor: string | null = null): Promise<void> {
 		if (id === branch?.id) {
 			if (anchor) await scrollToEvent(anchor);
@@ -217,18 +249,27 @@
 		}
 		branchId = id;
 		rememberBranch(id);
-		const target = anchor ?? positions.get(id) ?? null;
-		if (target) await scrollToEvent(target);
-		else window.scrollTo({ top: 0 });
+		if (anchor) await scrollToEvent(anchor);
 	}
 
 	function closeOutlineOnNarrow(): void {
 		if (isNarrow()) outlineOpen = false;
 	}
 
+	function jumpToHeading(heading: Heading): void {
+		closeOutlineOnNarrow();
+		targetEventId = heading.eventId;
+		currentEventId = heading.eventId;
+		currentHeading = { id: heading.id, eventId: heading.eventId };
+		targetHeading = currentHeading;
+	}
+
 	function jumpTo(eventId: string): void {
 		closeOutlineOnNarrow();
 		targetEventId = eventId;
+		currentEventId = eventId;
+		currentHeading = null;
+		targetHeading = null;
 	}
 
 	function followHash(): void {
@@ -304,33 +345,100 @@
 	});
 
 	// Track the top-most visible event as this path's reading position.
+	// The current event is the last one whose top has passed the reading line,
+	// so a jump that scrolls a message to the top makes that message current.
 	$effect(() => {
 		const ids = visibleEvents.map((event) => event.id);
 		const activeBranch = branch?.id;
-		if (activeBranch === undefined || typeof IntersectionObserver === 'undefined') return;
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- observer bookkeeping, not state
-		const visible = new Set<string>();
-		const observer = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					if (entry.isIntersecting) visible.add(entry.target.id);
-					else visible.delete(entry.target.id);
-				}
-				const first = ids.find((id) => visible.has(id));
-				if (first) {
-					currentEventId = first;
-					positions.set(activeBranch, first);
-					writeStorage(positionsKey, JSON.stringify(Object.fromEntries(positions)));
-				}
-			},
-			{ rootMargin: '-15% 0px -60% 0px' }
-		);
-		for (const id of ids) {
-			const element = document.getElementById(id);
-			if (element) observer.observe(element);
-		}
-		return () => observer.disconnect();
+		if (activeBranch === undefined) return;
+		let frame = 0;
+		const update = () => {
+			frame = 0;
+			// Just below where a jumped-to event lands (scroll-margin 5rem), so the
+			// event you jumped to is current rather than the one after it.
+			const line = 112;
+			let current: string | null = null;
+			for (const id of ids) {
+				const element = document.getElementById(id);
+				if (!element) continue;
+				if (element.getBoundingClientRect().top > line) break;
+				current = id;
+			}
+			// The last messages can never reach the reading line; at the end of the
+			// page, prefer a visible jump target, then the last visible event.
+			const atEnd =
+				window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+			if (atEnd) {
+				const visible = ids.filter((id) => {
+					const top = document.getElementById(id)?.getBoundingClientRect().top;
+					return top !== undefined && top < window.innerHeight;
+				});
+				current =
+					targetEventId !== null && visible.includes(targetEventId)
+						? targetEventId
+						: (visible.at(-1) ?? current);
+			}
+			current ??= ids[0] ?? null;
+			let heading: { id: string; eventId: string } | null = null;
+			for (const element of document.querySelectorAll<HTMLElement>('.block-heading[id]')) {
+				if (element.getBoundingClientRect().top > line) break;
+				const owner = element.closest<HTMLElement>('[data-event]')?.id;
+				if (owner) heading = { id: element.id, eventId: owner };
+			}
+			// At the end of the page the last headings never reach the line either.
+			if (atEnd && targetHeading) {
+				const top = document.getElementById(targetHeading.id)?.getBoundingClientRect().top;
+				if (top !== undefined && top < window.innerHeight) heading = targetHeading;
+			}
+			if (heading?.id !== currentHeading?.id) currentHeading = heading;
+			if (current === null || current === currentEventId) return;
+			currentEventId = current;
+			positions.set(activeBranch, current);
+			writeStorage(positionsKey, JSON.stringify(Object.fromEntries(positions)));
+		};
+		const schedule = () => {
+			if (frame === 0) frame = requestAnimationFrame(update);
+		};
+		schedule();
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', schedule);
+		return () => {
+			if (frame !== 0) cancelAnimationFrame(frame);
+			window.removeEventListener('scroll', schedule);
+			window.removeEventListener('resize', schedule);
+		};
 	});
+
+	function kindLabel(kind: ContentBlock['kind']): string {
+		const labels: Record<string, string> = {
+			reasoning: 'Reasoning',
+			tool_call: 'Tool call',
+			tool_result: 'Output',
+			attachment: 'Attachment'
+		};
+		return labels[kind] ?? 'Unrecognized content';
+	}
+
+	/** A short name for a non-message event, specific when the source said what changed. */
+	function markerLabel(event: ConversationEvent): string {
+		const native = event.extensions?.pi_entry_type;
+		const specific: Record<string, string> = {
+			model_change: 'model changed',
+			thinking_level_change: 'thinking level changed',
+			session_info: 'session info',
+			label: 'label',
+			branch_summary: 'branch summary'
+		};
+		if (typeof native === 'string' && specific[native]) return specific[native];
+		if (event.kind === 'compaction') return 'compaction';
+		if (event.kind === 'configuration') return 'configuration changed';
+		return 'unrecognized event';
+	}
+
+	function turnKind(event: ConversationEvent): 'user' | 'reply' | 'marker' {
+		if (event.kind !== 'message') return 'marker';
+		return event.role === 'user' ? 'user' : 'reply';
+	}
 
 	function collapsible(block: ContentBlock): boolean {
 		return block.text !== null && lineCount(block.text) > COLLAPSE_LINES;
@@ -362,15 +470,93 @@
 	{/each}
 {/snippet}
 
+{#snippet markerIcon(event: ConversationEvent)}
+	<svg
+		class="marker-icon"
+		viewBox="0 0 16 16"
+		width="14"
+		height="14"
+		aria-hidden="true"
+		focusable="false"
+	>
+		{#if event.kind === 'compaction'}
+			<path
+				d="M8 1.5v4m0 0L6 3.5m2 2 2-2M8 14.5v-4m0 0-2 2m2-2 2 2M2.5 8h11"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
+		{:else if event.kind === 'configuration'}
+			<path
+				d="M2 4.5h12M2 8h12M2 11.5h12"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+			/>
+			<circle cx="5.5" cy="4.5" r="1.6" fill="currentColor" />
+			<circle cx="10.5" cy="8" r="1.6" fill="currentColor" />
+			<circle cx="7" cy="11.5" r="1.6" fill="currentColor" />
+		{:else}
+			<circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5" />
+			<path
+				d="M6.2 6.3a1.8 1.8 0 1 1 2.6 1.6c-.6.3-.8.6-.8 1.3"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+			/>
+			<circle cx="8" cy="11.6" r=".9" fill="currentColor" />
+		{/if}
+	</svg>
+{/snippet}
+
+{#snippet contentsToggle()}
+	<button
+		class="icon-button contents-toggle"
+		type="button"
+		aria-label={outlineOpen ? 'Hide contents' : 'Show contents'}
+		aria-expanded={outlineOpen}
+		aria-controls="conversation-outline"
+		title={outlineOpen ? 'Hide contents' : 'Show contents'}
+		onclick={() => setOutline(!outlineOpen)}
+	>
+		<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
+			<circle cx="4" cy="5" r="1.4" fill="currentColor" />
+			<circle cx="4" cy="10" r="1.4" fill="currentColor" />
+			<circle cx="4" cy="15" r="1.4" fill="currentColor" />
+			<path
+				d="M8 5h9M8 10h9M8 15h9"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.75"
+				stroke-linecap="round"
+			/>
+		</svg>
+	</button>
+{/snippet}
+
 {#snippet selectToggle(event: ConversationEvent)}
-	<label class="event__select">
+	<label class="turn__select">
 		<input
 			type="checkbox"
 			checked={selection.has(refKey(evidenceRef(event.id)))}
 			onchange={(change) => toggleEvent(event, change.currentTarget.checked)}
 		/>
-		Select
+		<span class="visually-hidden">
+			Select {event.kind === 'message'
+				? roleLabel(event.role).toLowerCase()
+				: 'event'}{event.occurred_at ? ` at ${formatTime(event.occurred_at)}` : ''}
+		</span>
 	</label>
+{/snippet}
+
+{#snippet blockHead(item: ContentBlock, meta: string | null)}
+	<span class="block__kind">{kindLabel(item.kind)}</span>
+	{#if item.tool_call_id}<span class="block__meta block__meta--code">{item.tool_call_id}</span>{/if}
+	{#if meta}<span class="block__meta">{meta}</span>{/if}
 {/snippet}
 
 {#snippet block(item: ContentBlock)}
@@ -378,50 +564,120 @@
 		{#if item.text === null || item.text === ''}
 			<p class="block-gap">Text not captured</p>
 		{:else}
-			<div class="block-text" data-block-id={item.id}>{@render text(item.text)}</div>
+			<div class="block-text" data-block-id={item.id}>
+				{#each segmentText(item.text, item.id) as segment, index (index)}
+					{#if segment.kind === 'heading'}
+						<svelte:element
+							this={segment.level <= 2 ? 'h3' : 'h4'}
+							id={segment.id}
+							class="block-heading block-heading--{Math.min(segment.level, 3)}"
+							><span class="md-mark">{segment.marks}</span>{@render text(
+								segment.text
+							)}{segment.tail}</svelte:element
+						>
+					{:else}
+						<span class="block-run">{@render text(segment.text)}</span>
+					{/if}
+				{/each}
+			</div>
 		{/if}
 	{:else if item.text === null}
-		<p class="block-gap">{blockLabel(item)} · content not captured</p>
-	{:else if item.kind === 'reasoning' || collapsible(item)}
-		<details class="block-detail">
-			<summary>{blockLabel(item)} · {plural(lineCount(item.text), 'line')}</summary>
+		<p class="block block--{item.kind} block--missing">
+			{@render blockHead(item, 'content not captured')}
+		</p>
+	{:else if item.kind === 'reasoning'}
+		<details class="block block--reasoning">
+			<summary>{@render blockHead(item, plural(lineCount(item.text), 'line'))}</summary>
+			<div class="block__body" data-block-id={item.id}>{@render text(item.text)}</div>
+		</details>
+	{:else if collapsible(item)}
+		<details class="block block--{item.kind}">
+			<summary>{@render blockHead(item, plural(lineCount(item.text), 'line'))}</summary>
 			<pre data-block-id={item.id}>{@render text(item.text)}</pre>
 		</details>
 	{:else}
-		<div class="block-detail block-detail--inline">
-			<span class="block-detail__label">{blockLabel(item)}</span>
+		<div class="block block--{item.kind}">
+			<p class="block__head">{@render blockHead(item, null)}</p>
 			<pre data-block-id={item.id}>{@render text(item.text)}</pre>
 		</div>
 	{/if}
 {/snippet}
 
 <div class="reader" class:reader--outline-open={outlineOpen}>
-	<div class="reader__toolbar">
-		<button
-			class="icon-button"
-			type="button"
-			aria-label={outlineOpen ? 'Hide contents' : 'Show contents'}
-			aria-expanded={outlineOpen}
-			aria-controls="conversation-outline"
-			onclick={() => setOutline(!outlineOpen)}
-		>
-			<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
-				<rect x="2.5" y="3.5" width="15" height="13" rx="1.5" fill="none" stroke="currentColor" />
-				<line x1="7.5" y1="3.5" x2="7.5" y2="16.5" stroke="currentColor" />
-				{#if outlineOpen}
-					<rect x="3" y="4" width="4.5" height="12" fill="currentColor" opacity="0.35" />
+	<header class="reader__header">
+		<div class="reader__main">
+			<h1 id="conversation-title">{conversationLabel(summary)}</h1>
+			<p class="byline">
+				<span class="byline__source">{summary.source.display_name}</span>
+				{#if summary.started_at}
+					<time datetime={summary.started_at}>{formatTimestamp(summary.started_at)}</time>
+				{:else}
+					<span>Start time not captured</span>
 				{/if}
-			</svg>
-		</button>
-		<a class="reader__back" href={resolve('/conversations')}>Conversations</a>
-		<button
-			class="button reader__select"
-			type="button"
-			aria-pressed={selecting}
-			onclick={() => setSelecting(!selecting)}
-		>
-			{selecting ? 'Done selecting' : 'Select evidence'}
-		</button>
+				<span>· {plural(currentPath?.messageCount ?? summary.message_count, 'message')}</span>
+			</p>
+			{#if (currentPath && currentPath.models.length > 0) || gaps.length > 0}
+				<ul class="tags" aria-label="Models and capture notes">
+					{#each currentPath?.models ?? [] as model (model)}
+						<li class="tag tag--code">{model}</li>
+					{/each}
+					{#each gaps as gap (gap.label)}
+						{@const hint = gapLabel(gap)}
+						<li>
+							<Hint explanation={hint.explanation} tone="warn">{hint.text}</Hint>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+		<div class="reader__aside">
+			{#if paths.length > 1}
+				<MenuPicker
+					label="Path"
+					note="Branches within this conversation. Each path is one way it continued."
+					options={pathOptions(paths)}
+					currentId={branch?.id}
+					onselect={(id) => void selectBranch(id)}
+				/>
+			{/if}
+			{#if versionOptions.length > 1}
+				<MenuPicker
+					label="Version"
+					note="Benchwarmer stores a new version of a conversation only when it changed since the previous import. Bundles link to one specific version."
+					options={versionOptions}
+					currentId={summary.revision}
+					buttonLabel="Imported {formatDate(summary.captured_at)} · {plural(
+						versionOptions.length,
+						'version'
+					)}"
+					compact
+				/>
+			{:else}
+				<span class="reader__imported">Imported {formatDate(summary.captured_at)}</span>
+			{/if}
+		</div>
+		{#if !detail.is_latest}
+			<p class="notice" role="status">
+				Viewing the version imported {formatTimestamp(summary.captured_at)}; the conversation
+				changed in a later import.
+				<a href={revisionHref(null)}>View latest</a>
+			</p>
+		{/if}
+		{#each continues as item, index (index)}
+			<p class="relation">
+				{#if item.target_conversation_id}
+					Continues <a href={conversationHref(item.target_conversation_id)}>an earlier session</a>
+				{:else}
+					Continues a session that is not in the library ({item.target_native_id})
+				{/if}
+			</p>
+		{/each}
+	</header>
+
+	<div class="reader__rail">
+		{#if !outlineOpen}
+			{@render contentsToggle()}
+		{/if}
 	</div>
 
 	<nav
@@ -435,78 +691,58 @@
 			<button class="text-button outline__close" type="button" onclick={() => setOutline(false)}>
 				Close
 			</button>
+			{@render contentsToggle()}
 		</div>
 
-		{#if detail.branches.length > 1}
-			<section aria-labelledby="outline-paths">
-				<h3 id="outline-paths">Paths</h3>
-				<ul class="outline__list">
-					{#each detail.branches as item (item.id)}
-						<li>
-							<button
-								class="outline__item"
-								type="button"
-								aria-current={item.id === branch?.id ? 'true' : undefined}
-								onclick={() => {
-									closeOutlineOnNarrow();
-									void selectBranch(item.id);
-								}}
-							>
-								<span>{pathLabel(item)} · {plural(messageCount(item), 'message')}</span>
-								<span class="outline__secondary">
-									Ends: {outlineText(eventsById.get(item.leaf_event_id)!)}
-								</span>
-							</button>
-						</li>
-					{/each}
-				</ul>
-			</section>
-		{/if}
-
 		<section aria-labelledby="outline-turns">
-			<h3 id="outline-turns">User turns</h3>
-			{#if turns.length === 0}
+			<h3 id="outline-turns" class="visually-hidden">Turns and captured events</h3>
+			{#if outlineEntries.length === 0}
 				<p class="outline__empty">No user messages on this path.</p>
 			{:else}
 				<ol class="outline__list">
-					{#each turns as event (event.id)}
+					{#each outlineEntries as entry (entry.event.id)}
 						<li>
-							<a
-								class="outline__item"
-								href={`#${encodeURIComponent(event.id)}`}
-								aria-current={event.id === currentEventId ? 'location' : undefined}
-								onclick={() => jumpTo(event.id)}
-							>
-								{outlineText(event)}
-							</a>
+							{#if entry.kind === 'turn'}
+								<a
+									class="outline__item"
+									href={`#${encodeURIComponent(entry.event.id)}`}
+									aria-current={entry.event.id === currentTurnId ? 'location' : undefined}
+									onclick={() => jumpTo(entry.event.id)}
+								>
+									{outlineText(entry.event)}
+								</a>
+								{#if entry.headings.length > 0}
+									<ol class="outline__children">
+										{#each entry.headings as heading (heading.id)}
+											<li>
+												<a
+													class="outline__item outline__item--child"
+													class:outline__item--deep={heading.level >= 3}
+													href={`#${encodeURIComponent(heading.id)}`}
+													aria-current={heading.id === currentHeadingId ? 'location' : undefined}
+													onclick={() => jumpToHeading(heading)}
+												>
+													{heading.label}
+												</a>
+											</li>
+										{/each}
+									</ol>
+								{/if}
+							{:else}
+								<a
+									class="outline__item outline__item--marker"
+									href={`#${encodeURIComponent(entry.event.id)}`}
+									onclick={() => jumpTo(entry.event.id)}
+								>
+									{@render markerIcon(entry.event)}
+									{markerLabel(entry.event)}
+								</a>
+							{/if}
 						</li>
 					{/each}
 				</ol>
 			{/if}
 		</section>
-
-		{#if capturedEvents.length > 0}
-			<section aria-labelledby="outline-captured">
-				<h3 id="outline-captured">Captured events</h3>
-				<ul class="outline__list">
-					{#each capturedEvents as event (event.id)}
-						<li>
-							<a
-								class="outline__item"
-								href={`#${encodeURIComponent(event.id)}`}
-								onclick={() => jumpTo(event.id)}
-							>
-								{event.kind === 'compaction'
-									? 'Compaction'
-									: event.kind === 'configuration'
-										? 'Configuration change'
-										: 'Unrecognized event'}
-							</a>
-						</li>
-					{/each}
-				</ul>
-			</section>
-		{/if}
 
 		{#if continues.length > 0 || continuedIn.length > 0}
 			<section aria-labelledby="outline-related">
@@ -536,66 +772,27 @@
 	</nav>
 
 	<article class="transcript" aria-labelledby="conversation-title">
-		<header class="transcript__header">
-			<h1 id="conversation-title">{conversationLabel(summary)}</h1>
-			<p class="transcript__meta">
-				<span>{summary.source.display_name}</span>
-				{#if summary.started_at}
-					<span>Started {formatTimestamp(summary.started_at)}</span>
+		{#if currentPath && paths.length > 1}
+			<p class="transcript__path">
+				{#if currentPath.divergence}
+					<strong>{currentPath.name}</strong>
+					<span>{currentPath.divergence}</span>
 				{:else}
-					<span>Start time not captured</span>
-				{/if}
-				<span>{plural(summary.message_count, 'message')}</span>
-				{#if detail.branches.length > 1 && branch}
-					<span>{pathLabel(branch)} of {detail.branches.length}</span>
+					<strong>Original conversation</strong>
+					<span>Follows the earliest captured reply at every branch point</span>
 				{/if}
 			</p>
-			{#if gaps.length > 0}
-				<p class="transcript__capture">
-					Capture: {gaps.map((gap) => `${gap.label} ${gap.state}`).join(', ')}
-				</p>
-			{/if}
-			{#if !detail.is_latest}
-				<p class="notice" role="status">
-					Viewing an earlier revision captured {formatTimestamp(summary.captured_at)}.
-					<a href={revisionHref(null)}>View latest</a>
-				</p>
-			{/if}
-			{#if detail.revisions.length > 1}
-				<details class="revisions">
-					<summary>{plural(detail.revisions.length, 'revision')}</summary>
-					<ol>
-						{#each detail.revisions as item, index (item.revision)}
-							<li>
-								{#if item.revision === summary.revision}
-									<span aria-current="true">{formatTimestamp(item.captured_at)} (shown)</span>
-								{:else}
-									<a href={revisionHref(index === 0 ? null : item.revision)}>
-										{formatTimestamp(item.captured_at)}
-									</a>
-								{/if}
-							</li>
-						{/each}
-					</ol>
-				</details>
-			{/if}
-			{#each continues as item, index (index)}
-				<p class="relation">
-					{#if item.target_conversation_id}
-						Continues <a href={conversationHref(item.target_conversation_id)}>an earlier session</a>
-					{:else}
-						Continues a session that is not in the library ({item.target_native_id})
-					{/if}
-				</p>
-			{/each}
-		</header>
-
+		{/if}
 		{#if visibleEvents.length === 0}
 			<p class="status-panel">This conversation has no captured events.</p>
 		{:else}
 			<ol class="events">
 				{#each visibleEvents as event (event.id)}
-					<li>
+					<li
+						class="turn turn--{turnKind(event)}"
+						class:turn--selected={selectedEvents.has(event.id)}
+					>
+						{@render selectToggle(event)}
 						{#if event.kind === 'message'}
 							<section
 								id={event.id}
@@ -613,8 +810,8 @@
 									{#if event.occurred_at}
 										<time datetime={event.occurred_at}>{formatTime(event.occurred_at)}</time>
 									{/if}
-									{#if selecting}
-										{@render selectToggle(event)}
+									{#if currentPath?.divergence && event.id === currentPath.branch.divergent_event_id}
+										<span class="event__tag">Path diverges here</span>
 									{/if}
 								</header>
 								{#if event.content.length === 0}
@@ -635,15 +832,9 @@
 								tabindex="-1"
 								aria-label={event.kind === 'compaction' ? 'Compaction' : 'Captured event'}
 							>
-								{#if selecting}
-									{@render selectToggle(event)}
-								{/if}
 								<p class="event__marker">
-									{event.kind === 'compaction'
-										? 'Context compacted'
-										: event.kind === 'configuration'
-											? 'Configuration changed'
-											: 'Unrecognized event'}
+									{@render markerIcon(event)}
+									<span>{markerLabel(event)}</span>
 								</p>
 								{#each event.content as item (item.id)}
 									{@render block(item)}
@@ -680,13 +871,13 @@
 			</footer>
 		{/if}
 	</article>
-	{#if selecting}
+	{#if showTray}
 		<EvidenceTray
 			conversationId={summary.id}
 			items={selectedItems}
 			canAddText={highlighted !== null}
 			onaddtext={addHighlightedText}
-			onclear={() => selection.clear()}
+			onclear={clearSelection}
 		/>
 	{/if}
 </div>

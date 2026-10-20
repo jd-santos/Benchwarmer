@@ -136,6 +136,10 @@ class BranchResponse(_Strict):
     leaf_event_id: str
     event_ids: list[str]
     fork_event_id: str | None
+    divergent_event_id: str | None
+    is_original: bool
+    origin: Literal["captured"]
+    models: list[str]
 
 
 class RevisionResponse(_Strict):
@@ -286,6 +290,10 @@ def create_conversations_router(settings: BenchwarmerSettings) -> APIRouter:
                             leaf_event_id=item.leaf_event_id,
                             event_ids=list(item.event_ids),
                             fork_event_id=item.fork_event_id,
+                            divergent_event_id=item.divergent_event_id,
+                            is_original=item.is_original,
+                            origin="captured",
+                            models=list(item.models),
                         )
                         for item in detail.branches
                     ],

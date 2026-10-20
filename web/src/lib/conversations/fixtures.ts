@@ -76,7 +76,7 @@ export const detail: ConversationDetail = {
 				{
 					id: 'e3:b0',
 					kind: 'text',
-					text: 'I can offer a replacement instead.',
+					text: '## Options\nI can offer a replacement instead.',
 					tool_call_id: null,
 					artifact_id: null,
 					extensions: {}
@@ -90,7 +90,25 @@ export const detail: ConversationDetail = {
 	relationships: [],
 	referenced_by: [],
 	branches: [
-		{ id: 'e2', leaf_event_id: 'e2', event_ids: ['e1', 'e2'], fork_event_id: 'e1' },
-		{ id: 'e3', leaf_event_id: 'e3', event_ids: ['e1', 'e3'], fork_event_id: 'e1' }
+		{
+			id: 'e2',
+			leaf_event_id: 'e2',
+			event_ids: ['e1', 'e2'],
+			fork_event_id: 'e1',
+			divergent_event_id: 'e2',
+			is_original: true,
+			origin: 'captured',
+			models: ['model-a']
+		},
+		{
+			id: 'e3',
+			leaf_event_id: 'e3',
+			event_ids: ['e1', 'e3'],
+			fork_event_id: 'e1',
+			divergent_event_id: 'e3',
+			is_original: false,
+			origin: 'captured',
+			models: ['model-b']
+		}
 	]
 };

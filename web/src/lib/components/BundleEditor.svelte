@@ -150,8 +150,6 @@
 </script>
 
 <div class="bundle-editor">
-	<a class="back-link" href={resolve('/bundles')}>Bundles</a>
-
 	<header class="bundle-editor__header">
 		<h1 class:untitled={!current.document.objective}>{bundleLabel(current.document.objective)}</h1>
 		<p class="meta-line">
@@ -192,14 +190,15 @@
 					id="bundle-objective"
 					rows="2"
 					maxlength="4000"
+					placeholder="What this evidence shows, in a sentence"
 					bind:value={objective}
-					aria-describedby="bundle-objective-hint"
+					aria-describedby={needsObjective ? 'bundle-objective-error' : undefined}
 					aria-invalid={needsObjective}></textarea>
-				<p id="bundle-objective-hint" class={needsObjective ? 'field__error' : 'field__hint'}>
-					{needsObjective
-						? 'Add an objective before changing the status.'
-						: 'What this evidence shows, in a sentence.'}
-				</p>
+				{#if needsObjective}
+					<p id="bundle-objective-error" class="field__error">
+						Add an objective before changing the status.
+					</p>
+				{/if}
 			</div>
 
 			<fieldset class="field">
@@ -324,16 +323,20 @@
 			<legend class="visually-hidden">Review notes</legend>
 			<div class="field">
 				<label for="bundle-rationale">Why these items</label>
-				<textarea id="bundle-rationale" rows="3" maxlength="4000" bind:value={rationale}></textarea>
+				<textarea
+					id="bundle-rationale"
+					rows="3"
+					maxlength="4000"
+					placeholder="How these items connect to the objective"
+					bind:value={rationale}></textarea>
 			</div>
 			<div class="field">
 				<label for="bundle-missing">Missing evidence</label>
 				<textarea
 					id="bundle-missing"
 					rows="3"
-					aria-describedby="bundle-missing-hint"
+					placeholder="One gap per line, such as files or output that weren't captured"
 					bind:value={missing}></textarea>
-				<p id="bundle-missing-hint" class="field__hint">One gap per line.</p>
 			</div>
 		</fieldset>
 

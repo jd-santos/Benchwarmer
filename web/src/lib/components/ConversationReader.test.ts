@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from '@testing-library/svelte';
+import { cleanup, render, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { detail } from '$lib/conversations/fixtures';
@@ -24,13 +24,13 @@ describe('conversation reader', () => {
 		});
 
 		expect(getByRole('heading', { name: 'Refund investigation', level: 1 })).toBeTruthy();
-		expect(getByText('Path 2 of 2')).toBeTruthy();
+		expect(getByRole('button', { name: /^Path Alternate 1/ })).toBeTruthy();
 		expect(getByText('I can offer a replacement instead.')).toBeTruthy();
 		expect(queryByText('Text not captured')).toBeNull();
 		expect(getByRole('navigation', { name: 'Paths from this message' })).toBeTruthy();
 	});
 
-	it('selects messages as evidence for a bundle', async () => {
+	it('selects messages as evidence without entering a mode', async () => {
 		vi.stubGlobal(
 			'fetch',
 			vi.fn<typeof fetch>().mockResolvedValue(
@@ -43,44 +43,80 @@ describe('conversation reader', () => {
 		const { getByRole, getAllByRole, getByText, queryByRole } = render(ConversationReader, {
 			props: { detail }
 		});
-		expect(queryByRole('checkbox')).toBeNull();
+		expect(queryByRole('region', { name: 'Selected evidence' })).toBeNull();
 
-		await user.click(getByRole('button', { name: 'Select evidence' }));
-		expect(getByText('Pick messages or highlight text')).toBeTruthy();
-		await user.click(getAllByRole('checkbox', { name: 'Select' })[0]!);
+		await user.click(getAllByRole('checkbox', { name: /^Select user/ })[0]!);
 
 		expect(getByText('1 item selected')).toBeTruthy();
 		expect(getByRole('button', { name: 'Create bundle' }).hasAttribute('disabled')).toBe(false);
 
-		await user.click(getByRole('button', { name: 'Done selecting' }));
-		expect(queryByRole('checkbox')).toBeNull();
+		await user.click(getByRole('button', { name: 'Clear' }));
+		expect(queryByRole('region', { name: 'Selected evidence' })).toBeNull();
 		vi.unstubAllGlobals();
+	});
+
+	it('lists reply headings under their user turn and jumps to them', async () => {
+		const user = userEvent.setup();
+		const { getByRole } = render(ConversationReader, { props: { detail } });
+		const outline = getByRole('navigation', { name: 'Conversation contents' });
+		const child = within(outline).getByRole('link', { name: 'Options' });
+
+		expect(child.closest('.outline__children')?.previousElementSibling?.textContent).toContain(
+			'I need a refund'
+		);
+		expect(getByRole('heading', { name: /Options/, level: 3 }).id).toBe(
+			decodeURIComponent(child.getAttribute('href')!.slice(1))
+		);
+
+		await user.click(child);
+		expect(child.getAttribute('aria-current')).toBe('location');
 	});
 
 	it('switches paths from the fork point', async () => {
 		const user = userEvent.setup();
 		const { getByRole, getByText } = render(ConversationReader, { props: { detail } });
 
-		await user.click(getByRole('button', { name: 'Path 1' }));
+		await user.click(getByRole('button', { name: 'Original' }));
 
-		expect(getByText('Path 1 of 2')).toBeTruthy();
+		expect(getByRole('button', { name: /^Path Original/ })).toBeTruthy();
 		expect(getByText('Text not captured')).toBeTruthy();
 	});
 
-	it('keeps the outline hidden until the drawer toggle opens it', async () => {
+	it('describes how each path differs and switches from the picker', async () => {
 		const user = userEvent.setup();
-		const { getByRole } = render(ConversationReader, { props: { detail } });
-		const toggle = getByRole('button', { name: 'Show contents' });
+		const { getByRole, getByText } = render(ConversationReader, { props: { detail } });
+		const picker = getByRole('button', { name: /^Path Alternate 1/ });
 
-		expect(toggle.getAttribute('aria-expanded')).toBe('false');
-		expect(document.getElementById('conversation-outline')?.hidden).toBe(true);
-
-		await user.click(toggle);
-
-		expect(getByRole('button', { name: 'Hide contents' }).getAttribute('aria-expanded')).toBe(
-			'true'
+		await user.click(picker);
+		const menu = getByRole('list', { name: 'Paths' });
+		expect(menu.textContent).toContain(
+			'Diverges from Original at turn 1: the assistant replies differently'
 		);
+		expect(menu.textContent).toContain('model-b');
+		expect(menu.textContent).toContain('Follows the earliest captured reply');
+
+		await user.click(within(menu).getByRole('button', { name: /^Original/ }));
+
+		expect(picker.getAttribute('aria-expanded')).toBe('false');
+		expect(getByRole('button', { name: /^Path Original/ })).toBeTruthy();
+		expect(getByText('Text not captured')).toBeTruthy();
+	});
+
+	it('opens the outline by default and remembers closing it', async () => {
+		const user = userEvent.setup();
+		const { getByRole, getAllByRole } = render(ConversationReader, { props: { detail } });
+		const hide = getByRole('button', { name: 'Hide contents' });
+
+		expect(hide.getAttribute('aria-expanded')).toBe('true');
 		expect(getByRole('navigation', { name: 'Conversation contents' })).toBeTruthy();
+
+		await user.click(hide);
+
+		const show = getAllByRole('button', { name: 'Show contents' })[0]!;
+		expect(show.getAttribute('aria-expanded')).toBe('false');
+		expect(show.closest('.reader__rail')).not.toBeNull();
+		expect(document.getElementById('conversation-outline')?.hidden).toBe(true);
+		expect(sessionStorage.getItem('benchwarmer:outline-open')).toBe('false');
 	});
 
 	it('warns when an earlier revision is shown', () => {
@@ -88,7 +124,7 @@ describe('conversation reader', () => {
 			props: { detail: { ...detail, is_latest: false } }
 		});
 
-		expect(getByRole('status').textContent).toContain('Viewing an earlier revision');
+		expect(getByRole('status').textContent).toContain('Viewing the version imported');
 		expect(getByRole('link', { name: 'View latest' }).getAttribute('href')).toBe(
 			'/conversations/conversation-a'
 		);

@@ -26,13 +26,17 @@ class DemoConversationError(ValueError):
 
 
 def _conversation(entry: dict[str, Any]) -> FileConversation:
-    metadata = (("title", entry["title"]),) if entry.get("title") else ()
+    metadata: list[tuple[str, object]] = []
+    if entry.get("title"):
+        metadata.append(("title", entry["title"]))
+    if entry.get("usage"):
+        metadata.append(("usage_observations", entry["usage"]))
     return FileConversation(
         native_id=entry["native_id"],
         native={"id": entry["native_id"], "synthetic": True},
         events=tuple(entry["events"]),
         relationships=tuple(entry.get("relationships", ())),
-        metadata=metadata,
+        metadata=tuple(metadata),
         coverage=entry.get("coverage"),
     )
 

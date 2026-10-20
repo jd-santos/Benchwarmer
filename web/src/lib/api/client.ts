@@ -210,7 +210,12 @@ function isBranch(value: unknown): value is Branch {
 		typeof value.leaf_event_id === 'string' &&
 		Array.isArray(value.event_ids) &&
 		value.event_ids.every((id) => typeof id === 'string') &&
-		isNullableString(value.fork_event_id)
+		isNullableString(value.fork_event_id) &&
+		isNullableString(value.divergent_event_id) &&
+		typeof value.is_original === 'boolean' &&
+		value.origin === 'captured' &&
+		Array.isArray(value.models) &&
+		value.models.every((model) => typeof model === 'string')
 	);
 }
 
