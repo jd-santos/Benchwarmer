@@ -240,3 +240,47 @@ def test_rejects_malformed_documents(client: TestClient) -> None:
         ).status_code
         == 404
     )
+
+
+def test_generated_bundles_record_origin_and_producer(client: TestClient) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    document = {
+        "objective": "Proposed by a harness run",
+        "items": [{"ref": _ref(detail, "u0"), "role": "requirement"}],
+        "rationale": "Pilot proposal",
+    }
+
+    created = client.post(
+        "/api/v1/bundles",
+        json={
+            "document": document,
+            "origin": "generated",
+            "producer": "benchwarmer-harness/propose-bundles@0.0.1 anthropic/test",
+        },
+    )
+
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["origin"] == "generated"
+    assert body["producer"].startswith("benchwarmer-harness/propose-bundles")
+    assert body["document"]["status"] == "draft"
+
+    corrected = client.put(
+        f"/api/v1/bundles/{body['id']}",
+        json={
+            "document": dict(document, status="reviewed"),
+            "base_revision": 1,
+        },
+    )
+    assert corrected.status_code == 200, corrected.text
+    revisions = corrected.json()["revisions"]
+    assert [(r["number"], r["origin"]) for r in revisions] == [
+        (2, "human"),
+        (1, "generated"),
+    ]
+
+    rejected = client.post(
+        "/api/v1/bundles",
+        json={"document": document, "origin": "generated", "producer": ""},
+    )
+    assert rejected.status_code == 422
