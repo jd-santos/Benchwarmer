@@ -17,6 +17,7 @@
 		type BlockRange
 	} from '$lib/bundles/selection';
 	import EvidenceTray from '$lib/components/EvidenceTray.svelte';
+	import Hint from '$lib/components/Hint.svelte';
 	import MenuPicker from '$lib/components/MenuPicker.svelte';
 	import { describePaths, pathOptions } from '$lib/conversations/paths';
 	import {
@@ -469,6 +470,49 @@
 	{/each}
 {/snippet}
 
+{#snippet markerIcon(event: ConversationEvent)}
+	<svg
+		class="marker-icon"
+		viewBox="0 0 16 16"
+		width="14"
+		height="14"
+		aria-hidden="true"
+		focusable="false"
+	>
+		{#if event.kind === 'compaction'}
+			<path
+				d="M8 1.5v4m0 0L6 3.5m2 2 2-2M8 14.5v-4m0 0-2 2m2-2 2 2M2.5 8h11"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
+		{:else if event.kind === 'configuration'}
+			<path
+				d="M2 4.5h12M2 8h12M2 11.5h12"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+			/>
+			<circle cx="5.5" cy="4.5" r="1.6" fill="currentColor" />
+			<circle cx="10.5" cy="8" r="1.6" fill="currentColor" />
+			<circle cx="7" cy="11.5" r="1.6" fill="currentColor" />
+		{:else}
+			<circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5" />
+			<path
+				d="M6.2 6.3a1.8 1.8 0 1 1 2.6 1.6c-.6.3-.8.6-.8 1.3"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+			/>
+			<circle cx="8" cy="11.6" r=".9" fill="currentColor" />
+		{/if}
+	</svg>
+{/snippet}
+
 {#snippet contentsToggle()}
 	<button
 		class="icon-button contents-toggle"
@@ -579,8 +623,8 @@
 					{/each}
 					{#each gaps as gap (gap.label)}
 						{@const hint = gapLabel(gap)}
-						<li class="tag tag--warn hint" title={hint.explanation}>
-							{hint.text}<span class="visually-hidden">. {hint.explanation}</span>
+						<li>
+							<Hint explanation={hint.explanation} tone="warn">{hint.text}</Hint>
 						</li>
 					{/each}
 				</ul>
@@ -690,7 +734,8 @@
 									href={`#${encodeURIComponent(entry.event.id)}`}
 									onclick={() => jumpTo(entry.event.id)}
 								>
-									— {markerLabel(entry.event)} —
+									{@render markerIcon(entry.event)}
+									{markerLabel(entry.event)}
 								</a>
 							{/if}
 						</li>
@@ -787,7 +832,10 @@
 								tabindex="-1"
 								aria-label={event.kind === 'compaction' ? 'Compaction' : 'Captured event'}
 							>
-								<p class="event__marker">{markerLabel(event)}</p>
+								<p class="event__marker">
+									{@render markerIcon(event)}
+									<span>{markerLabel(event)}</span>
+								</p>
 								{#each event.content as item (item.id)}
 									{@render block(item)}
 								{/each}
