@@ -10,7 +10,9 @@ from pydantic import BaseModel, ConfigDict
 
 from benchwarmer.config import BenchwarmerSettings
 from benchwarmer.db import create_engine, create_session_factory
+from benchwarmer.outline import ConversationOutline, PathSpec, build_outline
 from benchwarmer.services.conversation_library import (
+    ConversationDetail,
     ConversationNotFound,
     ConversationSummary,
     get_conversation,
@@ -194,9 +196,53 @@ def _summary_response(summary: ConversationSummary) -> ConversationSummaryRespon
     )
 
 
+def _outline(detail: ConversationDetail) -> ConversationOutline:
+    return build_outline(
+        conversation_id=detail.summary.id,
+        revision=detail.summary.revision,
+        events=detail.events,
+        paths=[
+            PathSpec(
+                id=item.id,
+                leaf_event_id=item.leaf_event_id,
+                event_ids=list(item.event_ids),
+                fork_event_id=item.fork_event_id,
+                divergent_event_id=item.divergent_event_id,
+                is_original=item.is_original,
+            )
+            for item in detail.branches
+        ],
+        coverage=detail.summary.coverage,
+    )
+
+
 def create_conversations_router(settings: BenchwarmerSettings) -> APIRouter:
     """Create the conversation routes for one resolved runtime configuration."""
     router = APIRouter()
+
+    @router.get(
+        "/conversations/{conversation_id}/outline",
+        response_model=ConversationOutline,
+    )
+    def get_conversation_outline(
+        conversation_id: str, revision: str | None = None
+    ) -> ConversationOutline:
+        """Return the deterministic outline of one revision; no model work."""
+        engine = create_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            with factory() as session:
+                try:
+                    detail = get_conversation(
+                        session, conversation_id, revision=revision
+                    )
+                except ConversationNotFound:
+                    raise HTTPException(
+                        status_code=404, detail="Conversation not found"
+                    ) from None
+                return _outline(detail)
+        finally:
+            engine.dispose()
 
     @router.get("/conversations", response_model=ConversationsResponse)
     def get_conversations(

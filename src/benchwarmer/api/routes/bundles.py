@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from benchwarmer.config import BenchwarmerSettings
 from benchwarmer.db import create_engine, create_session_factory
-from benchwarmer.evidence import BundleDocument, BundleItem, BundleStatus
+from benchwarmer.evidence import BundleDocument, BundleItem, BundleOrigin, BundleStatus
 from benchwarmer.services.evidence_bundles import (
     BundleConflict,
     BundleDetail,
@@ -79,13 +79,22 @@ class BundlesResponse(_Strict):
     items: list[BundleSummaryResponse]
 
 
+_Producer = Annotated[str, Field(min_length=1, max_length=255)]
+
+
 class BundleCreateRequest(_Strict):
+    """A new bundle; a generated one names the producer that proposed it."""
+
     document: BundleDocument
+    origin: BundleOrigin = "human"
+    producer: _Producer = "web"
 
 
 class BundleUpdateRequest(_Strict):
     document: BundleDocument
     base_revision: Annotated[int, Field(ge=1)]
+    origin: BundleOrigin = "human"
+    producer: _Producer = "web"
 
 
 def _detail_response(detail: BundleDetail) -> BundleDetailResponse:
@@ -187,7 +196,14 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
     ) -> BundleDetailResponse | JSONResponse:
         with session_scope() as session:
             try:
-                return _detail_response(create_bundle(session, request.document))
+                return _detail_response(
+                    create_bundle(
+                        session,
+                        request.document,
+                        origin=request.origin,
+                        producer=request.producer,
+                    )
+                )
             except BundleInvalid as error:
                 return _invalid(error)
 
@@ -224,6 +240,8 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                         bundle_id,
                         request.document,
                         base_revision=request.base_revision,
+                        origin=request.origin,
+                        producer=request.producer,
                     )
                 )
             except BundleNotFound:

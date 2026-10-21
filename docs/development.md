@@ -128,6 +128,25 @@ both are briefly unavailable while that process is stopped. An already open
 page may show a request error during the interruption. After FastAPI reports
 ready, refreshing the page reconnects to the same durable records.
 
+## Run the analysis harness
+
+The `harness/` package runs Benchwarmer's own model-driven workflows on Pi
+Durable against a running API. Point it at a development data root, never a
+private one, until a workflow has been reviewed on synthetic data:
+
+```bash
+cd harness
+npm ci
+npm run list-models -- anthropic
+ANTHROPIC_API_KEY=... npm run propose-bundles -- \
+  --api http://127.0.0.1:8000 --model anthropic/<model-id> \
+  --conversation <conversation-id>
+```
+
+Running a workflow by hand is the approval for its model work. Durable state
+goes to `.benchwarmer/harness/` and run reports to `reports/harness/`, both
+gitignored. See [harness/README.md](../harness/README.md).
+
 ## Run checks
 
 Python checks:
@@ -137,6 +156,13 @@ uv run pytest
 uv run ruff check .
 uv run ruff format --check .
 uv run python -m compileall src
+```
+
+Harness checks:
+
+```bash
+npm --prefix harness run check
+npm --prefix harness test
 ```
 
 Frontend and browser checks:

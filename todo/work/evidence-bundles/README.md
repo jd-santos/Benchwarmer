@@ -1,7 +1,9 @@
 # Define evidence references and review conversation bundles
 
-Status: In progress on `task/evidence-bundles`. Manual bundle assembly is
-implemented; the pilot, observations, and deterministic outlines are pending.
+Status: In progress on `task/bundle-parsing-tools`. Manual bundle assembly,
+deterministic outlines, and the generated-bundle path through the API are
+implemented; the pilot, observation records, and in-app draft review are
+pending.
 
 ## Path to running evaluations
 
@@ -31,7 +33,25 @@ Contract design and synthetic examples can begin now. The manual review pilot
 waits for [browsing and annotations](../conversation-library/README.md). The
 user-facing [history and cost dashboards](../history-and-cost-dashboards/README.md)
 precede suggested-group approval in the product sequence. This is the last P2
-slice, ahead of broad model-powered enrichment.
+slice, ahead of broad model-powered enrichment. Model-proposed bundles run in
+the [analysis harness](../analysis-harness/README.md).
+
+## Decisions
+
+Decided with the user on 2026-10-19:
+
+- Deterministic parsing (outlines, segmentation, headings, reference
+  validation) lives in Python as typed pydantic models exposed over `/api/v1`.
+  Model-driven proposal lives in the Pi Durable harness, which wraps those
+  routes as tools and never opens the database.
+- Model-proposed bundles reuse the bundle record as `origin=generated`,
+  `status=draft` revisions. A separate suggestion queue is a UI concern for
+  later, not a second table now.
+- Pilot approval exception: an operator running the harness by hand on named
+  conversations with their own keys is the exact approval for that model work.
+  Nothing in the app starts a run. The bounded model-work service replaces this
+  exception; until then every generated revision records its producer string
+  and each run writes a usage report under `reports/harness/`.
 
 ## Acceptance criteria
 
@@ -52,12 +72,65 @@ informs the extraction schema and later in-app review of suggested groups.
   - [x] Bundles: numbered immutable revisions with objective, status (draft,
     reviewed, analysis only), rationale, missing evidence, origin, and producer;
     stale saves return 409 (`/api/v1/bundles`, migration `0004`).
+  - [x] Generated revisions: `POST`/`PUT /api/v1/bundles` accept `origin` and a
+    nonblank `producer`; a human correction of a generated bundle is a new
+    `human` revision over the generated one.
   - [ ] Observations and interpretations as separate records
-- [ ] Add deterministic conversation outlines from available roles, sizes, tools, branches, and configuration/compaction events. Do not infer missing timing or tool names.
+  - [ ] Store run-level provenance (model, input revisions, raw usage) with
+    generated revisions instead of only in the harness run report.
+- [x] Add deterministic conversation outlines from available roles, sizes, tools, branches, and configuration/compaction events. Do not infer missing timing or tool names.
+  `benchwarmer.outline` (pydantic, strict) measures each event, finds ATX
+  headings with code-point ranges that are valid evidence references, and
+  derives exchanges (per user turn) and segments (between compaction and
+  configuration boundaries) per path. `GET /api/v1/conversations/{id}/outline`
+  serves it; `tool_name` repeats a tool-call block's text only when it is a bare
+  identifier.
 - [x] Support human bundle assembly and correction with source expansion before automating extraction.
   Select messages or highlighted text in the reader, create or extend a bundle,
   then edit roles, notes, order, and status with jump-to-source links.
+- [ ] Propose bundles with a model under the pilot exception
+  - [x] `harness/` tools over the API: `list_conversations`, `get_outline`,
+    `read_events`, `list_bundles`, `propose_bundle`; the `propose-bundles`
+    workflow runs one durable conversation per library conversation and writes
+    a JSON run report with per-conversation usage.
+  - [ ] First operator run against the synthetic demo library, then against a
+    private import; record what the model proposed, what review removed or
+    added, and token cost per conversation here.
+  - [ ] Decide whether the model should receive shortened event ids. Current
+    ids repeat the conversation id in every event and block reference, which
+    inflates prompts on long conversations.
+  - [ ] Idempotency for `propose_bundle`: an interrupted call is reported to the
+    model rather than replayed, so a retry can create a near-duplicate. Consider
+    a client request id on bundle creation.
 - [ ] Review a bounded pilot of roughly 20–50 conversations when available, including successes, failures, and recoveries. Record context omissions, invalid references, and whether bundles support useful judgments; no model work is implied.
+
+## Interface follow-ups
+
+Generated draft bundles now exist without a review surface beyond the bundle
+editor. The accepted
+[suggestion review decision](../evaluation-workbench-ui/decisions/suggestion-review.md)
+covers the queue; these notes record what the proposer work surfaced for it,
+with the review-console shape of
+[offgrid-review](https://github.com/jd-santos/offgrid-review) as a reference:
+
+- A draft review queue filtered to `origin=generated` drafts, grouped by
+  conversation and by harness run, with accept, edit, reject, and defer as the
+  compatible actions and a required note when rejecting. Accept means a human
+  revision with `status=reviewed`; reject needs a status or flag the bundle
+  record does not have yet.
+- Each queue item shows the objective, rationale, missing evidence, the items
+  with excerpts and roles in conversation order, visible gaps between items,
+  and jump-to-source. Show the producer, model, and run report link, and a
+  stale marker when the cited revision is no longer latest.
+- Fingerprint what was reviewed: the bundle revision number is the fingerprint,
+  and a decision taken against an older revision must be rejected, which the
+  409 on stale saves already enforces.
+- Batch actions should stay within one run so cost and coverage stay legible;
+  the queue should show how many conversations the run inspected and skipped.
+- The reader should mark events cited by pending generated drafts distinctly
+  from human bundle membership, so inline review does not read as approval.
+- Rejected proposals are evidence for improving the proposer; keep them
+  queryable rather than deleting them.
 
 ## Verification
 
@@ -66,9 +139,18 @@ clean; web check, lint, and 50 vitest tests pass. A local browser pass against
 the synthetic demo library confirmed select, highlight, create, edit, save, the
 sibling-branch rejection, and no horizontal overflow at phone width.
 
+Outlines and the generated path, 2026-10-19: `tests/test_outline.py`,
+`tests/api/test_outline_api.py`, and the generated-origin case in
+`tests/api/test_bundle_api.py` pass with the full suite; ruff clean. In
+`harness/`, `npm run check` and `npm test` pass. A tool smoke run against a
+disposable demo data root listed conversations, outlined one, read events,
+received `event_not_found` for a bad reference, and created a generated draft
+bundle. No model call was made; the first operator run is pending.
+
 ## Supporting material
 
 - [Current priorities](../../TODO.md)
+- [Analysis harness](../analysis-harness/README.md)
 - [Conversation workflow](../../../docs/conversation-library.md)
 - [Experiment semantics](../../../docs/experiments.md)
 - [Evidence bundles and pattern discovery](../../../docs/evidence-bundles.md)

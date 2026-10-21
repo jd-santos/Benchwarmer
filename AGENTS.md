@@ -8,7 +8,9 @@
 
 - **Project**: Benchwarmer, a private conversation library and model evaluation
   app: collect, normalize, enrich, discover, select, and evaluate
-- **Tech stack**: Python 3.12+, uv, SQLite and Svelte (planned application)
+- **Tech stack**: Python 3.12+, uv, SQLite and Svelte (planned application);
+  a pinned Pi Durable TypeScript harness under `harness/` for Benchwarmer's own
+  model-driven workflows
 - **Architecture**: Central API and worker, private native snapshots and normalized
   conversations, harness-neutral task units, and source/execution adapters.
   Cross-machine collection follows ADR 0005's manual-first push topology.
@@ -37,6 +39,11 @@
   [private deployment verification](todo/work/private-deployment/README.md);
   never assume histories all reside on the central host.
 - Keep benchmark task definitions independent of Pi or any other agent harness.
+- Deterministic parsing (outlines, segmentation, headings, reference checks) is
+  typed Python exposed over `/api/v1`. The `harness/` package only orchestrates
+  models around those routes and never opens the database. Running a harness
+  workflow by hand is the pilot approval for its model work; see
+  [analysis harness](todo/work/analysis-harness/README.md).
 - Do not combine quality and economics into a single winner score. Preserve
   criterion-level and per-trial results.
 - Treat model, reasoning level, harness, prompts, skills, and tool sets as separate
@@ -98,6 +105,8 @@ and the interface principles in [docs/architecture.md](docs/architecture.md).
 - **Package check**: `uv run python -m compileall src`
 - **Tests**: `uv run pytest`
 - **Lint**: `uv run ruff check .`; `uv run ruff format --check .`
+- **Harness**: `npm --prefix harness ci`; `npm --prefix harness run check`;
+  `npm --prefix harness test`
 
 ## Documentation Index
 
@@ -148,6 +157,11 @@ tasks: {../todo/README.md,../todo/TODO.md}
   deletion or replacement commands.
 - **`src/benchwarmer/`**: Keep domain models independent from provider and
   harness adapters.
+- **`harness/`**: Pi Durable workflows (`src/workflows`), API-backed tools
+  (`src/tools`), and the typed client (`src/benchwarmer/client.ts`). Pin
+  `@earendil-works/pi-durable` exactly; read tools are replay-safe, writes are
+  not. Storage and run reports go to gitignored `.benchwarmer/harness/` and
+  `reports/harness/`.
 - **Generated reports**: Write to `reports/`; this directory is gitignored.
 - **Run artifacts**: Write to `artifacts/` or `.benchwarmer/`; both are
   gitignored.

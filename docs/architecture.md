@@ -66,6 +66,13 @@ worker remain on the Mac mini.
 | SQLite | Versioned records, relationships, provenance, annotations and durable job state |
 | Private artifact directory | Transcripts, prompt snapshots, fixtures, outputs and raw source records |
 | Adapters | Harness imports/execution, provider usage, pricing and published evidence |
+| Analysis harness | Benchwarmer's own model-driven workflows (bundle proposals, later enrichment and fixture generation) on Pi Durable, reaching data only through the API |
+
+The analysis harness is internal tooling, distinct from the harnesses under
+evaluation. It runs in a separate Node process under `harness/`, commits model
+turns and tool calls durably so interrupted runs resume without repeating paid
+work, and writes generated records back through `/api/v1` as `generated`
+drafts for human review. Deterministic parsing stays in Python.
 
 This is a design, not an implemented service. Add dependencies when an implemented
 feature needs them. Choose job scheduling and SQLite concurrency details during
