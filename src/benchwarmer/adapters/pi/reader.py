@@ -162,6 +162,11 @@ def read_pi_session(path: Path) -> FileConversation:
         after.st_mtime_ns,
     ) or not raw.endswith(b"\n"):
         raise FileConversationError("Pi session is changing or incomplete")
+    return parse_pi_session(raw)
+
+
+def parse_pi_session(raw: bytes | str) -> FileConversation:
+    """Parse complete Pi session content already in memory; nothing is persisted."""
     try:
         rows = [json.loads(line) for line in raw.splitlines()]
     except (ValueError, UnicodeDecodeError) as error:
