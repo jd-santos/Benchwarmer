@@ -39,6 +39,15 @@ This project does not currently declare a Semantic Versioning policy.
   unreviewed proposals, and a new `rejected` status keeps declined proposals
   with a required reason. `GET /api/v1/bundles` filters by `origin` and
   `status`.
+- Record run provenance (run id, workflow, harness version, provider, model,
+  thinking level, report path) on generated bundle revisions, filter the
+  bundle list by `run_id`, and link each proposal to its run in the web app.
+- Make bundle creation idempotent with a client `request_id`; the harness
+  derives one from the run and proposal content so an interrupted
+  `propose_bundle` retry returns the existing bundle instead of a duplicate.
+- Register every pi-ai provider in the harness (Anthropic, OpenAI, OpenRouter,
+  Google, xAI, Groq, Mistral, and the rest); the operator supplies whichever
+  provider key matches the chosen `provider/model-id`.
 
 ### Changed
 

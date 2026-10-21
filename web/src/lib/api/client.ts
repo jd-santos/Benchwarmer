@@ -475,6 +475,7 @@ function isBundleSummary(value: unknown): value is BundleSummary {
 		typeof value.origin === 'string' &&
 		bundleOrigins.has(value.origin) &&
 		typeof value.producer === 'string' &&
+		isNullableString(value.run_id) &&
 		isCount(value.item_count) &&
 		Array.isArray(value.conversation_ids) &&
 		value.conversation_ids.every((item) => typeof item === 'string') &&
@@ -496,6 +497,8 @@ export interface BundleFilters {
 	/** Origin of the latest revision, so a reviewed proposal no longer counts as generated. */
 	origin?: BundleOrigin;
 	status?: BundleStatus;
+	/** Only bundles whose latest revision came from this harness run. */
+	runId?: string;
 }
 
 export async function getBundles(
@@ -506,6 +509,7 @@ export async function getBundles(
 	if (filters.conversationId) params.set('conversation_id', filters.conversationId);
 	if (filters.origin) params.set('origin', filters.origin);
 	if (filters.status) params.set('status', filters.status);
+	if (filters.runId) params.set('run_id', filters.runId);
 	const query = params.toString();
 	const search = query ? `?${query}` : '';
 	const value = await getJson(`/api/v1/bundles${search}`, options.signal, options.fetch);

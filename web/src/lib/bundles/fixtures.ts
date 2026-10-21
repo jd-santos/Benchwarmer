@@ -15,6 +15,8 @@ export const bundle: BundleDetail = {
 	latest_revision: 1,
 	origin: 'human',
 	producer: 'web',
+	provenance: null,
+	request_id: null,
 	created_at: '2026-10-19T10:00:00Z',
 	updated_at: '2026-10-19T10:00:00Z',
 	document: {
@@ -60,7 +62,25 @@ export const bundle: BundleDetail = {
 			omitted_before: 2
 		}
 	],
-	revisions: [{ number: 1, origin: 'human', producer: 'web', created_at: '2026-10-19T10:00:00Z' }]
+	revisions: [
+		{
+			number: 1,
+			origin: 'human',
+			producer: 'web',
+			provenance: null,
+			created_at: '2026-10-19T10:00:00Z'
+		}
+	]
+};
+
+export const proposedProvenance = {
+	run_id: 'propose-bundles-2026-10-19T10-00-00-000Z',
+	workflow: 'propose-bundles',
+	harness_version: '0.0.1',
+	provider: 'anthropic',
+	model: 'claude-sonnet-5-5',
+	thinking_level: 'medium',
+	report_path: 'reports/harness/propose-bundles-2026-10-19T10-00-00-000Z.json'
 };
 
 export const proposedProducer =
@@ -72,6 +92,8 @@ export const proposedBundle: BundleDetail = {
 	id: 'bundle-2',
 	origin: 'generated',
 	producer: proposedProducer,
+	provenance: proposedProvenance,
+	request_id: `${proposedProvenance.run_id}:conversation-a:abc123`,
 	document: {
 		...bundle.document,
 		objective: 'Refund request and the offered resolution',
@@ -82,6 +104,7 @@ export const proposedBundle: BundleDetail = {
 			number: 1,
 			origin: 'generated',
 			producer: proposedProducer,
+			provenance: proposedProvenance,
 			created_at: '2026-10-19T10:00:00Z'
 		}
 	]

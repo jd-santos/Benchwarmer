@@ -84,6 +84,7 @@ const bundles: BundleSummary[] = [
 		status: 'reviewed',
 		origin: 'human',
 		producer: 'web',
+		run_id: null,
 		item_count: 3,
 		conversation_ids: ['conversation-a'],
 		updated_at: '2026-10-19T10:00:00Z'
@@ -95,6 +96,7 @@ const bundles: BundleSummary[] = [
 		status: 'draft',
 		origin: 'generated',
 		producer: 'benchwarmer-harness/propose-bundles@0.0.1 anthropic/test',
+		run_id: 'propose-bundles-2026-10-19T10-00-00-000Z',
 		item_count: 1,
 		conversation_ids: ['conversation-a'],
 		updated_at: '2026-10-19T11:00:00Z'

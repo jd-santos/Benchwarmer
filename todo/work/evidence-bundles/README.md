@@ -78,8 +78,11 @@ informs the extraction schema and later in-app review of suggested groups.
     nonblank `producer`; a human correction of a generated bundle is a new
     `human` revision over the generated one.
   - [ ] Observations and interpretations as separate records
-  - [ ] Store run-level provenance (model, input revisions, raw usage) with
-    generated revisions instead of only in the harness run report.
+  - [x] Store run-level provenance with generated revisions: run id, workflow,
+    harness version, provider, model, thinking level, and the run report path
+    (`RunProvenance`, migration `0005`). Raw usage stays in the run report,
+    which is only complete after the run; `GET /api/v1/bundles?run_id=` groups
+    a run's bundles and the editor links each proposal to its run.
 - [x] Add deterministic conversation outlines from available roles, sizes, tools, branches, and configuration/compaction events. Do not infer missing timing or tool names.
   `benchwarmer.outline` (pydantic, strict) measures each event, finds ATX
   headings with code-point ranges that are valid evidence references, and
@@ -106,9 +109,10 @@ informs the extraction schema and later in-app review of suggested groups.
   - [ ] Decide whether the model should receive shortened event ids. Current
     ids repeat the conversation id in every event and block reference, which
     inflates prompts on long conversations.
-  - [ ] Idempotency for `propose_bundle`: an interrupted call is reported to the
-    model rather than replayed, so a retry can create a near-duplicate. Consider
-    a client request id on bundle creation.
+  - [x] Idempotency for `propose_bundle`: `POST /api/v1/bundles` accepts a
+    `request_id` and returns the existing bundle (200) on repeat; the harness
+    derives the id from run id, conversation, and a digest of the proposal, so
+    a retry after an interrupted call cannot create a near-duplicate.
 - [ ] Review a bounded pilot of roughly 20–50 conversations when available, including successes, failures, and recoveries. Record context omissions, invalid references, and whether bundles support useful judgments; no model work is implied.
 
 ## Interface follow-ups
@@ -122,9 +126,9 @@ covers the fuller queue; these notes record what remains, with the
 review-console shape of
 [offgrid-review](https://github.com/jd-santos/offgrid-review) as a reference:
 
-- Group the proposed view by conversation and by harness run, and show how
-  many conversations the run inspected and skipped. This needs run provenance
-  on the revision (see Work), not only the harness run report.
+- The list now filters by run (`?run=<run id>`, linked from the editor) but
+  does not yet group by run or show how many conversations the run inspected
+  and skipped; that needs the run report read through the API.
 - Each item already shows objective, rationale, missing evidence, excerpts with
   roles in conversation order, gaps, producer, and jump-to-source. Still
   missing: a link to the run report and a stale marker when the cited

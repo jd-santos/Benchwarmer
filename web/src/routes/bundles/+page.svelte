@@ -11,8 +11,13 @@
 
 	const listHref = resolve('/bundles');
 
-	function viewHref(view: BundleView): ResolvedPathname {
-		return (view === 'all' ? listHref : `${listHref}?view=${view}`) as ResolvedPathname;
+	function viewHref(view: BundleView, run: string | null = data.run): ResolvedPathname {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built per call, never stored
+		const params = new URLSearchParams();
+		if (view !== 'all') params.set('view', view);
+		if (run) params.set('run', run);
+		const search = params.toString();
+		return `${listHref}${search ? `?${search}` : ''}` as ResolvedPathname;
 	}
 
 	/** The model for a proposal, or the workflow when no model was recorded. */
@@ -55,6 +60,13 @@
 			</a>
 		{/each}
 	</nav>
+
+	{#if data.run}
+		<p class="muted view-note" data-run-note>
+			Showing bundles whose latest revision came from harness run
+			<code>{data.run}</code>. <a href={viewHref(data.view, null)}>Show every run</a>
+		</p>
+	{/if}
 
 	{#if data.view === 'proposed'}
 		<p class="muted view-note">

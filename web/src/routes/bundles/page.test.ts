@@ -13,6 +13,7 @@ const human: BundleSummary = {
 	status: 'reviewed',
 	origin: 'human',
 	producer: 'web',
+	run_id: null,
 	item_count: 3,
 	conversation_ids: ['conversation-a'],
 	updated_at: '2026-10-19T10:00:00Z'
@@ -25,6 +26,7 @@ const proposed: BundleSummary = {
 	status: 'draft',
 	origin: 'generated',
 	producer: 'benchwarmer-harness/propose-bundles@0.0.1 anthropic/claude-sonnet-5-5',
+	run_id: 'propose-bundles-2026-10-19T10-00-00-000Z',
 	item_count: 2,
 	conversation_ids: ['conversation-a'],
 	updated_at: '2026-10-19T11:00:00Z'
@@ -33,9 +35,12 @@ const proposed: BundleSummary = {
 function renderPage(
 	bundles: Promise<BundlesResponse>,
 	view: BundleView = 'all',
-	proposedCount: Promise<number | null> | null = Promise.resolve(null)
+	proposedCount: Promise<number | null> | null = Promise.resolve(null),
+	run: string | null = null
 ) {
-	return render(Page, { props: { data: { view, bundles, proposedCount }, params: {} } });
+	return render(Page, {
+		props: { data: { view, run, bundles, proposedCount }, params: {} }
+	});
 }
 
 afterEach(cleanup);
@@ -48,6 +53,28 @@ describe('bundle list page', () => {
 		expect(_filtersFor('proposed')).toEqual({ origin: 'generated', status: 'draft' });
 		expect(_filtersFor('rejected')).toEqual({ status: 'rejected' });
 		expect(_filtersFor('all')).toEqual({});
+		expect(_filtersFor('proposed', 'run-1')).toEqual({
+			origin: 'generated',
+			status: 'draft',
+			runId: 'run-1'
+		});
+	});
+
+	it('names the run being shown and links back to every run', async () => {
+		const { findByText, getByRole } = renderPage(
+			Promise.resolve({ items: [proposed] }),
+			'proposed',
+			null,
+			'propose-bundles-2026-10-19T10-00-00-000Z'
+		);
+
+		expect(await findByText('propose-bundles-2026-10-19T10-00-00-000Z')).toBeTruthy();
+		expect(getByRole('link', { name: 'Show every run' }).getAttribute('href')).toBe(
+			'/bundles?view=proposed'
+		);
+		expect(getByRole('link', { name: /Proposed drafts/ }).getAttribute('href')).toBe(
+			'/bundles?view=proposed&run=propose-bundles-2026-10-19T10-00-00-000Z'
+		);
 	});
 
 	it('shows who produced each bundle and counts proposals awaiting review', async () => {
