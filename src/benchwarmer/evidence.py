@@ -51,6 +51,24 @@ class EvidenceRef(_Strict):
         return self
 
 
+class RunProvenance(_Strict):
+    """Which harness run and model produced a generated revision.
+
+    Usage is not recorded here because it is only known after the run; the
+    run report named by ``report_path`` holds raw usage and the pricing source.
+    """
+
+    run_id: _Identifier
+    workflow: _Identifier
+    harness_version: _Identifier
+    provider: _Identifier
+    model: _Identifier
+    thinking_level: _Identifier | None = None
+    report_path: (
+        Annotated[str, StringConstraints(min_length=1, max_length=1024)] | None
+    ) = None
+
+
 class BundleItem(_Strict):
     """One piece of evidence and why it matters to the bundle objective."""
 

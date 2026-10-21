@@ -14,7 +14,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from benchwarmer.evidence import BundleDocument, BundleItem, EvidenceRef
+from benchwarmer.evidence import BundleDocument, BundleItem, EvidenceRef, RunProvenance
 from benchwarmer.models.evidence_bundle import EvidenceBundle, EvidenceBundleRevision
 from benchwarmer.models.source import ConversationRevision, utc_now
 
@@ -70,6 +70,7 @@ class BundleRevisionRef:
     number: int
     origin: str
     producer: str
+    provenance: RunProvenance | None
     created_at: dt.datetime
 
 
@@ -80,6 +81,8 @@ class BundleDetail:
     latest_revision: int
     origin: str
     producer: str
+    provenance: RunProvenance | None
+    request_id: str | None
     created_at: dt.datetime
     updated_at: dt.datetime
     document: BundleDocument
@@ -95,6 +98,7 @@ class BundleSummary:
     status: str
     origin: str
     producer: str
+    run_id: str | None
     item_count: int
     conversation_ids: tuple[str, ...]
     updated_at: dt.datetime
@@ -389,6 +393,8 @@ def _detail(
         latest_revision=bundle.latest_revision,
         origin=selected.origin,
         producer=selected.producer,
+        provenance=_provenance(selected),
+        request_id=bundle.request_id,
         created_at=bundle.created_at,
         updated_at=bundle.updated_at,
         document=document,
@@ -398,11 +404,26 @@ def _detail(
                 number=row.number,
                 origin=row.origin,
                 producer=row.producer,
+                provenance=_provenance(row),
                 created_at=row.created_at,
             )
             for row in rows
         ),
     )
+
+
+def _provenance(row: EvidenceBundleRevision) -> RunProvenance | None:
+    return (
+        None if row.provenance is None else RunProvenance.model_validate(row.provenance)
+    )
+
+
+def find_bundle_by_request_id(session: Session, request_id: str) -> BundleDetail | None:
+    """Return the bundle a creation request already produced, if any."""
+    bundle = session.execute(
+        select(EvidenceBundle).where(EvidenceBundle.request_id == request_id)
+    ).scalar_one_or_none()
+    return None if bundle is None else _detail(session, bundle)
 
 
 def create_bundle(
@@ -411,13 +432,21 @@ def create_bundle(
     *,
     origin: str = "human",
     producer: str = "web",
+    provenance: RunProvenance | None = None,
+    request_id: str | None = None,
 ) -> BundleDetail:
-    """Validate and store a new bundle as revision 1."""
+    """Validate and store a new bundle as revision 1.
+
+    A ``request_id`` makes creation idempotent: callers check
+    :func:`find_bundle_by_request_id` first, and the unique column rejects a
+    second bundle for the same request if two callers race.
+    """
     _checked(session, document)
     now = utc_now()
     bundle = EvidenceBundle(
         id=f"bundle-{uuid.uuid4().hex}",
         latest_revision=1,
+        request_id=request_id,
         created_at=now,
         updated_at=now,
     )
@@ -429,6 +458,9 @@ def create_bundle(
             document=document.model_dump(mode="json"),
             origin=origin,
             producer=producer,
+            provenance=None
+            if provenance is None
+            else provenance.model_dump(mode="json"),
             created_at=now,
         )
     )
@@ -444,6 +476,7 @@ def update_bundle(
     base_revision: int,
     origin: str = "human",
     producer: str = "web",
+    provenance: RunProvenance | None = None,
 ) -> BundleDetail:
     """Store a new revision unless the bundle changed or the content is unchanged."""
     bundle = session.get(EvidenceBundle, bundle_id)
@@ -466,6 +499,9 @@ def update_bundle(
             document=serialized,
             origin=origin,
             producer=producer,
+            provenance=None
+            if provenance is None
+            else provenance.model_dump(mode="json"),
             created_at=now,
         )
     )
@@ -489,11 +525,12 @@ def list_bundles(
     conversation_id: str | None = None,
     origin: str | None = None,
     status: str | None = None,
+    run_id: str | None = None,
 ) -> tuple[BundleSummary, ...]:
     """List latest bundle revisions, most recently updated first.
 
-    ``origin`` and ``status`` filter on the latest revision, so a generated
-    draft that a human later reviewed no longer counts as generated.
+    ``origin``, ``status``, and ``run_id`` filter on the latest revision, so a
+    generated draft that a human later reviewed no longer counts as generated.
     """
     query = (
         select(EvidenceBundle, EvidenceBundleRevision)
@@ -512,6 +549,11 @@ def list_bundles(
         document = BundleDocument.model_validate(revision.document)
         if status is not None and document.status != status:
             continue
+        revision_run = (
+            None if revision.provenance is None else revision.provenance.get("run_id")
+        )
+        if run_id is not None and revision_run != run_id:
+            continue
         cited = tuple(
             dict.fromkeys(item.ref.conversation_id for item in document.items)
         )
@@ -525,6 +567,7 @@ def list_bundles(
                 status=document.status,
                 origin=revision.origin,
                 producer=revision.producer,
+                run_id=revision_run,
                 item_count=len(document.items),
                 conversation_ids=cited,
                 updated_at=bundle.updated_at,

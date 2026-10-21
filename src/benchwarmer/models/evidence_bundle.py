@@ -33,6 +33,10 @@ class EvidenceBundle(Base):
 
     id: Mapped[str] = mapped_column(String(255), primary_key=True)
     latest_revision: Mapped[int] = mapped_column(Integer(), nullable=False)
+    # A client-supplied idempotency key for creation; a retry returns the same bundle.
+    request_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
     created_at: Mapped[dt.datetime] = mapped_column(
         UTCDateTime(),
         nullable=False,
@@ -66,6 +70,8 @@ class EvidenceBundleRevision(Base):
     document: Mapped[dict[str, Any]] = mapped_column(JSON(), nullable=False)
     origin: Mapped[str] = mapped_column(String(32), nullable=False)
     producer: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Run-level provenance for generated revisions; see ``benchwarmer.evidence.RunProvenance``.
+    provenance: Mapped[dict[str, Any] | None] = mapped_column(JSON(), nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(
         UTCDateTime(), nullable=False, default=utc_now
     )
