@@ -66,10 +66,14 @@ class BundleDetailResponse(_Strict):
 
 
 class BundleSummaryResponse(_Strict):
+    """The latest revision of one bundle, with who produced that revision."""
+
     id: str
     revision: int
     objective: str
     status: BundleStatus
+    origin: BundleOrigin
+    producer: str
     item_count: int
     conversation_ids: list[str]
     updated_at: dt.datetime
@@ -167,9 +171,13 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
     @router.get("/bundles", response_model=BundlesResponse)
     def get_bundles(
         conversation_id: Annotated[str | None, Query(max_length=255)] = None,
+        origin: BundleOrigin | None = None,
+        status: BundleStatus | None = None,
     ) -> BundlesResponse:
         with session_scope() as session:
-            summaries = list_bundles(session, conversation_id=conversation_id)
+            summaries = list_bundles(
+                session, conversation_id=conversation_id, origin=origin, status=status
+            )
             return BundlesResponse(
                 items=[
                     BundleSummaryResponse(
@@ -177,6 +185,8 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                         revision=item.revision,
                         objective=item.objective,
                         status=item.status,  # type: ignore[arg-type]
+                        origin=item.origin,  # type: ignore[arg-type]
+                        producer=item.producer,
                         item_count=item.item_count,
                         conversation_ids=list(item.conversation_ids),
                         updated_at=item.updated_at,

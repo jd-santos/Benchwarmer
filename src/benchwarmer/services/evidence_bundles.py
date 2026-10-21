@@ -93,6 +93,8 @@ class BundleSummary:
     revision: int
     objective: str
     status: str
+    origin: str
+    producer: str
     item_count: int
     conversation_ids: tuple[str, ...]
     updated_at: dt.datetime
@@ -482,10 +484,18 @@ def get_bundle(
 
 
 def list_bundles(
-    session: Session, *, conversation_id: str | None = None
+    session: Session,
+    *,
+    conversation_id: str | None = None,
+    origin: str | None = None,
+    status: str | None = None,
 ) -> tuple[BundleSummary, ...]:
-    """List latest bundle revisions, most recently updated first."""
-    rows = session.execute(
+    """List latest bundle revisions, most recently updated first.
+
+    ``origin`` and ``status`` filter on the latest revision, so a generated
+    draft that a human later reviewed no longer counts as generated.
+    """
+    query = (
         select(EvidenceBundle, EvidenceBundleRevision)
         .join(
             EvidenceBundleRevision,
@@ -493,10 +503,15 @@ def list_bundles(
             & (EvidenceBundleRevision.number == EvidenceBundle.latest_revision),
         )
         .order_by(EvidenceBundle.updated_at.desc(), EvidenceBundle.id)
-    ).all()
+    )
+    if origin is not None:
+        query = query.where(EvidenceBundleRevision.origin == origin)
+    rows = session.execute(query).all()
     summaries: list[BundleSummary] = []
     for bundle, revision in rows:
         document = BundleDocument.model_validate(revision.document)
+        if status is not None and document.status != status:
+            continue
         cited = tuple(
             dict.fromkeys(item.ref.conversation_id for item in document.items)
         )
@@ -508,6 +523,8 @@ def list_bundles(
                 revision=revision.number,
                 objective=document.objective,
                 status=document.status,
+                origin=revision.origin,
+                producer=revision.producer,
                 item_count=len(document.items),
                 conversation_ids=cited,
                 updated_at=bundle.updated_at,

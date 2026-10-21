@@ -18,7 +18,7 @@ BUNDLE_SCHEMA_VERSION = 1
 MAX_BUNDLE_ITEMS = 200
 
 EvidenceRole = Literal["requirement", "action", "result", "correction", "context"]
-BundleStatus = Literal["draft", "reviewed", "analysis_only"]
+BundleStatus = Literal["draft", "reviewed", "analysis_only", "rejected"]
 BundleOrigin = Literal["human", "generated"]
 
 _Identifier = Annotated[str, StringConstraints(min_length=1, max_length=255)]
@@ -71,8 +71,10 @@ class BundleDocument(_Strict):
 
     @model_validator(mode="after")
     def _reviewable(self) -> Self:
-        if self.status != "draft" and not self.objective:
+        if self.status not in ("draft", "rejected") and not self.objective:
             raise ValueError("a reviewed or analysis-only bundle needs an objective")
+        if self.status == "rejected" and not self.rationale:
+            raise ValueError("a rejected bundle needs a rationale saying why")
         seen: set[EvidenceRef] = set()
         for item in self.items:
             if item.ref in seen:
