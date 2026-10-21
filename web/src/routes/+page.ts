@@ -17,7 +17,7 @@ async function loadLibrary(request: typeof globalThis.fetch): Promise<LibraryCou
 	try {
 		const [conversations, bundles] = await Promise.all([
 			getConversations({ limit: 1 }, { fetch: request }),
-			getBundles(null, { fetch: request })
+			getBundles({}, { fetch: request })
 		]);
 		return { conversations: conversations.total, bundles: bundles.items };
 	} catch {

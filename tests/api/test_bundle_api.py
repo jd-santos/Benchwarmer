@@ -284,3 +284,53 @@ def test_generated_bundles_record_origin_and_producer(client: TestClient) -> Non
         json={"document": document, "origin": "generated", "producer": ""},
     )
     assert rejected.status_code == 422
+
+
+def test_lists_provenance_and_filters_proposed_drafts(client: TestClient) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    document = {"items": [{"ref": _ref(detail, "u0"), "role": "requirement"}]}
+    producer = "benchwarmer-harness/propose-bundles@0.0.1 anthropic/test"
+    proposed = client.post(
+        "/api/v1/bundles",
+        json={"document": document, "origin": "generated", "producer": producer},
+    ).json()
+    human = client.post("/api/v1/bundles", json={"document": document}).json()
+
+    listed = client.get("/api/v1/bundles").json()["items"]
+    by_id = {item["id"]: item for item in listed}
+    assert by_id[proposed["id"]]["origin"] == "generated"
+    assert by_id[proposed["id"]]["producer"] == producer
+    assert by_id[human["id"]] | {} == by_id[human["id"]] | {
+        "origin": "human",
+        "producer": "web",
+    }
+
+    pending = client.get(
+        "/api/v1/bundles", params={"origin": "generated", "status": "draft"}
+    ).json()["items"]
+    assert [item["id"] for item in pending] == [proposed["id"]]
+
+    # A rejection keeps the proposal queryable and must say why.
+    unexplained = client.put(
+        f"/api/v1/bundles/{proposed['id']}",
+        json={"document": dict(document, status="rejected"), "base_revision": 1},
+    )
+    assert unexplained.status_code == 422
+    rejected = client.put(
+        f"/api/v1/bundles/{proposed['id']}",
+        json={
+            "document": dict(
+                document, status="rejected", rationale="Two unrelated requests"
+            ),
+            "base_revision": 1,
+        },
+    )
+    assert rejected.status_code == 200, rejected.text
+    assert rejected.json()["origin"] == "human"
+    assert (
+        client.get("/api/v1/bundles", params={"origin": "generated"}).json()["items"]
+        == []
+    )
+    kept = client.get("/api/v1/bundles", params={"status": "rejected"}).json()
+    assert [item["id"] for item in kept["items"]] == [proposed["id"]]
+    assert client.get("/api/v1/bundles", params={"origin": "robot"}).status_code == 422

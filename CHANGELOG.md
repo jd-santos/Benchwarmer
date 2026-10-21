@@ -34,6 +34,11 @@ This project does not currently declare a Semantic Versioning policy.
 - Add the `harness/` Pi Durable package with API-backed library tools and a
   manually run `propose-bundles` workflow that writes a per-conversation usage
   report.
+- Review proposed bundles in the web app: the list shows each bundle's origin
+  and producing model with a "Proposed drafts" view, the editor flags
+  unreviewed proposals, and a new `rejected` status keeps declined proposals
+  with a required reason. `GET /api/v1/bundles` filters by `origin` and
+  `status`.
 
 ### Changed
 

@@ -82,6 +82,8 @@ const bundles: BundleSummary[] = [
 		revision: 2,
 		objective: 'Refund handling',
 		status: 'reviewed',
+		origin: 'human',
+		producer: 'web',
 		item_count: 3,
 		conversation_ids: ['conversation-a'],
 		updated_at: '2026-10-19T10:00:00Z'
@@ -91,6 +93,8 @@ const bundles: BundleSummary[] = [
 		revision: 1,
 		objective: '',
 		status: 'draft',
+		origin: 'generated',
+		producer: 'benchwarmer-harness/propose-bundles@0.0.1 anthropic/test',
 		item_count: 1,
 		conversation_ids: ['conversation-a'],
 		updated_at: '2026-10-19T11:00:00Z'

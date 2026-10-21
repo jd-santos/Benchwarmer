@@ -148,7 +148,8 @@ export interface ConversationDetail {
 }
 
 export type EvidenceRole = 'requirement' | 'action' | 'result' | 'correction' | 'context';
-export type BundleStatus = 'draft' | 'reviewed' | 'analysis_only';
+export type BundleStatus = 'draft' | 'reviewed' | 'analysis_only' | 'rejected';
+export type BundleOrigin = 'human' | 'generated';
 
 export interface EvidenceRef {
 	conversation_id: string;
@@ -188,7 +189,7 @@ export interface ResolvedBundleItem {
 
 export interface BundleRevision {
 	number: number;
-	origin: 'human' | 'generated';
+	origin: BundleOrigin;
 	producer: string;
 	created_at: string;
 }
@@ -197,7 +198,7 @@ export interface BundleDetail {
 	id: string;
 	revision: number;
 	latest_revision: number;
-	origin: 'human' | 'generated';
+	origin: BundleOrigin;
 	producer: string;
 	created_at: string;
 	updated_at: string;
@@ -206,11 +207,14 @@ export interface BundleDetail {
 	revisions: BundleRevision[];
 }
 
+/** The latest revision of one bundle; origin and producer describe that revision. */
 export interface BundleSummary {
 	id: string;
 	revision: number;
 	objective: string;
 	status: BundleStatus;
+	origin: BundleOrigin;
+	producer: string;
 	item_count: number;
 	conversation_ids: string[];
 	updated_at: string;

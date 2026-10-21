@@ -2,7 +2,9 @@ import type {
 	Branch,
 	BundleDetail,
 	BundleDocument,
+	BundleOrigin,
 	BundlesResponse,
+	BundleStatus,
 	BundleSummary,
 	EvidenceIssue,
 	ContentBlock,
@@ -400,7 +402,13 @@ const evidenceRoles: ReadonlySet<string> = new Set([
 	'correction',
 	'context'
 ]);
-const bundleStatuses: ReadonlySet<string> = new Set(['draft', 'reviewed', 'analysis_only']);
+const bundleStatuses: ReadonlySet<string> = new Set([
+	'draft',
+	'reviewed',
+	'analysis_only',
+	'rejected'
+]);
+const bundleOrigins: ReadonlySet<string> = new Set(['human', 'generated']);
 
 function isBundleDocument(value: unknown): value is BundleDocument {
 	return (
@@ -464,6 +472,9 @@ function isBundleSummary(value: unknown): value is BundleSummary {
 		typeof value.objective === 'string' &&
 		typeof value.status === 'string' &&
 		bundleStatuses.has(value.status) &&
+		typeof value.origin === 'string' &&
+		bundleOrigins.has(value.origin) &&
+		typeof value.producer === 'string' &&
 		isCount(value.item_count) &&
 		Array.isArray(value.conversation_ids) &&
 		value.conversation_ids.every((item) => typeof item === 'string') &&
@@ -480,13 +491,23 @@ function bundleDetail(value: unknown): BundleDetail {
 	return value;
 }
 
+export interface BundleFilters {
+	conversationId?: string;
+	/** Origin of the latest revision, so a reviewed proposal no longer counts as generated. */
+	origin?: BundleOrigin;
+	status?: BundleStatus;
+}
+
 export async function getBundles(
-	conversationId: string | null = null,
+	filters: BundleFilters = {},
 	options: ApiRequestOptions = {}
 ): Promise<BundlesResponse> {
-	const search = conversationId
-		? `?${new URLSearchParams({ conversation_id: conversationId })}`
-		: '';
+	const params = new URLSearchParams();
+	if (filters.conversationId) params.set('conversation_id', filters.conversationId);
+	if (filters.origin) params.set('origin', filters.origin);
+	if (filters.status) params.set('status', filters.status);
+	const query = params.toString();
+	const search = query ? `?${query}` : '';
 	const value = await getJson(`/api/v1/bundles${search}`, options.signal, options.fetch);
 	if (!isRecord(value) || !Array.isArray(value.items) || !value.items.every(isBundleSummary)) {
 		throw new ApiClientError('The API bundles response did not match its contract.', {

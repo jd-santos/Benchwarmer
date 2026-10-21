@@ -159,7 +159,7 @@ export interface ConversationOutline {
 }
 
 export type EvidenceRole = 'requirement' | 'action' | 'result' | 'correction' | 'context';
-export type BundleStatus = 'draft' | 'reviewed' | 'analysis_only';
+export type BundleStatus = 'draft' | 'reviewed' | 'analysis_only' | 'rejected';
 export type BundleOrigin = 'human' | 'generated';
 
 export interface EvidenceRef {
