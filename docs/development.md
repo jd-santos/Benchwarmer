@@ -69,11 +69,23 @@ npm --prefix web run build
 uv run alembic upgrade head
 uv run python -m benchwarmer.services.fixtures \
   --load tests/fixtures/sources.json
+uv run python -m benchwarmer.services.demo_conversations \
+  --load tests/fixtures/demo-conversations.json
+uv run python -m benchwarmer.services.demo_conversations \
+  --load tests/fixtures/demo-long-conversations.json
 uv run uvicorn benchwarmer.api.app:create_app \
   --factory \
   --host 127.0.0.1 \
   --port 8000
 ```
+
+`demo-conversations.json` holds short synthetic conversations covering the
+browsing states; `demo-long-conversations.json` holds four long synthetic
+coding-agent sessions (a debugging session, a feature build with compaction and
+a model change, a branched session with a failed tool call, and a prose review
+that continues the debugging session) for exercising outlines and the
+`propose-bundles` harness workflow. Both are invented content under the
+`fixture-source-pi-failed` source and must stay under 1 MiB each.
 
 This is the local form of the accepted one-process boundary. FastAPI serves the
 built UI and versioned API from the same origin. Unknown API paths, mutations,
