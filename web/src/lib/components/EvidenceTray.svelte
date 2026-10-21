@@ -34,7 +34,7 @@
 	let error = $state<string[]>([]);
 
 	onMount(() => {
-		getBundles(conversationId).then(
+		getBundles({ conversationId }).then(
 			(response) => (bundles = response.items),
 			() => (bundles = [])
 		);

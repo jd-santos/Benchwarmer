@@ -62,3 +62,27 @@ export const bundle: BundleDetail = {
 	],
 	revisions: [{ number: 1, origin: 'human', producer: 'web', created_at: '2026-10-19T10:00:00Z' }]
 };
+
+export const proposedProducer =
+	'benchwarmer-harness/propose-bundles@0.0.1 anthropic/claude-sonnet-5-5';
+
+/** A model's draft awaiting review; the same evidence as `bundle`. */
+export const proposedBundle: BundleDetail = {
+	...bundle,
+	id: 'bundle-2',
+	origin: 'generated',
+	producer: proposedProducer,
+	document: {
+		...bundle.document,
+		objective: 'Refund request and the offered resolution',
+		rationale: 'The user asked for a refund and the assistant offered one.'
+	},
+	revisions: [
+		{
+			number: 1,
+			origin: 'generated',
+			producer: proposedProducer,
+			created_at: '2026-10-19T10:00:00Z'
+		}
+	]
+};

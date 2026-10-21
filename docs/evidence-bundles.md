@@ -66,7 +66,10 @@ evidence, origin, and review status. Record requested capability, subject
 matter, behavior, outcome, recovery, and suitability for evaluation
 separately. "Unknown" and "ambiguous" are legitimate values. Keep human
 corrections and earlier generated versions; regenerating a bundle never
-changes the imported history.
+changes the imported history. A generated bundle stays a draft until a person
+saves a revision over it, either accepting it as reviewed or rejecting it with
+a reason. Rejected bundles remain queryable because they show where the
+proposer went wrong.
 
 Begin by assembling bundles manually from roughly 20–50 conversations, when
 that many are available. Review routine successes, failures, recoveries, and

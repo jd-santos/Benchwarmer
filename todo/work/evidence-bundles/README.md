@@ -1,9 +1,9 @@
 # Define evidence references and review conversation bundles
 
 Status: In progress on `task/bundle-parsing-tools`. Manual bundle assembly,
-deterministic outlines, and the generated-bundle path through the API are
-implemented; the pilot, observation records, and in-app draft review are
-pending.
+deterministic outlines, the generated-bundle path through the API, and a first
+in-app review surface for proposed drafts are implemented; the pilot run and
+observation records are pending.
 
 ## Path to running evaluations
 
@@ -70,8 +70,10 @@ informs the extraction schema and later in-app review of suggested groups.
   must be joined by captured relationships (`tests/api/test_bundle_api.py`).
 - [ ] Define versioned observations and bundles separately from contiguous segments and executable task versions; retain producer and selection rationale.
   - [x] Bundles: numbered immutable revisions with objective, status (draft,
-    reviewed, analysis only), rationale, missing evidence, origin, and producer;
-    stale saves return 409 (`/api/v1/bundles`, migration `0004`).
+    reviewed, analysis only, rejected), rationale, missing evidence, origin, and
+    producer; stale saves return 409 (`/api/v1/bundles`, migration `0004`).
+    A rejected bundle must carry a rationale; the list route filters by the
+    latest revision's `origin` and by `status`.
   - [x] Generated revisions: `POST`/`PUT /api/v1/bundles` accept `origin` and a
     nonblank `producer`; a human correction of a generated bundle is a new
     `human` revision over the generated one.
@@ -93,6 +95,11 @@ informs the extraction schema and later in-app review of suggested groups.
     `read_events`, `list_bundles`, `propose_bundle`; the `propose-bundles`
     workflow runs one durable conversation per library conversation and writes
     a JSON run report with per-conversation usage.
+  - [x] Review proposed drafts in the web app: the bundle list shows origin and
+    the producing model with a "Proposed drafts" view and count, the editor
+    names the producer per revision, flags an unreviewed proposal, and accepts
+    (status Reviewed) or rejects (status Rejected with a required reason) as a
+    human revision over the generated one.
   - [ ] First operator run against the synthetic demo library, then against a
     private import; record what the model proposed, what review removed or
     added, and token cost per conversation here.
@@ -106,31 +113,33 @@ informs the extraction schema and later in-app review of suggested groups.
 
 ## Interface follow-ups
 
-Generated draft bundles now exist without a review surface beyond the bundle
-editor. The accepted
+The first review surface is the bundle list's "Proposed drafts" view plus the
+editor: accept is a human revision with `status=reviewed`, reject is a human
+revision with `status=rejected` and a rationale, and edit is the editor as it
+stands. Defer is implicit (leave the draft). The accepted
 [suggestion review decision](../evaluation-workbench-ui/decisions/suggestion-review.md)
-covers the queue; these notes record what the proposer work surfaced for it,
-with the review-console shape of
+covers the fuller queue; these notes record what remains, with the
+review-console shape of
 [offgrid-review](https://github.com/jd-santos/offgrid-review) as a reference:
 
-- A draft review queue filtered to `origin=generated` drafts, grouped by
-  conversation and by harness run, with accept, edit, reject, and defer as the
-  compatible actions and a required note when rejecting. Accept means a human
-  revision with `status=reviewed`; reject needs a status or flag the bundle
-  record does not have yet.
-- Each queue item shows the objective, rationale, missing evidence, the items
-  with excerpts and roles in conversation order, visible gaps between items,
-  and jump-to-source. Show the producer, model, and run report link, and a
-  stale marker when the cited revision is no longer latest.
+- Group the proposed view by conversation and by harness run, and show how
+  many conversations the run inspected and skipped. This needs run provenance
+  on the revision (see Work), not only the harness run report.
+- Each item already shows objective, rationale, missing evidence, excerpts with
+  roles in conversation order, gaps, producer, and jump-to-source. Still
+  missing: a link to the run report and a stale marker when the cited
+  conversation revision is no longer latest (the detail knows
+  `conversation_is_latest` per item but the editor does not surface it).
 - Fingerprint what was reviewed: the bundle revision number is the fingerprint,
   and a decision taken against an older revision must be rejected, which the
   409 on stale saves already enforces.
-- Batch actions should stay within one run so cost and coverage stay legible;
-  the queue should show how many conversations the run inspected and skipped.
-- The reader should mark events cited by pending generated drafts distinctly
-  from human bundle membership, so inline review does not read as approval.
-- Rejected proposals are evidence for improving the proposer; keep them
-  queryable rather than deleting them.
+- Batch accept or reject should stay within one run so cost and coverage stay
+  legible. The editor reviews one bundle at a time today.
+- The reader does not yet show bundle membership at all. When it does, mark
+  events cited by pending generated drafts distinctly from human bundle
+  membership, so inline review does not read as approval.
+- Rejected proposals are evidence for improving the proposer. The "Rejected"
+  view keeps them queryable; nothing deletes a bundle.
 
 ## Verification
 

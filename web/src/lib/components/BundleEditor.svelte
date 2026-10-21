@@ -12,6 +12,7 @@
 	} from '$lib/api/types';
 	import {
 		bundleLabel,
+		producerLabel,
 		roleOptions,
 		scopeLabel,
 		statusLabel,
@@ -68,7 +69,15 @@
 		}))
 	});
 	const dirty = $derived(JSON.stringify(draft) !== JSON.stringify(normalized(current.document)));
-	const needsObjective = $derived(status !== 'draft' && draft.objective === '');
+	const needsObjective = $derived(
+		status !== 'draft' && status !== 'rejected' && draft.objective === ''
+	);
+	const needsReason = $derived(status === 'rejected' && draft.rationale === null);
+	const blocked = $derived(needsObjective || needsReason || entries.length === 0);
+	// A proposal awaits review until a person saves any revision over it.
+	const awaitingReview = $derived(
+		!readOnly && current.origin === 'generated' && current.document.status === 'draft'
+	);
 	const statusHint = $derived(statusOptions.find((option) => option.value === status)?.hint);
 	const conversations = $derived([
 		...new Map(current.items.map((item) => [item.item.ref.conversation_id, item])).values()
@@ -122,7 +131,7 @@
 	}
 
 	async function save(): Promise<void> {
-		if (saving || !dirty || needsObjective || entries.length === 0) return;
+		if (saving || !dirty || blocked) return;
 		saving = true;
 		messages = [];
 		itemIssues = {};
@@ -154,6 +163,7 @@
 		<h1 class:untitled={!current.document.objective}>{bundleLabel(current.document.objective)}</h1>
 		<p class="meta-line">
 			<span>{statusLabel(current.document.status)}</span>
+			<span title={current.producer}>{producerLabel(current.origin, current.producer)}</span>
 			<span>{plural(current.items.length, 'item')}</span>
 			{#if conversations.length === 1}
 				<span>
@@ -171,6 +181,11 @@
 		{#if readOnly}
 			<p class="notice" role="status">
 				Viewing an earlier revision. <a href={revisionHref(null)}>View latest</a>
+			</p>
+		{:else if awaitingReview}
+			<p class="notice" role="status">
+				A model proposed this bundle and no one has reviewed it. Check each item against its source,
+				then set the status to Reviewed to accept it, or to Rejected with a reason.
 			</p>
 		{/if}
 	</header>
@@ -322,13 +337,24 @@
 		<fieldset class="bundle-notes" disabled={readOnly}>
 			<legend class="visually-hidden">Review notes</legend>
 			<div class="field">
-				<label for="bundle-rationale">Why these items</label>
+				<label for="bundle-rationale"
+					>{status === 'rejected' ? 'Why it was rejected' : 'Why these items'}</label
+				>
 				<textarea
 					id="bundle-rationale"
 					rows="3"
 					maxlength="4000"
-					placeholder="How these items connect to the objective"
-					bind:value={rationale}></textarea>
+					placeholder={status === 'rejected'
+						? 'What made this evidence unusable, so proposals can improve'
+						: 'How these items connect to the objective'}
+					bind:value={rationale}
+					aria-describedby={needsReason ? 'bundle-rationale-error' : undefined}
+					aria-invalid={needsReason}></textarea>
+				{#if needsReason}
+					<p id="bundle-rationale-error" class="field__error">
+						Say why before rejecting; the reason stays with the bundle.
+					</p>
+				{/if}
 			</div>
 			<div class="field">
 				<label for="bundle-missing">Missing evidence</label>
@@ -345,11 +371,7 @@
 				<p class="save-bar__status" aria-live="polite">
 					{#if dirty}Unsaved changes{:else if confirmation}{confirmation}{:else}No changes{/if}
 				</p>
-				<button
-					class="button button--primary"
-					type="submit"
-					disabled={!dirty || saving || needsObjective || entries.length === 0}
-				>
+				<button class="button button--primary" type="submit" disabled={!dirty || saving || blocked}>
 					{saving ? 'Saving…' : 'Save revision'}
 				</button>
 				{#if conflict !== null}
@@ -387,6 +409,10 @@
 								Revision {revision.number}
 							</a>
 						{/if}
+						·
+						<span title={revision.producer}
+							>{producerLabel(revision.origin, revision.producer)}</span
+						>
 						· {formatTimestamp(revision.created_at)}
 					</li>
 				{/each}

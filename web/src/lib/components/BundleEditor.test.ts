@@ -3,7 +3,7 @@
 import { cleanup, render } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bundle } from '$lib/bundles/fixtures';
+import { bundle, proposedBundle } from '$lib/bundles/fixtures';
 import BundleEditor from './BundleEditor.svelte';
 
 vi.mock('$app/navigation', () => ({ invalidateAll: vi.fn() }));
@@ -104,5 +104,34 @@ describe('bundle editor', () => {
 		await user.click(getByRole('button', { name: 'Save revision' }));
 
 		expect(await findByText('Different branch.')).toBeTruthy();
+	});
+});
+
+describe('reviewing a proposed bundle', () => {
+	it('names the model, flags the draft as unreviewed, and requires a reason to reject', async () => {
+		const user = userEvent.setup();
+		const { getByRole, getByText, getByLabelText, queryByText } = render(BundleEditor, {
+			props: { detail: proposedBundle }
+		});
+
+		expect(getByText('Proposed by anthropic/claude-sonnet-5-5')).toBeTruthy();
+		expect(getByRole('status').textContent).toContain('no one has reviewed it');
+
+		await user.click(getByRole('radio', { name: /Rejected/ }));
+		expect(queryByText('Add an objective before changing the status.')).toBeNull();
+		const reason = getByLabelText('Why it was rejected');
+		await user.clear(reason);
+		expect(getByText('Say why before rejecting; the reason stays with the bundle.')).toBeTruthy();
+		expect(getByRole('button', { name: 'Save revision' }).hasAttribute('disabled')).toBe(true);
+
+		await user.type(reason, 'Two unrelated requests');
+		expect(getByRole('button', { name: 'Save revision' }).hasAttribute('disabled')).toBe(false);
+	});
+
+	it('does not flag a human bundle as awaiting review', () => {
+		const { queryByRole, getByText } = render(BundleEditor, { props: { detail: bundle } });
+
+		expect(getByText('Human, in the web app')).toBeTruthy();
+		expect(queryByRole('status')).toBeNull();
 	});
 });
