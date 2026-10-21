@@ -37,7 +37,6 @@ re-run `npm run check` and `npm test`.
   session file, producing a synthetic fixture draft for human review
 - `src/fixture.ts`: the disclosure gate and the fixture document shape
 - `src/usage.ts`: usage deltas and totals shared by workflows
-- `src/providers.ts`: provider registration (stub until the shared module lands)
 - `src/cli.ts`: operator entry point
 
 ## Approval boundary

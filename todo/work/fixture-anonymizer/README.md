@@ -19,9 +19,8 @@ private enters the library, the database, or a snapshot on the way.
 
 Builds on the [analysis harness](../analysis-harness/README.md) conventions
 (typed routes in Python, Pi Durable workflows around them) and the Pi session
-reader. The first operator run waits on the shared provider registration
-module (`harness/src/providers.ts`) replacing the stub here, and on a running
-API over a disposable data root.
+reader. The first operator run waits on a running API over a disposable data
+root and a real Pi session named by the operator.
 
 ## Decisions
 
@@ -107,8 +106,7 @@ never land in `tests/fixtures/` without a human step.
   extension (`read_scrubbed_session`, `check_fixture`, `write_fixture_draft`),
   disclosure gate, run report, vitest coverage for the gate and document
   shape. Shared usage helpers moved to `harness/src/usage.ts`; provider
-  registration goes through `harness/src/providers.ts` (stub here).
-- [ ] Replace the `providers.ts` stub with the shared module once it lands.
+  registration goes through the shared `harness/src/providers.ts`.
 - [ ] First operator run on one real session against a disposable data root;
   record the diff review, cost, and which detector categories missed anything
   the reviewer caught. Extend the detectors or the terms file accordingly.
