@@ -12,13 +12,12 @@ import path from 'node:path';
 
 import { BACKGROUND_CONTEXT } from '@earendil-works/chord/context';
 import type { Usage } from '@earendil-works/pi-ai';
-import { createModels } from '@earendil-works/pi-ai/models';
-import { anthropicProvider } from '@earendil-works/pi-ai/providers/anthropic';
-import { openaiProvider } from '@earendil-works/pi-ai/providers/openai';
 import { createRegistry, Harness, type UsageState } from '@earendil-works/pi-durable';
 import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node';
 
 import { BenchwarmerClient } from '../benchwarmer/client.ts';
+import type { RunProvenance } from '../benchwarmer/client.ts';
+import { createHarnessModels, missingKeyHint } from '../providers.ts';
 import { createLibraryExtension, type ProposedBundleRecord } from '../tools/library.ts';
 
 export const WORKFLOW_NAME = 'propose-bundles';
@@ -124,19 +123,30 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 	const runId = `${WORKFLOW_NAME}-${startedAt.toISOString().replace(/[:.]/g, '-')}`;
 	const producer = `benchwarmer-harness/${WORKFLOW_NAME}@${options.harnessVersion} ${options.provider}/${options.modelId}`;
 
-	const models = createModels();
-	models.setProvider(anthropicProvider());
-	models.setProvider(openaiProvider());
+	const models = createHarnessModels();
 	if (!models.getModel(options.provider, options.modelId)) {
 		throw new Error(
 			`Unknown model ${options.provider}/${options.modelId}. Run "npm run list-models" to see the catalog.`
 		);
 	}
+	const keyHint = missingKeyHint(options.provider);
+	if (keyHint) throw new Error(keyHint);
+	const reportPath = path.join(options.reportDir, `${runId}.json`);
+	const provenance: RunProvenance = {
+		run_id: runId,
+		workflow: WORKFLOW_NAME,
+		harness_version: options.harnessVersion,
+		provider: options.provider,
+		model: options.modelId,
+		thinking_level: options.thinkingLevel ?? null,
+		report_path: reportPath
+	};
 
 	const client = new BenchwarmerClient(options.apiBaseUrl);
 	const created: ProposedBundleRecord[] = [];
 	const library = createLibraryExtension(client, {
 		producer,
+		provenance,
 		onBundleCreated: (record) => {
 			created.push(record);
 			log(`  created ${record.bundle_id}: ${record.objective}`);
@@ -239,7 +249,6 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 		pricing_source: 'pi-ai model catalog estimate'
 	};
 	await mkdir(options.reportDir, { recursive: true });
-	const reportPath = path.join(options.reportDir, `${runId}.json`);
 	await writeFile(reportPath, JSON.stringify(runReport, null, 2) + '\n');
 	log(`report: ${reportPath}`);
 	return runReport;

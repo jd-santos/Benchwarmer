@@ -192,11 +192,25 @@ export interface BundleIssue {
 	message: string;
 }
 
+/** Which harness run and model produced a generated revision; mirrors `RunProvenance` in Python. */
+export interface RunProvenance {
+	run_id: string;
+	workflow: string;
+	harness_version: string;
+	provider: string;
+	model: string;
+	thinking_level: string | null;
+	report_path: string | null;
+}
+
 export interface BundleSummary {
 	id: string;
 	revision: number;
 	objective: string;
 	status: BundleStatus;
+	origin: BundleOrigin;
+	producer: string;
+	run_id: string | null;
 	item_count: number;
 	conversation_ids: string[];
 	updated_at: string;
@@ -208,11 +222,13 @@ export interface BundleDetail {
 	latest_revision: number;
 	origin: BundleOrigin;
 	producer: string;
+	provenance: RunProvenance | null;
+	request_id: string | null;
 	document: Required<Pick<BundleDocument, 'items'>> & BundleDocument;
 }
 
 export type CreateBundleResult =
-	| { ok: true; bundle: BundleDetail }
+	| { ok: true; bundle: BundleDetail; existing: boolean }
 	| { ok: false; issues: BundleIssue[] };
 
 export class BenchwarmerApiError extends Error {
@@ -272,13 +288,25 @@ export class BenchwarmerClient {
 		return page.items;
 	}
 
-	/** Create a bundle; evidence that does not resolve comes back as issues, not an exception. */
+	/**
+	 * Create a bundle; evidence that does not resolve comes back as issues, not an exception.
+	 *
+	 * With a `requestId`, repeating the call returns the bundle it already
+	 * created (`existing: true`) instead of a second one.
+	 */
 	async createBundle(
 		document: BundleDocument,
 		origin: BundleOrigin,
-		producer: string
+		producer: string,
+		options: { provenance?: RunProvenance; requestId?: string } = {}
 	): Promise<CreateBundleResult> {
-		const response = await this.request('POST', '/bundles', { document, origin, producer });
+		const response = await this.request('POST', '/bundles', {
+			document,
+			origin,
+			producer,
+			...(options.provenance ? { provenance: options.provenance } : {}),
+			...(options.requestId ? { request_id: options.requestId } : {})
+		});
 		if (response.status === 422) {
 			const body = (await response.json()) as { issues?: BundleIssue[]; detail?: unknown };
 			if (Array.isArray(body.issues)) return { ok: false, issues: body.issues };
@@ -290,7 +318,7 @@ export class BenchwarmerClient {
 		if (!response.ok) {
 			throw new BenchwarmerApiError(response.status, 'POST', '/bundles', await response.text());
 		}
-		return { ok: true, bundle: (await response.json()) as BundleDetail };
+		return { ok: true, existing: response.status === 200, bundle: (await response.json()) as BundleDetail };
 	}
 
 	private async request(method: string, path: string, body?: unknown): Promise<Response> {

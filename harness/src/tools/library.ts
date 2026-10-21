@@ -7,10 +7,17 @@
  * instead of silently creating a second bundle.
  */
 
+import { createHash } from 'node:crypto';
+
 import { Type } from '@earendil-works/pi-ai';
 import { defineExtension, defineTool, type Extension } from '@earendil-works/pi-durable';
 
-import type { BenchwarmerClient, BundleDocument, BundleItem } from '../benchwarmer/client.ts';
+import type {
+	BenchwarmerClient,
+	BundleDocument,
+	BundleItem,
+	RunProvenance
+} from '../benchwarmer/client.ts';
 import { formatEvents, formatOutline } from '../format.ts';
 
 /** A type alias, not an interface, so it satisfies Pi Durable's JSON `details` channel. */
@@ -22,9 +29,21 @@ export type ProposedBundleRecord = {
 	item_count: number;
 };
 
+/**
+ * A creation request id derived from the run and the proposal's content, so a
+ * retry after an interrupted call returns the bundle already created instead
+ * of a near-duplicate. Without a run id the call is not idempotent.
+ */
+export function proposalRequestId(runId: string, conversationId: string, document: BundleDocument): string {
+	const digest = createHash('sha256').update(JSON.stringify(document)).digest('hex').slice(0, 24);
+	return `${runId}:${conversationId}:${digest}`;
+}
+
 export interface LibraryExtensionOptions {
 	/** Recorded on every generated bundle revision, for example `benchwarmer-harness/propose-bundles@0.0.1 anthropic/model`. */
 	producer: string;
+	/** Run identity stored with each generated revision so bundles can be grouped and costed per run. */
+	provenance?: RunProvenance;
 	/** Receives each bundle the model creates, for the run report. */
 	onBundleCreated?: (record: ProposedBundleRecord) => void;
 }
@@ -145,7 +164,7 @@ export function createLibraryExtension(
 	const proposeBundle = defineTool({
 		name: 'propose_bundle',
 		description:
-			'Create one generated draft evidence bundle from exact event/block references. Benchwarmer validates every reference against the pinned revision and rejects sibling-branch mixes; fix the reported issues and call again. Each call creates a new bundle.',
+			'Create one generated draft evidence bundle from exact event/block references. Benchwarmer validates every reference against the pinned revision and rejects sibling-branch mixes; fix the reported issues and call again. Repeating an identical proposal returns the bundle it already created.',
 		parameters: Type.Object({
 			conversation_id: Type.String(),
 			revision: Type.String(),
@@ -181,7 +200,11 @@ export function createLibraryExtension(
 				rationale: args.rationale,
 				missing_evidence: args.missing_evidence ?? []
 			};
-			const result = await client.createBundle(document, 'generated', options.producer);
+			const runId = options.provenance?.run_id;
+			const result = await client.createBundle(document, 'generated', options.producer, {
+				...(options.provenance ? { provenance: options.provenance } : {}),
+				...(runId ? { requestId: proposalRequestId(runId, args.conversation_id, document) } : {})
+			});
 			if (!result.ok) {
 				const issues = result.issues
 					.map((i) => `${i.item_index === null ? 'bundle' : `items[${i.item_index}]`}: ${i.code}: ${i.message}`)
@@ -195,9 +218,13 @@ export function createLibraryExtension(
 				objective: args.objective,
 				item_count: items.length
 			};
-			options.onBundleCreated?.(record);
+			if (!result.existing) options.onBundleCreated?.(record);
 			return {
-				...text(`Created generated draft bundle ${result.bundle.id} with ${items.length} item(s).`),
+				...text(
+					result.existing
+						? `This proposal already exists as bundle ${result.bundle.id}; nothing new was created.`
+						: `Created generated draft bundle ${result.bundle.id} with ${items.length} item(s).`
+				),
 				details: record
 			};
 		}
