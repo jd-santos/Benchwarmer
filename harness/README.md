@@ -29,8 +29,15 @@ re-run `npm run check` and `npm test`.
 - `src/format.ts`: compact model-facing renderings of outlines and events
 - `src/tools/library.ts`: the `benchwarmer-library` extension: `list_conversations`,
   `get_outline`, `read_events`, `list_bundles`, `propose_bundle`
+- `src/tools/fixtures.ts`: the `benchwarmer-fixtures` extension:
+  `read_scrubbed_session`, `check_fixture`, `write_fixture_draft`
 - `src/workflows/propose-bundles.ts`: one Pi Durable conversation per library
   conversation, sequential, with a JSON run report
+- `src/workflows/anonymize-fixture.ts`: one Pi Durable conversation per raw Pi
+  session file, producing a synthetic fixture draft for human review
+- `src/fixture.ts`: the disclosure gate and the fixture document shape
+- `src/usage.ts`: usage deltas and totals shared by workflows
+- `src/providers.ts`: provider registration (stub until the shared module lands)
 - `src/cli.ts`: operator entry point
 
 ## Approval boundary
@@ -73,6 +80,35 @@ the run creates records the run id, model, and report path as provenance, and
 `propose_bundle` sends a request id derived from the run and the proposal, so
 a retry after an interruption returns the existing bundle. The durable
 storage file is owned by one process at a time.
+
+## Anonymize a raw Pi session into a fixture draft
+
+The `anonymize-fixture` workflow takes a Pi session file that has not been
+imported. The harness reads the file, the API scrubs it in memory
+(`POST /api/v1/fixtures/scrub-pi-session`) and checks candidates
+(`POST /api/v1/fixtures/check`) without storing anything, and the model writes
+an invented analog with the same structure. Drafts land in
+`reports/harness/fixtures/<run-id>/<native_id>.json` for a human diff review;
+nothing is written to `tests/fixtures/`.
+
+```bash
+npm run anonymize-fixture -- \
+  --api http://127.0.0.1:8000 \
+  --model <provider>/<model-id> --disclose-to <provider> \
+  --session /absolute/path/to/session.jsonl \
+  --term "Operator Name" --term "Employer" --terms-file /private/terms.txt
+```
+
+Disclosure rule: scrubbed session content is sent to the model provider, so
+every run must name that provider with `--disclose-to`, and it must match the
+provider in `--model`. The command refuses to start otherwise. Scrub-only
+output is not a fixture; the model rewrite is required, and the draft tool
+refuses a candidate that still contains placeholders. See
+[the work record](../todo/work/fixture-anonymizer/README.md).
+
+Provider keys come from the environment through the registered pi-ai
+providers; an unknown model error means the catalog does not list it or its
+provider's key is missing.
 
 ## Checks
 
