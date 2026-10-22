@@ -56,6 +56,11 @@ This project does not currently declare a Semantic Versioning policy.
   take raw Pi session content and store nothing. The harness gains an
   `anonymize-fixture` workflow with an explicit `--disclose-to` gate that
   writes fixture drafts under `reports/harness/fixtures/` for human review.
+- Add `tests/fixtures/demo-long-conversations.json`: four long synthetic
+  coding-agent sessions (debugging with a rejected hypothesis, a feature build
+  across a compaction and model change, a branched session with a failed tool
+  call, and a prose plan review that continues the debugging session) for
+  outline and bundle-proposal work, loaded by the foundation demo script.
 
 ### Changed
 
