@@ -42,6 +42,17 @@ Decided with the user on 2026-10-21:
 - Generated revisions carry run provenance, and non-replay-safe writes carry
   a request id derived from the run so retries cannot duplicate records.
 
+Decided with the user on 2026-10-22:
+
+- Provider requests may be routed through a pass-through gateway (one that
+  takes the vendor's native request body and swaps the virtual key for real
+  credentials) by setting that provider's base URL variable, for example
+  `ANTHROPIC_BASE_URL`. The gateway's virtual key goes in the usual key
+  variable. Normalizing proxies that translate request formats are not in
+  scope; pi-ai speaks each vendor's native API already. Run reports record
+  the override so usage can later be reconciled against the gateway's
+  accounting rather than the vendor's.
+
 ## Acceptance criteria
 
 A workflow can be interrupted and resumed without repeating committed model
