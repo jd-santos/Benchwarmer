@@ -1,15 +1,21 @@
 /**
  * Model providers for harness workflows.
  *
- * Every provider in the pi-ai catalog is registered, and each resolves its own
- * credentials from the environment (for example `ANTHROPIC_API_KEY`,
- * `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`). The harness never
- * hardcodes one vendor; the operator picks `provider/model-id` on the command
- * line and supplies that provider's key.
+ * The pi-ai catalog is registered except for an explicit exclusion list, and
+ * each provider resolves its own credentials from the environment (for example
+ * `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`).
+ * The harness never hardcodes one vendor; the operator picks `provider/model-id`
+ * on the command line and supplies that provider's key.
  */
 
-import { builtinModels, getBuiltinProviders } from '@earendil-works/pi-ai/providers/all';
-import type { MutableModels } from '@earendil-works/pi-ai/models';
+import { builtinProviders } from '@earendil-works/pi-ai/providers/all';
+import { createModels, type MutableModels } from '@earendil-works/pi-ai/models';
+
+/**
+ * Providers the operator has ruled out. They are never registered, so no model
+ * from them can be selected and no key for them is ever read.
+ */
+export const EXCLUDED_PROVIDERS: ReadonlySet<string> = new Set(['xai', 'groq']);
 
 /** Environment variables pi-ai reads for the most common providers, for diagnostics only. */
 export const COMMON_PROVIDER_KEYS: Readonly<Record<string, readonly string[]>> = {
@@ -17,21 +23,26 @@ export const COMMON_PROVIDER_KEYS: Readonly<Record<string, readonly string[]>> =
 	openai: ['OPENAI_API_KEY'],
 	openrouter: ['OPENROUTER_API_KEY'],
 	google: ['GEMINI_API_KEY', 'GOOGLE_API_KEY'],
-	xai: ['XAI_API_KEY'],
-	groq: ['GROQ_API_KEY'],
 	mistral: ['MISTRAL_API_KEY'],
 	deepseek: ['DEEPSEEK_API_KEY'],
 	together: ['TOGETHER_API_KEY'],
 	fireworks: ['FIREWORKS_API_KEY']
 };
 
-/** A models collection with every pi-ai provider registered. */
+/** A models collection with every allowed pi-ai provider registered. */
 export function createHarnessModels(): MutableModels {
-	return builtinModels();
+	const models = createModels();
+	for (const provider of builtinProviders()) {
+		if (!EXCLUDED_PROVIDERS.has(provider.id)) models.setProvider(provider);
+	}
+	return models;
 }
 
 export function providerIds(): string[] {
-	return getBuiltinProviders().map(String).sort();
+	return createHarnessModels()
+		.getProviders()
+		.map((provider) => provider.id)
+		.sort();
 }
 
 /** Common providers whose key is present in `env`, so an operator can see what a run can use. */

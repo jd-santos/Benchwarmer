@@ -45,9 +45,10 @@ This project does not currently declare a Semantic Versioning policy.
 - Make bundle creation idempotent with a client `request_id`; the harness
   derives one from the run and proposal content so an interrupted
   `propose_bundle` retry returns the existing bundle instead of a duplicate.
-- Register every pi-ai provider in the harness (Anthropic, OpenAI, OpenRouter,
-  Google, xAI, Groq, Mistral, and the rest); the operator supplies whichever
-  provider key matches the chosen `provider/model-id`.
+- Register the pi-ai provider catalog in the harness (Anthropic, OpenAI,
+  OpenRouter, Google, Mistral, and the rest) behind an explicit exclusion
+  list; the operator supplies whichever provider key matches the chosen
+  `provider/model-id`.
 - Add the fixture anonymizer groundwork: `benchwarmer.anonymize` scrubs
   normalized events with stable placeholders and reports spans without the
   original values, plus fidelity and leak checks for candidate fixtures.

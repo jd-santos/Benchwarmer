@@ -1,15 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { createHarnessModels, missingKeyHint, providerIds, providersWithKeys } from './providers.ts';
+import {
+	EXCLUDED_PROVIDERS,
+	createHarnessModels,
+	missingKeyHint,
+	providerIds,
+	providersWithKeys
+} from './providers.ts';
 
 describe('providers', () => {
-	it('registers the whole pi-ai catalog, not one vendor', () => {
+	it('registers the pi-ai catalog minus the excluded providers', () => {
 		const ids = providerIds();
-		for (const expected of ['anthropic', 'openai', 'openrouter', 'google', 'xai', 'groq', 'mistral']) {
+		for (const expected of ['anthropic', 'openai', 'openrouter', 'google', 'mistral']) {
 			expect(ids).toContain(expected);
 		}
 		const models = createHarnessModels();
 		expect(models.getProvider('openrouter')).toBeDefined();
 		expect(models.getModels('openrouter').length).toBeGreaterThan(0);
+		for (const excluded of EXCLUDED_PROVIDERS) {
+			expect(ids).not.toContain(excluded);
+			expect(models.getProvider(excluded)).toBeUndefined();
+			expect(models.getModels(excluded)).toEqual([]);
+		}
 	});
 
 	it('reports which common providers have keys and hints at the missing one', () => {
