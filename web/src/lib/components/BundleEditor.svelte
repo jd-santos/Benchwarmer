@@ -125,6 +125,15 @@
 		return `${base}${search}#${encodeURIComponent(ref.event_id)}` as ResolvedPathname;
 	}
 
+	function runHref(runId: string): ResolvedPathname {
+		return `${resolve('/bundles')}?${new URLSearchParams({ run: runId })}` as ResolvedPathname;
+	}
+
+	/** The timestamp part of a run id, which is what distinguishes runs of one workflow. */
+	function shortRunId(runId: string): string {
+		return runId.replace(/^[a-z-]+-(?=\d{4})/, '');
+	}
+
 	function revisionHref(number: number | null): ResolvedPathname {
 		const base = resolve('/bundles/[id]', { id: current.id });
 		return (number === null ? base : `${base}?revision=${number}`) as ResolvedPathname;
@@ -164,6 +173,13 @@
 		<p class="meta-line">
 			<span>{statusLabel(current.document.status)}</span>
 			<span title={current.producer}>{producerLabel(current.origin, current.producer)}</span>
+			{#if current.provenance}
+				<span title={current.provenance.report_path ?? current.provenance.run_id}>
+					<a href={runHref(current.provenance.run_id)}
+						>Run {shortRunId(current.provenance.run_id)}</a
+					>
+				</span>
+			{/if}
 			<span>{plural(current.items.length, 'item')}</span>
 			{#if conversations.length === 1}
 				<span>

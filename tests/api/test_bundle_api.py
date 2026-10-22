@@ -334,3 +334,65 @@ def test_lists_provenance_and_filters_proposed_drafts(client: TestClient) -> Non
     kept = client.get("/api/v1/bundles", params={"status": "rejected"}).json()
     assert [item["id"] for item in kept["items"]] == [proposed["id"]]
     assert client.get("/api/v1/bundles", params={"origin": "robot"}).status_code == 422
+
+
+def test_generated_bundles_carry_run_provenance_and_idempotent_creation(
+    client: TestClient,
+) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    document = {"items": [{"ref": _ref(detail, "u0"), "role": "requirement"}]}
+    provenance = {
+        "run_id": "propose-bundles-2026-10-21T00-00-00Z",
+        "workflow": "propose-bundles",
+        "harness_version": "0.0.1",
+        "provider": "anthropic",
+        "model": "test-model",
+        "thinking_level": None,
+        "report_path": "reports/harness/propose-bundles-2026-10-21T00-00-00Z.json",
+    }
+    request = {
+        "document": document,
+        "origin": "generated",
+        "producer": "benchwarmer-harness/propose-bundles@0.0.1 anthropic/test-model",
+        "provenance": provenance,
+        "request_id": "propose-bundles-2026-10-21T00-00-00Z:conv:1",
+    }
+
+    first = client.post("/api/v1/bundles", json=request)
+    assert first.status_code == 201, first.text
+    assert first.json()["provenance"] == provenance
+    assert first.json()["request_id"] == request["request_id"]
+    assert first.json()["revisions"][0]["provenance"]["run_id"] == provenance["run_id"]
+
+    # The same request id returns the same bundle rather than a second one.
+    again = client.post("/api/v1/bundles", json=dict(request, document=document))
+    assert again.status_code == 200, again.text
+    assert again.json()["id"] == first.json()["id"]
+    listed = client.get(
+        "/api/v1/bundles", params={"run_id": provenance["run_id"]}
+    ).json()["items"]
+    assert [(item["id"], item["run_id"]) for item in listed] == [
+        (first.json()["id"], provenance["run_id"])
+    ]
+
+    # A human correction has no run provenance, and leaves the run filter.
+    reviewed = client.put(
+        f"/api/v1/bundles/{first.json()['id']}",
+        json={
+            "document": dict(document, objective="Checked", status="reviewed"),
+            "base_revision": 1,
+        },
+    )
+    assert reviewed.status_code == 200, reviewed.text
+    assert reviewed.json()["provenance"] is None
+    assert reviewed.json()["revisions"][1]["provenance"]["model"] == "test-model"
+    assert client.get(
+        "/api/v1/bundles", params={"run_id": provenance["run_id"]}
+    ).json() == {"items": []}
+
+    # Provenance is validated as a typed record.
+    malformed = client.post(
+        "/api/v1/bundles",
+        json=dict(request, request_id="other", provenance={"run_id": "x"}),
+    )
+    assert malformed.status_code == 422

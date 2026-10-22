@@ -32,6 +32,16 @@ Decided with the user on 2026-10-19:
 - Running a workflow by hand with named inputs and operator keys is the
   approval for its model work until the bounded model-work service exists.
 
+Decided with the user on 2026-10-21:
+
+- The harness is provider-neutral within an explicit exclusion list
+  (`EXCLUDED_PROVIDERS` in `harness/src/providers.ts`; the user has ruled out
+  xAI and Groq). Every other pi-ai provider is registered and the
+  operator supplies the key for the one named on the command line; nothing
+  looks for an Anthropic key specifically.
+- Generated revisions carry run provenance, and non-replay-safe writes carry
+  a request id derived from the run so retries cannot duplicate records.
+
 ## Acceptance criteria
 
 A workflow can be interrupted and resumed without repeating committed model
@@ -52,6 +62,13 @@ capability, which then lands as a typed route first.
   deliberate interruption.
 - [ ] Shared conventions for later workflows: where instructions live, how a
   workflow names its producer, and how reports are versioned.
+  - [x] Providers: `src/providers.ts` registers the pi-ai catalog minus the
+    exclusion list; a
+    workflow fails fast with a provider-neutral hint when the chosen
+    provider's key is absent.
+  - [x] Provenance: a workflow passes a `RunProvenance` record to its write
+    tools so generated revisions name the run, and derives idempotent request
+    ids for writes from the run id and content.
 - [ ] Table-of-contents headings for non-Markdown responses: decide what is
   deterministic (candidate line detection in Python) and what needs a model.
 - [ ] Fixture-from-conversation workflow that rewrites private details into a

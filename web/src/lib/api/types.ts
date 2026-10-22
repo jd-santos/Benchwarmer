@@ -187,10 +187,22 @@ export interface ResolvedBundleItem {
 	omitted_before: number | null;
 }
 
+/** Which harness run and model produced a generated revision. */
+export interface RunProvenance {
+	run_id: string;
+	workflow: string;
+	harness_version: string;
+	provider: string;
+	model: string;
+	thinking_level: string | null;
+	report_path: string | null;
+}
+
 export interface BundleRevision {
 	number: number;
 	origin: BundleOrigin;
 	producer: string;
+	provenance: RunProvenance | null;
 	created_at: string;
 }
 
@@ -200,6 +212,8 @@ export interface BundleDetail {
 	latest_revision: number;
 	origin: BundleOrigin;
 	producer: string;
+	provenance: RunProvenance | null;
+	request_id: string | null;
 	created_at: string;
 	updated_at: string;
 	document: BundleDocument;
@@ -215,6 +229,8 @@ export interface BundleSummary {
 	status: BundleStatus;
 	origin: BundleOrigin;
 	producer: string;
+	/** The harness run that produced the latest revision, when it was generated. */
+	run_id: string | null;
 	item_count: number;
 	conversation_ids: string[];
 	updated_at: string;

@@ -14,13 +14,20 @@ from sqlalchemy.orm import Session
 
 from benchwarmer.config import BenchwarmerSettings
 from benchwarmer.db import create_engine, create_session_factory
-from benchwarmer.evidence import BundleDocument, BundleItem, BundleOrigin, BundleStatus
+from benchwarmer.evidence import (
+    BundleDocument,
+    BundleItem,
+    BundleOrigin,
+    BundleStatus,
+    RunProvenance,
+)
 from benchwarmer.services.evidence_bundles import (
     BundleConflict,
     BundleDetail,
     BundleInvalid,
     BundleNotFound,
     create_bundle,
+    find_bundle_by_request_id,
     get_bundle,
     list_bundles,
     update_bundle,
@@ -49,6 +56,7 @@ class BundleRevisionResponse(_Strict):
     number: int
     origin: Literal["human", "generated"]
     producer: str
+    provenance: RunProvenance | None
     created_at: dt.datetime
 
 
@@ -58,6 +66,8 @@ class BundleDetailResponse(_Strict):
     latest_revision: int
     origin: Literal["human", "generated"]
     producer: str
+    provenance: RunProvenance | None
+    request_id: str | None
     created_at: dt.datetime
     updated_at: dt.datetime
     document: BundleDocument
@@ -74,6 +84,7 @@ class BundleSummaryResponse(_Strict):
     status: BundleStatus
     origin: BundleOrigin
     producer: str
+    run_id: str | None
     item_count: int
     conversation_ids: list[str]
     updated_at: dt.datetime
@@ -84,14 +95,21 @@ class BundlesResponse(_Strict):
 
 
 _Producer = Annotated[str, Field(min_length=1, max_length=255)]
+_RequestId = Annotated[str, Field(min_length=1, max_length=255)]
 
 
 class BundleCreateRequest(_Strict):
-    """A new bundle; a generated one names the producer that proposed it."""
+    """A new bundle; a generated one names the producer and run that proposed it.
+
+    ``request_id`` makes creation idempotent: repeating a request with the
+    same id returns the bundle it already created instead of a second one.
+    """
 
     document: BundleDocument
     origin: BundleOrigin = "human"
     producer: _Producer = "web"
+    provenance: RunProvenance | None = None
+    request_id: _RequestId | None = None
 
 
 class BundleUpdateRequest(_Strict):
@@ -99,6 +117,7 @@ class BundleUpdateRequest(_Strict):
     base_revision: Annotated[int, Field(ge=1)]
     origin: BundleOrigin = "human"
     producer: _Producer = "web"
+    provenance: RunProvenance | None = None
 
 
 def _detail_response(detail: BundleDetail) -> BundleDetailResponse:
@@ -108,6 +127,8 @@ def _detail_response(detail: BundleDetail) -> BundleDetailResponse:
         latest_revision=detail.latest_revision,
         origin=detail.origin,  # type: ignore[arg-type]
         producer=detail.producer,
+        provenance=detail.provenance,
+        request_id=detail.request_id,
         created_at=detail.created_at,
         updated_at=detail.updated_at,
         document=detail.document,
@@ -130,6 +151,7 @@ def _detail_response(detail: BundleDetail) -> BundleDetailResponse:
                 number=item.number,
                 origin=item.origin,  # type: ignore[arg-type]
                 producer=item.producer,
+                provenance=item.provenance,
                 created_at=item.created_at,
             )
             for item in detail.revisions
@@ -173,10 +195,15 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
         conversation_id: Annotated[str | None, Query(max_length=255)] = None,
         origin: BundleOrigin | None = None,
         status: BundleStatus | None = None,
+        run_id: Annotated[str | None, Query(max_length=255)] = None,
     ) -> BundlesResponse:
         with session_scope() as session:
             summaries = list_bundles(
-                session, conversation_id=conversation_id, origin=origin, status=status
+                session,
+                conversation_id=conversation_id,
+                origin=origin,
+                status=status,
+                run_id=run_id,
             )
             return BundlesResponse(
                 items=[
@@ -187,6 +214,7 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                         status=item.status,  # type: ignore[arg-type]
                         origin=item.origin,  # type: ignore[arg-type]
                         producer=item.producer,
+                        run_id=item.run_id,
                         item_count=item.item_count,
                         conversation_ids=list(item.conversation_ids),
                         updated_at=item.updated_at,
@@ -199,12 +227,22 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
         "/bundles",
         status_code=201,
         response_model=BundleDetailResponse,
-        responses={422: {"description": "Bundle evidence is invalid"}},
+        responses={
+            200: {"description": "A bundle this request id already created"},
+            422: {"description": "Bundle evidence is invalid"},
+        },
     )
     def post_bundle(
         request: BundleCreateRequest,
     ) -> BundleDetailResponse | JSONResponse:
         with session_scope() as session:
+            if request.request_id is not None:
+                existing = find_bundle_by_request_id(session, request.request_id)
+                if existing is not None:
+                    return JSONResponse(
+                        status_code=200,
+                        content=_detail_response(existing).model_dump(mode="json"),
+                    )
             try:
                 return _detail_response(
                     create_bundle(
@@ -212,6 +250,8 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                         request.document,
                         origin=request.origin,
                         producer=request.producer,
+                        provenance=request.provenance,
+                        request_id=request.request_id,
                     )
                 )
             except BundleInvalid as error:
@@ -252,6 +292,7 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                         base_revision=request.base_revision,
                         origin=request.origin,
                         producer=request.producer,
+                        provenance=request.provenance,
                     )
                 )
             except BundleNotFound:

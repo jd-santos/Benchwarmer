@@ -20,22 +20,28 @@ export function _viewFrom(searchParams: URLSearchParams): BundleView {
 	return _views.some((option) => option.value === view) ? (view as BundleView) : 'all';
 }
 
-export function _filtersFor(view: BundleView): { origin?: BundleOrigin; status?: BundleStatus } {
+export function _filtersFor(
+	view: BundleView,
+	run: string | null = null
+): { origin?: BundleOrigin; status?: BundleStatus; runId?: string } {
+	const byRun = run ? { runId: run } : {};
 	switch (view) {
 		case 'proposed':
-			return { origin: 'generated', status: 'draft' };
+			return { origin: 'generated', status: 'draft', ...byRun };
 		case 'rejected':
-			return { status: 'rejected' };
+			return { status: 'rejected', ...byRun };
 		default:
-			return {};
+			return byRun;
 	}
 }
 
 export const load: PageLoad = ({ fetch, url }) => {
 	const view = _viewFrom(url.searchParams);
+	const run = url.searchParams.get('run')?.trim() || null;
 	return {
 		view,
-		bundles: getBundles(_filtersFor(view), { fetch }),
+		run,
+		bundles: getBundles(_filtersFor(view, run), { fetch }),
 		// The count is a hint beside the view link; its failure must not hide the list.
 		proposedCount:
 			view === 'proposed'

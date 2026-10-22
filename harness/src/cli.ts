@@ -9,9 +9,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { createModels } from '@earendil-works/pi-ai/models';
-import { anthropicProvider } from '@earendil-works/pi-ai/providers/anthropic';
-import { openaiProvider } from '@earendil-works/pi-ai/providers/openai';
+import { createHarnessModels, providersWithKeys } from './providers.ts';
 
 import { proposeBundles, type ProposeBundlesOptions } from './workflows/propose-bundles.ts';
 
@@ -40,12 +38,12 @@ function usage(): never {
 }
 
 async function listModels(provider?: string): Promise<void> {
-	const models = createModels();
-	models.setProvider(anthropicProvider());
-	models.setProvider(openaiProvider());
+	const models = createHarnessModels();
 	for (const model of models.getModels(provider)) {
 		process.stdout.write(`${model.provider}/${model.id}\n`);
 	}
+	const ready = providersWithKeys();
+	process.stderr.write(`providers with keys in this environment: ${ready.join(', ') || 'none'}\n`);
 }
 
 async function main(argv: string[]): Promise<void> {

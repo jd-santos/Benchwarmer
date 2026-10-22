@@ -25,6 +25,7 @@ re-run `npm run check` and `npm test`.
 ## Layout
 
 - `src/benchwarmer/client.ts`: typed client for the API routes the harness uses
+- `src/providers.ts`: the pi-ai provider catalog minus an explicit exclusion list, plus key diagnostics
 - `src/format.ts`: compact model-facing renderings of outlines and events
 - `src/tools/library.ts`: the `benchwarmer-library` extension: `list_conversations`,
   `get_outline`, `read_events`, `list_bundles`, `propose_bundle`
@@ -35,8 +36,13 @@ re-run `npm run check` and `npm test`.
 ## Approval boundary
 
 Running a workflow by hand is the approval for its model work: the operator
-names the conversations, the model, and supplies provider keys through the
-environment (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`). Nothing in the Benchwarmer
+names the conversations, the model, and supplies that provider's key through
+the environment. The pi-ai provider catalog is registered except for the
+providers named in `EXCLUDED_PROVIDERS` (`src/providers.ts`), which can never
+be selected and whose keys are never read, so
+`--model openrouter/<id>` reads `OPENROUTER_API_KEY`, `--model google/<id>`
+reads `GEMINI_API_KEY`, and so on; `npm run list-models` prints which common
+providers have keys present. Nothing in the Benchwarmer
 application starts a harness run, and generated bundles land as
 `origin=generated`, `status=draft` revisions that a human reviews in the app.
 This is the pilot exception recorded in
@@ -64,7 +70,10 @@ gitignored), `--reports <dir>` (default `reports/harness`, gitignored).
 
 Each run writes `reports/harness/propose-bundles-<timestamp>.json` with the
 conversations processed, the bundles created, and per-conversation usage. Cost
-figures there are pi-ai catalog estimates, not provider charges. The durable
+figures there are pi-ai catalog estimates, not provider charges. Every bundle
+the run creates records the run id, model, and report path as provenance, and
+`propose_bundle` sends a request id derived from the run and the proposal, so
+a retry after an interruption returns the existing bundle. The durable
 storage file is owned by one process at a time.
 
 ## Checks
