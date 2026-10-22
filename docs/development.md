@@ -159,6 +159,32 @@ Running a workflow by hand is the approval for its model work. Durable state
 goes to `.benchwarmer/harness/` and run reports to `reports/harness/`, both
 gitignored. See [harness/README.md](../harness/README.md).
 
+### Scrub a Pi session locally without a model
+
+The scrub route parses session content in memory and stores nothing, so it can
+be exercised against the demo data root with the synthetic session fixture:
+
+```bash
+uv run python - <<'EOF'
+import json, urllib.request
+content = open("tests/fixtures/pi-session-synthetic.jsonl", encoding="utf-8").read()
+body = json.dumps({"content": content, "terms": ["Dana", "widget"]}).encode()
+request = urllib.request.Request(
+    "http://127.0.0.1:8000/api/v1/fixtures/scrub-pi-session",
+    data=body, headers={"content-type": "application/json"},
+)
+with urllib.request.urlopen(request) as response:
+    result = json.load(response)
+print(result["report"]["counts"])
+print(json.dumps(result["fixture"], indent=1)[:2000])
+EOF
+```
+
+`POST /api/v1/fixtures/check` takes the same `content` and `terms` plus a
+`candidate` fixture conversation and returns typed fidelity and leak issues.
+Point these routes at a real session only on a loopback API you started
+yourself; the response contains the scrubbed text.
+
 ## Run checks
 
 Python checks:

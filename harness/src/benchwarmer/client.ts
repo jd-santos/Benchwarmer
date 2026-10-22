@@ -231,6 +231,92 @@ export type CreateBundleResult =
 	| { ok: true; bundle: BundleDetail; existing: boolean }
 	| { ok: false; issues: BundleIssue[] };
 
+/** Mirrors `benchwarmer.anonymize`: fixture-file shapes and check results. */
+export interface FixtureBlock {
+	kind: BlockKind;
+	text: string | null;
+	tool_call_id: string | null;
+	artifact_id: string | null;
+	extensions: Record<string, unknown>;
+}
+
+export interface FixtureEvent {
+	native_id: string;
+	ordinal: number;
+	parent_id: string | null;
+	kind: EventKind;
+	role: EventRole;
+	occurred_at: string | null;
+	content: FixtureBlock[];
+	extensions: Record<string, unknown>;
+}
+
+export interface FixtureConversation {
+	native_id: string;
+	title: string | null;
+	coverage: Record<string, string> | null;
+	usage: Record<string, unknown>[];
+	events: FixtureEvent[];
+	relationships: Record<string, unknown>[];
+}
+
+export type ScrubCategory = 'term' | 'email' | 'url' | 'path' | 'ipv6' | 'ipv4' | 'secret' | 'hostname';
+
+export interface ScrubSpan {
+	event_id: string | null;
+	block_id: string | null;
+	category: ScrubCategory;
+	text_start: number;
+	text_end: number;
+	placeholder: string;
+}
+
+export interface ScrubReport {
+	schema_version: 1;
+	producer: string;
+	producer_version: string;
+	native_id: string;
+	source_version: string | null;
+	term_count: number;
+	counts: Partial<Record<ScrubCategory, number>>;
+	placeholders: Record<string, ScrubCategory>;
+	spans: ScrubSpan[];
+	notes: string[];
+}
+
+export interface ScrubbedSession {
+	native_id: string;
+	source_version: string | null;
+	title: string | null;
+	events: ConversationEvent[];
+	fixture: FixtureConversation;
+	report: ScrubReport;
+}
+
+export interface FidelityIssue {
+	code: string;
+	ordinal: number | null;
+	message: string;
+}
+
+export interface LeakIssue {
+	code: 'term' | 'original_span';
+	location: string;
+	text_start: number;
+	text_end: number;
+	category: ScrubCategory | null;
+}
+
+export interface FixtureCheck {
+	schema_version: 1;
+	producer: string;
+	producer_version: string;
+	native_id: string;
+	fidelity: FidelityIssue[];
+	leaks: LeakIssue[];
+	ok: boolean;
+}
+
 export class BenchwarmerApiError extends Error {
 	constructor(
 		readonly status: number,
@@ -321,6 +407,16 @@ export class BenchwarmerClient {
 		return { ok: true, existing: response.status === 200, bundle: (await response.json()) as BundleDetail };
 	}
 
+	/** Scrub raw Pi session content in memory; the API stores nothing. */
+	async scrubPiSession(content: string, terms: string[]): Promise<ScrubbedSession> {
+		return this.json<ScrubbedSession>('POST', '/fixtures/scrub-pi-session', { content, terms });
+	}
+
+	/** Structural fidelity and leak findings for a candidate against raw session content. */
+	async checkFixture(content: string, candidate: FixtureConversation, terms: string[]): Promise<FixtureCheck> {
+		return this.json<FixtureCheck>('POST', '/fixtures/check', { content, candidate, terms });
+	}
+
 	private async request(method: string, path: string, body?: unknown): Promise<Response> {
 		const init: RequestInit = { method, headers: { accept: 'application/json' } };
 		if (body !== undefined) {
@@ -330,8 +426,8 @@ export class BenchwarmerClient {
 		return this.fetchImpl(this.base + path, init);
 	}
 
-	private async json<T>(method: string, path: string): Promise<T> {
-		const response = await this.request(method, path);
+	private async json<T>(method: string, path: string, body?: unknown): Promise<T> {
+		const response = await this.request(method, path, body);
 		if (!response.ok) {
 			throw new BenchwarmerApiError(response.status, method, path, await response.text());
 		}

@@ -11,7 +11,6 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { BACKGROUND_CONTEXT } from '@earendil-works/chord/context';
-import type { Usage } from '@earendil-works/pi-ai';
 import { createRegistry, Harness, type UsageState } from '@earendil-works/pi-durable';
 import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node';
 
@@ -19,6 +18,9 @@ import { BenchwarmerClient } from '../benchwarmer/client.ts';
 import type { RunProvenance } from '../benchwarmer/client.ts';
 import { createHarnessModels, missingKeyHint } from '../providers.ts';
 import { createLibraryExtension, type ProposedBundleRecord } from '../tools/library.ts';
+import { emptyUsage, sumUsage, usageDelta } from '../usage.ts';
+
+export { usageDelta } from '../usage.ts';
 
 export const WORKFLOW_NAME = 'propose-bundles';
 
@@ -78,43 +80,6 @@ Work like this:
 Report only what the evidence supports. Say "the test failed before the correction", not "the agent misunderstood"; interpretations are not part of the bundle record. If the conversation holds no coherent piece of work, create no bundle and say so.
 
 When finished, answer with a short list of the bundles you created (id and objective) or the reason none were created.`;
-
-function emptyUsage(): UsageState {
-	return { models: {}, tools: {} };
-}
-
-function subtractUsage(after: Usage, before: Usage | undefined): Usage {
-	const b = before ?? {
-		input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
-		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
-	};
-	return {
-		input: after.input - b.input,
-		output: after.output - b.output,
-		cacheRead: after.cacheRead - b.cacheRead,
-		cacheWrite: after.cacheWrite - b.cacheWrite,
-		totalTokens: after.totalTokens - b.totalTokens,
-		cost: {
-			input: after.cost.input - b.cost.input,
-			output: after.cost.output - b.cost.output,
-			cacheRead: after.cost.cacheRead - b.cost.cacheRead,
-			cacheWrite: after.cost.cacheWrite - b.cost.cacheWrite,
-			total: after.cost.total - b.cost.total
-		}
-	};
-}
-
-/** Usage added between two session totals, per model and tool bucket. */
-export function usageDelta(after: UsageState, before: UsageState): UsageState {
-	const delta = emptyUsage();
-	for (const bucket of ['models', 'tools'] as const) {
-		for (const [key, usage] of Object.entries(after[bucket])) {
-			const diff = subtractUsage(usage as Usage, before[bucket][key] as Usage | undefined);
-			if (diff.totalTokens !== 0 || diff.cost.total !== 0) delta[bucket][key] = diff;
-		}
-	}
-	return delta;
-}
 
 export async function proposeBundles(options: ProposeBundlesOptions): Promise<RunReport> {
 	const context = BACKGROUND_CONTEXT;
@@ -222,15 +187,7 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 	}
 
 	const finishedAt = new Date();
-	const total = emptyUsage();
-	for (const report of reports) {
-		for (const bucket of ['models', 'tools'] as const) {
-			for (const [key, usage] of Object.entries(report.usage[bucket])) {
-				const sum = total[bucket][key] as Usage | undefined;
-				total[bucket][key] = sum ? addUsage(sum, usage as Usage) : usage;
-			}
-		}
-	}
+	const total = sumUsage(reports.map((report) => report.usage));
 	const runReport: RunReport = {
 		workflow: WORKFLOW_NAME,
 		run_id: runId,
@@ -252,21 +209,4 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 	await writeFile(reportPath, JSON.stringify(runReport, null, 2) + '\n');
 	log(`report: ${reportPath}`);
 	return runReport;
-}
-
-function addUsage(a: Usage, b: Usage): Usage {
-	return {
-		input: a.input + b.input,
-		output: a.output + b.output,
-		cacheRead: a.cacheRead + b.cacheRead,
-		cacheWrite: a.cacheWrite + b.cacheWrite,
-		totalTokens: a.totalTokens + b.totalTokens,
-		cost: {
-			input: a.cost.input + b.cost.input,
-			output: a.cost.output + b.cost.output,
-			cacheRead: a.cost.cacheRead + b.cost.cacheRead,
-			cacheWrite: a.cost.cacheWrite + b.cost.cacheWrite,
-			total: a.cost.total + b.cost.total
-		}
-	};
 }

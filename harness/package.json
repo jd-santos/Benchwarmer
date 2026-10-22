@@ -9,6 +9,7 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run",
     "propose-bundles": "node --import tsx src/cli.ts propose-bundles",
+    "anonymize-fixture": "node --import tsx src/cli.ts anonymize-fixture",
     "list-models": "node --import tsx src/cli.ts list-models"
   },
   "dependencies": {

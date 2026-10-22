@@ -71,10 +71,10 @@ capability, which then lands as a typed route first.
     ids for writes from the run id and content.
 - [ ] Table-of-contents headings for non-Markdown responses: decide what is
   deterministic (candidate line detection in Python) and what needs a model.
-- [ ] Fixture-from-conversation workflow that rewrites private details into a
-  synthetic fixture. Requires an explicit disclosure decision before any
-  private conversation is sent to a provider, and a diff review before the
-  fixture enters `tests/fixtures/`.
+- [ ] Fixture-from-session workflow that rewrites private details into a
+  synthetic fixture: groundwork landed in the
+  [fixture anonymizer record](../fixture-anonymizer/README.md), which owns the
+  disclosure gate, the scrub and check routes, and the draft review step.
 - [ ] Decide whether harness runs should register as model-work plans once the
   [bounded model-work service](../bounded-model-work/README.md) exists, so the
   pilot exception can end.
