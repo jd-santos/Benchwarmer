@@ -17,14 +17,14 @@ import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite
 
 import { BenchwarmerClient } from '../benchwarmer/client.ts';
 import { checkDisclosure } from '../fixture.ts';
-import { createHarnessModels, missingKeyHint } from '../providers.ts';
+import { createHarnessModels, missingKeyHint, providerBaseUrlOverride } from '../providers.ts';
 import {
 	createFixturesExtension,
 	type FixtureCheckRecord,
 	type FixtureDraftRecord,
 	type SessionSlot
 } from '../tools/fixtures.ts';
-import { emptyUsage, sumUsage, usageDelta } from '../usage.ts';
+import { emptyUsage, sumUsage, toRunUsage, usageDelta } from '../usage.ts';
 
 export const WORKFLOW_NAME = 'anonymize-fixture';
 
@@ -62,7 +62,7 @@ export interface RunReport {
 	started_at: string;
 	finished_at: string;
 	api_base_url: string;
-	model: { provider: string; model_id: string; thinking_level: string | null };
+	model: { provider: string; model_id: string; thinking_level: string | null; base_url_override: string | null };
 	disclosed_to: string;
 	producer: string;
 	storage_path: string;
@@ -210,7 +210,8 @@ export async function anonymizeFixture(options: AnonymizeFixtureOptions): Promis
 		model: {
 			provider: options.provider,
 			model_id: options.modelId,
-			thinking_level: options.thinkingLevel ?? null
+			thinking_level: options.thinkingLevel ?? null,
+			base_url_override: providerBaseUrlOverride(options.provider)
 		},
 		disclosed_to: options.discloseTo ?? '',
 		producer,
@@ -225,5 +226,31 @@ export async function anonymizeFixture(options: AnonymizeFixtureOptions): Promis
 	const reportPath = path.join(options.reportDir, `${runId}.json`);
 	await writeFile(reportPath, JSON.stringify(runReport, null, 2) + '\n');
 	log(`report: ${reportPath}`);
+	try {
+		await client.recordRun({
+			run_id: runReport.run_id,
+			workflow: runReport.workflow,
+			harness_version: options.harnessVersion,
+			started_at: runReport.started_at,
+			finished_at: runReport.finished_at,
+			api_base_url: runReport.api_base_url,
+			model: runReport.model,
+			producer: runReport.producer,
+			inputs: runReport.sessions.map((item) => ({
+				id: item.session_file,
+				kind: 'session',
+				status: item.status,
+				reason: item.reason ?? null,
+				bundle_ids: [],
+				usage: toRunUsage(item.usage)
+			})),
+			usage_total: toRunUsage(runReport.usage_total),
+			pricing_source: runReport.pricing_source,
+			report_path: reportPath
+		});
+		log(`recorded run ${runReport.run_id} in the application`);
+	} catch (error) {
+		log(`could not record the run in the application (the report file stands): ${error instanceof Error ? error.message : String(error)}`);
+	}
 	return runReport;
 }

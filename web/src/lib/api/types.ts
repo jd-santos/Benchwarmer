@@ -167,8 +167,11 @@ export interface BundleItem {
 }
 
 export interface BundleDocument {
-	schema_version?: 1;
+	schema_version?: 2;
+	/** The kind of work in general terms; the axis bundles are grouped on. */
 	objective: string;
+	/** What this particular piece of work tried to achieve. */
+	goal: string;
 	status: BundleStatus;
 	items: BundleItem[];
 	rationale: string | null;
@@ -226,6 +229,7 @@ export interface BundleSummary {
 	id: string;
 	revision: number;
 	objective: string;
+	goal: string;
 	status: BundleStatus;
 	origin: BundleOrigin;
 	producer: string;
@@ -238,6 +242,52 @@ export interface BundleSummary {
 
 export interface BundlesResponse {
 	items: BundleSummary[];
+}
+
+/** Raw token counts for one model or tool and the catalog estimate of their cost in USD. */
+export interface RunModelUsage {
+	input: number;
+	output: number;
+	cache_read: number;
+	cache_write: number;
+	total_tokens: number;
+	cost: { input: number; output: number; cache_read: number; cache_write: number; total: number };
+}
+
+export interface RunUsageTotal {
+	models: Record<string, RunModelUsage>;
+	tools: Record<string, RunModelUsage>;
+}
+
+/** One conversation or session a harness run worked on. */
+export interface RunInput {
+	id: string;
+	kind: 'conversation' | 'session';
+	status: 'done' | 'unanswered' | 'error';
+	reason: string | null;
+	bundle_ids: string[];
+	usage: RunUsageTotal;
+}
+
+/** A hand-run harness workflow; cost figures are catalog estimates, not charges. */
+export interface HarnessRunRecord {
+	run_id: string;
+	workflow: string;
+	harness_version: string;
+	started_at: string;
+	finished_at: string;
+	api_base_url: string;
+	model: {
+		provider: string;
+		model_id: string;
+		thinking_level: string | null;
+		base_url_override: string | null;
+	};
+	producer: string;
+	inputs: RunInput[];
+	usage_total: RunUsageTotal;
+	pricing_source: string;
+	report_path: string | null;
 }
 
 export interface EvidenceIssue {

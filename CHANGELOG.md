@@ -49,6 +49,16 @@ This project does not currently declare a Semantic Versioning policy.
   OpenRouter, Google, Mistral, and the rest) behind an explicit exclusion
   list; the operator supplies whichever provider key matches the chosen
   `provider/model-id`.
+- Let a harness provider be routed through a pass-through gateway with a base
+  URL variable such as `ANTHROPIC_BASE_URL`; run reports record the override.
+- Split a bundle's `goal` (what this piece of work tried to achieve) from its
+  `objective` (the kind of work in general terms, for grouping bundles later).
+  Bundle documents are version 2; version 1 documents are read with their
+  objective carried into the goal. The proposer, list, and editor use both.
+- Record each hand-run harness workflow in the application
+  (`PUT /api/v1/runs/{run_id}`, `GET /api/v1/runs`) with raw usage and the
+  catalog cost estimate; the bundle list and editor show what a run or a
+  conversation's pass cost beside its proposals.
 - Add the fixture anonymizer groundwork: `benchwarmer.anonymize` scrubs
   normalized events with stable placeholders and reports spans without the
   original values, plus fidelity and leak checks for candidate fixtures.

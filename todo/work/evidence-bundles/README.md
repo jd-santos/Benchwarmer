@@ -53,6 +53,21 @@ Decided with the user on 2026-10-19:
   exception; until then every generated revision records its producer string
   and each run writes a usage report under `reports/harness/`.
 
+Decided with the user on 2026-10-22, after the first operator run:
+
+- A bundle states a `goal` (what this piece of work tried to achieve, with
+  specifics) and an `objective` (the kind of work in general terms, with no
+  project names, dates, or figures). The objective is the axis bundles will
+  be grouped on into categories of work, so it must be reusable across
+  projects; the first run's objectives were too specific and are the goals
+  under this split. Version 1 documents upgrade on read with their objective
+  copied into the goal; reviewers generalize the objective when they touch
+  the bundle. A reviewed bundle still needs an objective.
+- Run usage belongs in the application, not only in a report file. Each
+  workflow records its run (`PUT /api/v1/runs/{run_id}`) with per-input raw
+  usage and the catalog estimate; the editor shows what the pass that
+  proposed a bundle cost and the list shows a run's total.
+
 ## Acceptance criteria
 
 Evidence resolves against pinned conversation revisions and valid branch
@@ -106,6 +121,16 @@ informs the extraction schema and later in-app review of suggested groups.
   - [ ] First operator run against the synthetic demo library, then against a
     private import; record what the model proposed, what review removed or
     added, and token cost per conversation here.
+    - [x] Synthetic run, 2026-10-22: `anthropic/claude-sonnet-5-5` through a
+      pass-through gateway (`ANTHROPIC_BASE_URL`), no thinking, on the
+      41-event ledger debugging fixture. Three drafts in 29 seconds covering
+      diagnosis (8 items), fix with tests (12 items), and verification plus
+      summary (6 items); every reference resolved, spans were disjoint and in
+      order, and each carried a rationale and `missing_evidence`. Catalog
+      estimate 0.14 USD: 3.9k output tokens, 23.5k cache-write, 28.4k
+      cache-read, 10 uncached input. Review of the drafts is pending.
+    - [ ] Remaining three synthetic fixtures (branch, compaction, no headings),
+      then a private import once anonymized.
   - [ ] Decide whether the model should receive shortened event ids. Current
     ids repeat the conversation id in every event and block reference, which
     inflates prompts on long conversations.
@@ -158,7 +183,23 @@ Outlines and the generated path, 2026-10-19: `tests/test_outline.py`,
 `harness/`, `npm run check` and `npm test` pass. A tool smoke run against a
 disposable demo data root listed conversations, outlined one, read events,
 received `event_not_found` for a bad reference, and created a generated draft
-bundle. No model call was made; the first operator run is pending.
+bundle. No model call was made at that point.
+
+First operator run, 2026-10-22: `propose-bundles` against the pilot API with
+`anthropic/claude-sonnet-5-5` on one synthetic conversation produced three
+generated drafts with run provenance and request ids, listed under the
+"Proposed drafts" view with the run link, and a run report under
+`reports/harness/` recording the gateway override. Harness `npm run check`
+and `npm test` pass with the base URL override tests.
+
+Goal/objective split and run records, 2026-10-22: the full Python suite
+(254 tests, including the version 1 upgrade, goal round trip, and run record
+tests), ruff, harness `check` and `test`, and the web suite (62 tests with
+the goal field, objective column, and run usage line) pass. The pilot data
+root migrated to `0006`; the three first-run drafts read back with their
+objective copied into the goal. A second operator run with the new analyst
+instructions, which should produce general objectives and specific goals,
+is pending a provider key.
 
 ## Supporting material
 

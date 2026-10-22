@@ -1,4 +1,11 @@
-import type { BundleOrigin, BundleStatus, EvidenceRole, ResolvedBundleItem } from '$lib/api/types';
+import type {
+	BundleOrigin,
+	BundleStatus,
+	EvidenceRole,
+	HarnessRunRecord,
+	ResolvedBundleItem,
+	RunUsageTotal
+} from '$lib/api/types';
 
 export const roleOptions: { value: EvidenceRole; label: string }[] = [
 	{ value: 'requirement', label: 'Requirement' },
@@ -58,8 +65,34 @@ export function statusLabel(status: BundleStatus): string {
 	return statusOptions.find((option) => option.value === status)?.label ?? status;
 }
 
-export function bundleLabel(objective: string): string {
-	return objective.trim() || 'Untitled bundle';
+/** The bundle's name for lists and titles: its specific goal, else its general objective. */
+export function bundleLabel(goal: string, objective = ''): string {
+	return goal.trim() || objective.trim() || 'Untitled bundle';
+}
+
+/** A dollar figure for a catalog estimate; small amounts keep enough precision to compare. */
+export function formatEstimate(usd: number): string {
+	if (usd === 0) return '$0';
+	if (usd < 0.01) return `$${usd.toFixed(4)}`;
+	if (usd < 1) return `$${usd.toFixed(3)}`;
+	return `$${usd.toFixed(2)}`;
+}
+
+export function usageTotals(usage: RunUsageTotal): { tokens: number; estimate: number } {
+	let tokens = 0;
+	let estimate = 0;
+	for (const bucket of [usage.models, usage.tools]) {
+		for (const entry of Object.values(bucket)) {
+			tokens += entry.total_tokens;
+			estimate += entry.cost.total;
+		}
+	}
+	return { tokens, estimate };
+}
+
+/** The run input (one conversation's pass) whose proposals include this bundle, if recorded. */
+export function runInputFor(run: HarnessRunRecord, bundleId: string) {
+	return run.inputs.find((input) => input.bundle_ids.includes(bundleId)) ?? null;
 }
 
 /** What part of the event an item cites, in reader terms. */

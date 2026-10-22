@@ -95,6 +95,7 @@ class BundleSummary:
     id: str
     revision: int
     objective: str
+    goal: str
     status: str
     origin: str
     producer: str
@@ -564,6 +565,7 @@ def list_bundles(
                 id=bundle.id,
                 revision=revision.number,
                 objective=document.objective,
+                goal=document.goal,
                 status=document.status,
                 origin=revision.origin,
                 producer=revision.producer,

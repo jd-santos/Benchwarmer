@@ -14,7 +14,7 @@
 		title = 'Bundle';
 		data.bundle.then(
 			(detail) => {
-				if (current) title = bundleLabel(detail.document.objective);
+				if (current) title = bundleLabel(detail.document.goal, detail.document.objective);
 			},
 			() => undefined
 		);
@@ -39,7 +39,7 @@
 	</section>
 {:then detail}
 	{#key `${detail.id}:${detail.revision}`}
-		<BundleEditor {detail} />
+		<BundleEditor {detail} run={data.run} />
 	{/key}
 {:catch error}
 	<section class="status-panel status-panel--error" role="alert">

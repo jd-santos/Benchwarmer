@@ -396,3 +396,63 @@ def test_generated_bundles_carry_run_provenance_and_idempotent_creation(
         json=dict(request, request_id="other", provenance={"run_id": "x"}),
     )
     assert malformed.status_code == 422
+
+
+def test_goal_and_objective_are_separate_and_version_1_upgrades(
+    client: TestClient,
+) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    items = [{"ref": _ref(detail, "u0"), "role": "requirement"}]
+    created = client.post(
+        "/api/v1/bundles",
+        json={
+            "document": {
+                "objective": "Diagnose duplicate records from a scheduled import",
+                "goal": "Find why duplicate sessions appear after the nightly import",
+                "items": items,
+            }
+        },
+    )
+    assert created.status_code == 201, created.text
+    document = created.json()["document"]
+    assert document["schema_version"] == 2
+    assert document["goal"].startswith("Find why")
+    listed = client.get("/api/v1/bundles").json()["items"]
+    assert listed[0]["goal"] == document["goal"]
+    assert listed[0]["objective"] == document["objective"]
+
+    # A reviewed bundle needs the general objective; a goal alone is not enough.
+    goal_only = client.put(
+        f"/api/v1/bundles/{created.json()['id']}",
+        json={
+            "document": {"goal": "Specific aim", "status": "reviewed", "items": items},
+            "base_revision": 1,
+        },
+    )
+    assert goal_only.status_code == 422
+
+    # Version 1 documents kept the specific aim in objective; it becomes the goal
+    # and stays in objective until a reviewer generalizes it.
+    legacy = client.post(
+        "/api/v1/bundles",
+        json={
+            "document": {
+                "schema_version": 1,
+                "objective": "Find why duplicate sessions appear",
+                "items": items,
+            }
+        },
+    )
+    assert legacy.status_code == 201, legacy.text
+    assert legacy.json()["document"] | {} == legacy.json()["document"] | {
+        "schema_version": 2,
+        "goal": "Find why duplicate sessions appear",
+        "objective": "Find why duplicate sessions appear",
+    }
+    assert (
+        client.post(
+            "/api/v1/bundles",
+            json={"document": {"schema_version": 3, "items": items}},
+        ).status_code
+        == 422
+    )

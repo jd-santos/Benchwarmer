@@ -2,14 +2,16 @@
 
 import { cleanup, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { BundlesResponse, BundleSummary } from '$lib/api/types';
+import type { BundlesResponse, BundleSummary, HarnessRunRecord } from '$lib/api/types';
+import { proposedRun } from '$lib/bundles/fixtures';
 import Page from './+page.svelte';
 import { _filtersFor, _viewFrom, type BundleView } from './+page';
 
 const human: BundleSummary = {
 	id: 'bundle-1',
 	revision: 2,
-	objective: 'Refund handling',
+	objective: 'Resolve a customer refund request',
+	goal: 'Refund handling',
 	status: 'reviewed',
 	origin: 'human',
 	producer: 'web',
@@ -22,7 +24,8 @@ const human: BundleSummary = {
 const proposed: BundleSummary = {
 	id: 'bundle-2',
 	revision: 1,
-	objective: 'Refund request and the offered resolution',
+	objective: 'Resolve a customer refund request',
+	goal: 'Refund request and the offered resolution',
 	status: 'draft',
 	origin: 'generated',
 	producer: 'benchwarmer-harness/propose-bundles@0.0.1 anthropic/claude-sonnet-5-5',
@@ -36,10 +39,11 @@ function renderPage(
 	bundles: Promise<BundlesResponse>,
 	view: BundleView = 'all',
 	proposedCount: Promise<number | null> | null = Promise.resolve(null),
-	run: string | null = null
+	run: string | null = null,
+	runRecord: Promise<HarnessRunRecord | null> | null = null
 ) {
 	return render(Page, {
-		props: { data: { view, run, bundles, proposedCount }, params: {} }
+		props: { data: { view, run, bundles, proposedCount, runRecord }, params: {} }
 	});
 }
 
@@ -60,15 +64,20 @@ describe('bundle list page', () => {
 		});
 	});
 
-	it('names the run being shown and links back to every run', async () => {
-		const { findByText, getByRole } = renderPage(
+	it('names the run being shown, its estimated usage, and links back to every run', async () => {
+		const { findByText, getByRole, container } = renderPage(
 			Promise.resolve({ items: [proposed] }),
 			'proposed',
 			null,
-			'propose-bundles-2026-10-19T10-00-00-000Z'
+			'propose-bundles-2026-10-19T10-00-00-000Z',
+			Promise.resolve(proposedRun)
 		);
 
 		expect(await findByText('propose-bundles-2026-10-19T10-00-00-000Z')).toBeTruthy();
+		const usage = await findByText(/55,810 tokens/);
+		expect(usage.textContent).toContain('about $0.136');
+		expect(usage.textContent).toContain('pi-ai model catalog estimate');
+		expect(container.querySelector('[data-run-usage]')).toBe(usage);
 		expect(getByRole('link', { name: 'Show every run' }).getAttribute('href')).toBe(
 			'/bundles?view=proposed'
 		);
@@ -78,13 +87,15 @@ describe('bundle list page', () => {
 	});
 
 	it('shows who produced each bundle and counts proposals awaiting review', async () => {
-		const { findByRole, getByRole, getByText, getAllByTitle } = renderPage(
+		const { findByRole, getByRole, getByText, getAllByText, getAllByTitle } = renderPage(
 			Promise.resolve({ items: [proposed, human] }),
 			'all',
 			Promise.resolve(1)
 		);
 
 		expect(await findByRole('link', { name: 'Refund handling' })).toBeTruthy();
+		// The objective groups bundles: a column at desktop width, a folded line at phone width.
+		expect(getAllByText('Resolve a customer refund request').length).toBe(4);
 		expect(getByText('Human')).toBeTruthy();
 		// The origin cell at desktop width and the folded line at phone width both name the producer.
 		const cells = getAllByTitle(proposed.producer);

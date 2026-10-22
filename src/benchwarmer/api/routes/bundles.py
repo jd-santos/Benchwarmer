@@ -81,6 +81,7 @@ class BundleSummaryResponse(_Strict):
     id: str
     revision: int
     objective: str
+    goal: str
     status: BundleStatus
     origin: BundleOrigin
     producer: str
@@ -211,6 +212,7 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                         id=item.id,
                         revision=item.revision,
                         objective=item.objective,
+                        goal=item.goal,
                         status=item.status,  # type: ignore[arg-type]
                         origin=item.origin,  # type: ignore[arg-type]
                         producer=item.producer,

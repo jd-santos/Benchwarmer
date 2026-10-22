@@ -6,6 +6,8 @@
 import type { Usage } from '@earendil-works/pi-ai';
 import type { UsageState } from '@earendil-works/pi-durable';
 
+import type { RunModelUsage, RunUsageTotal } from './benchwarmer/client.ts';
+
 export function emptyUsage(): UsageState {
 	return { models: {}, tools: {} };
 }
@@ -60,4 +62,28 @@ export function sumUsage(parts: Iterable<UsageState>): UsageState {
 		}
 	}
 	return total;
+}
+
+function toRunModelUsage(usage: Usage): RunModelUsage {
+	return {
+		input: usage.input,
+		output: usage.output,
+		cache_read: usage.cacheRead,
+		cache_write: usage.cacheWrite,
+		total_tokens: usage.totalTokens,
+		cost: {
+			input: usage.cost.input,
+			output: usage.cost.output,
+			cache_read: usage.cost.cacheRead,
+			cache_write: usage.cost.cacheWrite,
+			total: usage.cost.total
+		}
+	};
+}
+
+/** The same figures in the shape the application's run record expects. */
+export function toRunUsage(state: UsageState): RunUsageTotal {
+	const convert = (bucket: Record<string, unknown>): Record<string, RunModelUsage> =>
+		Object.fromEntries(Object.entries(bucket).map(([key, usage]) => [key, toRunModelUsage(usage as Usage)]));
+	return { models: convert(state.models), tools: convert(state.tools) };
 }

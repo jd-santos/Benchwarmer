@@ -2,7 +2,14 @@
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 	import type { BundleSummary } from '$lib/api/types';
-	import { bundleLabel, describeProducer, originLabel, statusLabel } from '$lib/bundles/format';
+	import {
+		bundleLabel,
+		describeProducer,
+		formatEstimate,
+		originLabel,
+		statusLabel,
+		usageTotals
+	} from '$lib/bundles/format';
 	import { formatTimestamp, plural } from '$lib/conversations/format';
 	import { _views, type BundleView } from './+page';
 	import type { PageProps } from './$types';
@@ -66,6 +73,23 @@
 			Showing bundles whose latest revision came from harness run
 			<code>{data.run}</code>. <a href={viewHref(data.view, null)}>Show every run</a>
 		</p>
+		{#if data.runRecord}
+			{#await data.runRecord then run}
+				{#if run}
+					{@const totals = usageTotals(run.usage_total)}
+					<p class="muted view-note" data-run-usage>
+						{run.model.provider}/{run.model.model_id}{run.model.thinking_level
+							? `, thinking ${run.model.thinking_level}`
+							: ''}
+						· {plural(run.inputs.length, 'conversation')} · {totals.tokens.toLocaleString()} tokens ·
+						about {formatEstimate(totals.estimate)} ({run.pricing_source})
+						{#if run.model.base_url_override}
+							· via {new URL(run.model.base_url_override).host}
+						{/if}
+					</p>
+				{/if}
+			{/await}
+		{/if}
 	{/if}
 
 	{#if data.view === 'proposed'}
@@ -106,7 +130,8 @@
 			<table class="data-table bundle-table">
 				<thead>
 					<tr>
-						<th scope="col">Objective</th>
+						<th scope="col">Bundle</th>
+						<th scope="col" class="wide-only">Objective</th>
 						<th scope="col" class="wide-only">Status</th>
 						<th scope="col" class="wide-only">Origin</th>
 						<th scope="col" class="numeric">Items</th>
@@ -119,11 +144,14 @@
 						<tr>
 							<th scope="row">
 								<a
-									class:untitled={!bundle.objective.trim()}
+									class:untitled={!bundle.goal.trim() && !bundle.objective.trim()}
 									href={resolve('/bundles/[id]', { id: bundle.id })}
 								>
-									{bundleLabel(bundle.objective)}
+									{bundleLabel(bundle.goal, bundle.objective)}
 								</a>
+								{#if bundle.goal.trim() && bundle.objective.trim()}
+									<span class="bundle-table__note bundle-table__meta">{bundle.objective}</span>
+								{/if}
 								{#if bundle.conversation_ids.length > 1}
 									<span class="bundle-table__note">
 										{plural(bundle.conversation_ids.length, 'conversation')}
@@ -136,6 +164,9 @@
 									· {originLabel(bundle.origin)}{note ? `, ${note}` : ''}
 								</span>
 							</th>
+							<td class="wide-only muted">
+								{#if bundle.objective.trim()}{bundle.objective}{:else}Not set{/if}
+							</td>
 							<td class="wide-only"
 								><span class="bundle-status bundle-status--{bundle.status}"
 									>{statusLabel(bundle.status)}</span

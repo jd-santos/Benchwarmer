@@ -8,21 +8,28 @@
 		BundleDocument,
 		BundleStatus,
 		EvidenceRole,
+		HarnessRunRecord,
 		ResolvedBundleItem
 	} from '$lib/api/types';
 	import {
 		bundleLabel,
+		formatEstimate,
 		producerLabel,
 		roleOptions,
+		runInputFor,
 		scopeLabel,
 		statusLabel,
-		statusOptions
+		statusOptions,
+		usageTotals
 	} from '$lib/bundles/format';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { refKey } from '$lib/bundles/selection';
 	import { formatTime, formatTimestamp, plural, roleLabel } from '$lib/conversations/format';
 
-	let { detail }: { detail: BundleDetail } = $props();
+	let {
+		detail,
+		run = Promise.resolve(null)
+	}: { detail: BundleDetail; run?: Promise<HarnessRunRecord | null> } = $props();
 
 	interface Entry {
 		resolved: ResolvedBundleItem;
@@ -43,6 +50,7 @@
 	const readOnly = $derived(current.revision !== current.latest_revision);
 
 	let objective = $derived(current.document.objective);
+	let goal = $derived(current.document.goal);
 	let status = $derived<BundleStatus>(current.document.status);
 	let rationale = $derived(current.document.rationale ?? '');
 	let missing = $derived(current.document.missing_evidence.join('\n'));
@@ -56,6 +64,7 @@
 
 	const draft = $derived<BundleDocument>({
 		objective: objective.trim(),
+		goal: goal.trim(),
 		status,
 		rationale: rationale.trim() || null,
 		missing_evidence: missing
@@ -87,6 +96,7 @@
 	function normalized(document: BundleDocument): BundleDocument {
 		return {
 			objective: document.objective,
+			goal: document.goal,
 			status: document.status,
 			rationale: document.rationale,
 			missing_evidence: document.missing_evidence,
@@ -169,7 +179,9 @@
 
 <div class="bundle-editor">
 	<header class="bundle-editor__header">
-		<h1 class:untitled={!current.document.objective}>{bundleLabel(current.document.objective)}</h1>
+		<h1 class:untitled={!current.document.goal && !current.document.objective}>
+			{bundleLabel(current.document.goal, current.document.objective)}
+		</h1>
 		<p class="meta-line">
 			<span>{statusLabel(current.document.status)}</span>
 			<span title={current.producer}>{producerLabel(current.origin, current.producer)}</span>
@@ -194,6 +206,23 @@
 				<span>Revision {current.revision}</span>
 			{/if}
 		</p>
+		{#if current.provenance}
+			{#await run then record}
+				{@const input = record ? runInputFor(record, current.id) : null}
+				{#if record && input}
+					{@const totals = usageTotals(input.usage)}
+					<p class="meta-line" data-run-usage>
+						<span>
+							The pass that proposed this bundle{input.bundle_ids.length > 1
+								? ` and ${input.bundle_ids.length - 1} other${input.bundle_ids.length > 2 ? 's' : ''}`
+								: ''}
+							used {totals.tokens.toLocaleString()} tokens, about {formatEstimate(totals.estimate)}
+							({record.pricing_source})
+						</span>
+					</p>
+				{/if}
+			{/await}
+		{/if}
 		{#if readOnly}
 			<p class="notice" role="status">
 				Viewing an earlier revision. <a href={revisionHref(null)}>View latest</a>
@@ -216,18 +245,33 @@
 		<fieldset class="bundle-summary" disabled={readOnly}>
 			<legend class="visually-hidden">Summary</legend>
 			<div class="field">
+				<label for="bundle-goal">Goal</label>
+				<textarea
+					id="bundle-goal"
+					rows="2"
+					maxlength="4000"
+					placeholder="What this piece of work was trying to achieve, with its specifics"
+					bind:value={goal}></textarea>
+			</div>
+
+			<div class="field">
 				<label for="bundle-objective">Objective</label>
 				<textarea
 					id="bundle-objective"
 					rows="2"
 					maxlength="4000"
-					placeholder="What this evidence shows, in a sentence"
+					placeholder="The kind of work in general terms, e.g. verify a fix by replaying historical inputs"
 					bind:value={objective}
-					aria-describedby={needsObjective ? 'bundle-objective-error' : undefined}
+					aria-describedby={needsObjective ? 'bundle-objective-error' : 'bundle-objective-hint'}
 					aria-invalid={needsObjective}></textarea>
 				{#if needsObjective}
 					<p id="bundle-objective-error" class="field__error">
 						Add an objective before changing the status.
+					</p>
+				{:else}
+					<p id="bundle-objective-hint" class="field__hint">
+						Bundles are grouped by objective, so describe the type of work without project names,
+						dates, or figures.
 					</p>
 				{/if}
 			</div>

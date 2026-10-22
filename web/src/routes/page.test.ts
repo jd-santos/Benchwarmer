@@ -80,7 +80,8 @@ const bundles: BundleSummary[] = [
 	{
 		id: 'bundle-1',
 		revision: 2,
-		objective: 'Refund handling',
+		objective: 'Resolve a customer refund request',
+		goal: 'Refund handling',
 		status: 'reviewed',
 		origin: 'human',
 		producer: 'web',
@@ -93,6 +94,7 @@ const bundles: BundleSummary[] = [
 		id: 'bundle-2',
 		revision: 1,
 		objective: '',
+		goal: '',
 		status: 'draft',
 		origin: 'generated',
 		producer: 'benchwarmer-harness/propose-bundles@0.0.1 anthropic/test',

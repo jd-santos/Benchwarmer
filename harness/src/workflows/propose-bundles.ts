@@ -16,9 +16,9 @@ import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite
 
 import { BenchwarmerClient } from '../benchwarmer/client.ts';
 import type { RunProvenance } from '../benchwarmer/client.ts';
-import { createHarnessModels, missingKeyHint } from '../providers.ts';
+import { createHarnessModels, missingKeyHint, providerBaseUrlOverride } from '../providers.ts';
 import { createLibraryExtension, type ProposedBundleRecord } from '../tools/library.ts';
-import { emptyUsage, sumUsage, usageDelta } from '../usage.ts';
+import { emptyUsage, sumUsage, toRunUsage, usageDelta } from '../usage.ts';
 
 export { usageDelta } from '../usage.ts';
 
@@ -55,7 +55,13 @@ export interface RunReport {
 	started_at: string;
 	finished_at: string;
 	api_base_url: string;
-	model: { provider: string; model_id: string; thinking_level: string | null };
+	model: {
+		provider: string;
+		model_id: string;
+		thinking_level: string | null;
+		/** Where requests went when a base URL override redirected the provider; null for the vendor's own endpoint. */
+		base_url_override: string | null;
+	};
 	producer: string;
 	storage_path: string;
 	conversations: ConversationRunReport[];
@@ -72,14 +78,17 @@ Work like this:
 1. Call get_outline first. It is deterministic and complete; use it to decide which exchanges matter.
 2. Call list_bundles to see what already exists for this conversation and do not duplicate it.
 3. Read only the events you need with read_events. Prefer citing a specific block; cite a text range (code points, half-open) when a block is long and only part of it is evidence.
-4. Propose one bundle per distinct objective with propose_bundle. Include failures, recoveries, and routine successes alike. Write the objective as what the work tried to achieve, and the rationale as why these items were selected.
+4. Propose one bundle per distinct piece of work with propose_bundle. Include failures, recoveries, and routine successes alike. Give each bundle two statements:
+   - goal: what this particular piece of work tried to achieve, with its specifics ("find why the nightly reconciliation posted duplicate credits to 14 accounts").
+   - objective: the kind of work in general terms, as one short imperative phrase that could describe the same work in another project ("diagnose duplicate records produced by a scheduled batch job", "verify a fix by replaying historical inputs against a scratch copy"). No project names, dates, identifiers, or figures. Bundles are later grouped by objective, so reuse the same wording when two bundles are the same kind of work.
+   Write the rationale as why these items were selected.
 5. Record in missing_evidence anything the evidence does not show (uncaptured tool output, compaction gaps, missing starting files). If an event was not captured, do not conclude it did not happen.
 6. If propose_bundle reports issues, fix the references and try again. Do not invent event or block ids.
 7. Stay on one path per bundle. Sibling branches are different executions.
 
 Report only what the evidence supports. Say "the test failed before the correction", not "the agent misunderstood"; interpretations are not part of the bundle record. If the conversation holds no coherent piece of work, create no bundle and say so.
 
-When finished, answer with a short list of the bundles you created (id and objective) or the reason none were created.`;
+When finished, answer with a short list of the bundles you created (id, objective, goal) or the reason none were created.`;
 
 export async function proposeBundles(options: ProposeBundlesOptions): Promise<RunReport> {
 	const context = BACKGROUND_CONTEXT;
@@ -114,7 +123,8 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 		provenance,
 		onBundleCreated: (record) => {
 			created.push(record);
-			log(`  created ${record.bundle_id}: ${record.objective}`);
+			log(`  created ${record.bundle_id}: ${record.goal}`);
+			log(`    objective: ${record.objective}`);
 		}
 	});
 	const registry = createRegistry();
@@ -197,7 +207,8 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 		model: {
 			provider: options.provider,
 			model_id: options.modelId,
-			thinking_level: options.thinkingLevel ?? null
+			thinking_level: options.thinkingLevel ?? null,
+			base_url_override: providerBaseUrlOverride(options.provider)
 		},
 		producer,
 		storage_path: options.storagePath,
@@ -208,5 +219,42 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 	await mkdir(options.reportDir, { recursive: true });
 	await writeFile(reportPath, JSON.stringify(runReport, null, 2) + '\n');
 	log(`report: ${reportPath}`);
+	await recordRun(client, runReport, options.harnessVersion, reportPath, log);
 	return runReport;
+}
+
+/** Store the run in the application so reviewers see its usage beside the bundles; the file is the fallback. */
+async function recordRun(
+	client: BenchwarmerClient,
+	report: RunReport,
+	harnessVersion: string,
+	reportPath: string,
+	log: (line: string) => void
+): Promise<void> {
+	try {
+		await client.recordRun({
+			run_id: report.run_id,
+			workflow: report.workflow,
+			harness_version: harnessVersion,
+			started_at: report.started_at,
+			finished_at: report.finished_at,
+			api_base_url: report.api_base_url,
+			model: report.model,
+			producer: report.producer,
+			inputs: report.conversations.map((item) => ({
+				id: item.conversation_id,
+				kind: 'conversation',
+				status: item.status,
+				reason: item.reason ?? null,
+				bundle_ids: item.bundles_created.map((bundle) => bundle.bundle_id),
+				usage: toRunUsage(item.usage)
+			})),
+			usage_total: toRunUsage(report.usage_total),
+			pricing_source: report.pricing_source,
+			report_path: reportPath
+		});
+		log(`recorded run ${report.run_id} in the application`);
+	} catch (error) {
+		log(`could not record the run in the application (the report file stands): ${error instanceof Error ? error.message : String(error)}`);
+	}
 }
