@@ -70,6 +70,8 @@ uv run python -m benchwarmer.services.fixtures \
   --load tests/fixtures/sources.json
 uv run python -m benchwarmer.services.demo_conversations \
   --load tests/fixtures/demo-conversations.json
+uv run python -m benchwarmer.services.demo_conversations \
+  --load tests/fixtures/demo-long-conversations.json
 
 printf '\nBenchwarmer foundation demo\n'
 printf '  URL: http://127.0.0.1:%s\n' "$port"

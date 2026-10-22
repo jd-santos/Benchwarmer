@@ -49,6 +49,11 @@ This project does not currently declare a Semantic Versioning policy.
   OpenRouter, Google, Mistral, and the rest) behind an explicit exclusion
   list; the operator supplies whichever provider key matches the chosen
   `provider/model-id`.
+- Add `tests/fixtures/demo-long-conversations.json`: four long synthetic
+  coding-agent sessions (debugging with a rejected hypothesis, a feature build
+  across a compaction and model change, a branched session with a failed tool
+  call, and a prose plan review that continues the debugging session) for
+  outline and bundle-proposal work, loaded by the foundation demo script.
 
 ### Changed
 
