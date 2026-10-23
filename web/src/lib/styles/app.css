@@ -2359,3 +2359,13 @@ input:focus-visible {
 	font-size: 0.85rem;
 	font-family: var(--font-mono, ui-monospace, monospace);
 }
+
+/* An item that cites a conversation revision a later import superseded. */
+.stale-mark {
+	color: #8a5a00;
+	font-weight: 600;
+}
+
+.stale-mark::before {
+	content: '⚠ ';
+}

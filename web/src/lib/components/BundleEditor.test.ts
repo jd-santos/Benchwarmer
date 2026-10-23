@@ -201,6 +201,27 @@ describe('reviewing a proposed bundle', () => {
 		expect(queryByText(/tokens/)).toBeNull();
 	});
 
+	it('marks items whose conversation changed in a later import, and counts them', () => {
+		const stale = {
+			...bundle,
+			items: [bundle.items[0], { ...bundle.items[1], conversation_is_latest: false }]
+		};
+		const { getAllByText, container } = render(BundleEditor, { props: { detail: stale } });
+
+		expect(container.querySelector('[data-stale-count]')?.textContent).toBe(
+			'1 item cites an earlier import'
+		);
+		// One mark on the item itself; the header count is the other.
+		expect(getAllByText(/[Ee]arlier import/).length).toBe(2);
+	});
+
+	it('shows no stale marks when every cited conversation is current', () => {
+		const { queryByText, container } = render(BundleEditor, { props: { detail: bundle } });
+
+		expect(container.querySelector('[data-stale-count]')).toBeNull();
+		expect(queryByText(/[Ee]arlier import/)).toBeNull();
+	});
+
 	it('does not flag a human bundle as awaiting review', () => {
 		const { queryByRole, getByText } = render(BundleEditor, { props: { detail: bundle } });
 

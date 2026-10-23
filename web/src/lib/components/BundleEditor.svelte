@@ -105,6 +105,8 @@
 	const conversations = $derived([
 		...new Map(current.items.map((item) => [item.item.ref.conversation_id, item])).values()
 	]);
+	// Items pin a conversation revision; a later import may have changed what they cite.
+	const staleCount = $derived(current.items.filter((item) => !item.conversation_is_latest).length);
 	const openNotes = new SvelteSet<string>();
 
 	function normalized(document: BundleDocument): BundleDocument {
@@ -207,6 +209,13 @@
 			{/if}
 			{#if current.latest_revision > 1}
 				<span>Revision {current.revision}</span>
+			{/if}
+			{#if staleCount > 0}
+				<span class="stale-mark" data-stale-count
+					>{staleCount === current.items.length
+						? 'Cites an earlier import'
+						: `${plural(staleCount, 'item')} ${staleCount === 1 ? 'cites' : 'cite'} an earlier import`}</span
+				>
 			{/if}
 		</p>
 		{#if readOnly}
@@ -340,6 +349,13 @@
 										: 'View in conversation'}</a
 								>
 							</span>
+							{#if !item.conversation_is_latest}
+								<span
+									class="stale-mark"
+									title="This item cites the conversation as it was imported earlier. A later import changed the conversation; the link opens the cited version."
+									>Earlier import</span
+								>
+							{/if}
 						</p>
 
 						{#if entry.note || openNotes.has(key)}
