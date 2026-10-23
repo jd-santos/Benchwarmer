@@ -74,6 +74,11 @@ export function roleLabel(role: EventRole): string {
 	return roleLabels[role] ?? 'Unknown role';
 }
 
+/** Narrow a role string from the API to a known role, treating anything else as unknown. */
+export function eventRole(role: string): EventRole {
+	return role in roleLabels ? (role as EventRole) : 'unknown';
+}
+
 export interface TextPart {
 	text: string;
 	match: boolean;

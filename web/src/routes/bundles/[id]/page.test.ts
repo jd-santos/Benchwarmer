@@ -53,7 +53,6 @@ describe('bundle page navigation', () => {
 				data: {
 					revision: null,
 					bundle: Promise.resolve(proposedBundle),
-					run: Promise.resolve(null),
 					navigation: Promise.resolve(navigation)
 				},
 				params: { id: 'bundle-2' }

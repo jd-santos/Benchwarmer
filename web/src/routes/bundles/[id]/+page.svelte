@@ -85,11 +85,10 @@
 	{/await}
 	{#key `${detail.id}:${detail.revision}`}
 		{#await data.navigation}
-			<BundleEditor {detail} run={data.run} />
+			<BundleEditor {detail} />
 		{:then navigation}
 			<BundleEditor
 				{detail}
-				run={data.run}
 				nextHref={navigation?.nextId ? bundleHref(navigation, navigation.nextId) : null}
 			/>
 		{/await}

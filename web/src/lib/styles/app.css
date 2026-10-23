@@ -2173,6 +2173,37 @@ input:focus-visible {
 	font-size: 0.8rem;
 }
 
+.evidence-card__speaker {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	color: #2b3947;
+	font-weight: 600;
+}
+
+/* The glyph says who spoke at a glance; the text beside it carries the meaning. */
+.role-glyph {
+	flex: none;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.role-glyph--user {
+	color: #2f6fb3;
+}
+
+.role-glyph--assistant {
+	color: #7a4ea8;
+	fill: currentColor;
+}
+
+.role-glyph--tool {
+	color: #5a6b7c;
+}
+
 .evidence-card__note {
 	display: flex;
 	align-items: center;
@@ -2249,4 +2280,82 @@ input:focus-visible {
 	.bundle-notes {
 		align-self: start;
 	}
+}
+
+/* Runs: the audit trail of model work. Numeric tables scroll sideways rather than wrap. */
+.runs-table th,
+.runs-table td,
+.usage-table th,
+.usage-table td,
+.inputs-table th,
+.inputs-table td {
+	white-space: nowrap;
+}
+
+/* At phone width each row folds its figures under the first cell. */
+.runs-table__note.runs-table__meta {
+	display: none;
+	white-space: normal;
+}
+
+@media (max-width: 47.999rem) {
+	.runs-table .wide-only,
+	.usage-table .wide-only,
+	.inputs-table .wide-only {
+		display: none;
+	}
+
+	.runs-table__note.runs-table__meta {
+		display: block;
+	}
+}
+
+@media (max-width: 47.999rem) {
+	.runs-table .wide-only,
+	.usage-table .wide-only {
+		display: none;
+	}
+}
+
+.runs-table__note {
+	display: block;
+	color: #526272;
+	font-size: 0.8rem;
+}
+
+.run-page__back {
+	margin: 0 0 0.5rem;
+	font-size: 0.875rem;
+}
+
+.run-page__header {
+	margin-block-end: 1.5rem;
+}
+
+.run-page__report {
+	margin: 0.5rem 0 0;
+	font-size: 0.8rem;
+	overflow-wrap: anywhere;
+}
+
+.run-page .section-title {
+	margin: 1.5rem 0 0.5rem;
+	font-size: 1.1rem;
+}
+
+.run-outcome--error {
+	color: #a12d2d;
+	font-weight: 600;
+}
+
+.run-outcome--unanswered {
+	color: #526272;
+}
+
+.run-bundles {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: 0.85rem;
+	font-family: var(--font-mono, ui-monospace, monospace);
 }

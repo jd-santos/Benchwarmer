@@ -5,11 +5,9 @@
 	import {
 		bundleLabel,
 		describeProducer,
-		formatEstimate,
 		originLabel,
 		shortModel,
-		statusLabel,
-		usageTotals
+		statusLabel
 	} from '$lib/bundles/format';
 	import { formatDate, formatTimestamp, plural } from '$lib/conversations/format';
 	import { _views, type BundleView } from './+page';
@@ -81,23 +79,6 @@
 			Showing bundles whose latest revision came from harness run
 			<code>{data.run}</code>. <a href={viewHref(data.view, null)}>Show every run</a>
 		</p>
-		{#if data.runRecord}
-			{#await data.runRecord then run}
-				{#if run}
-					{@const totals = usageTotals(run.usage_total)}
-					<p class="muted view-note" data-run-usage>
-						{run.model.provider}/{run.model.model_id}{run.model.thinking_level
-							? `, thinking ${run.model.thinking_level}`
-							: ''}
-						· {plural(run.inputs.length, 'conversation')} · {totals.tokens.toLocaleString()} tokens ·
-						about {formatEstimate(totals.estimate)} ({run.pricing_source})
-						{#if run.model.base_url_override}
-							· via {new URL(run.model.base_url_override).host}
-						{/if}
-					</p>
-				{/if}
-			{/await}
-		{/if}
 	{/if}
 
 	{#if data.view === 'proposed'}

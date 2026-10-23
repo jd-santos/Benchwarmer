@@ -63,6 +63,10 @@ This project does not currently declare a Semantic Versioning policy.
   indented arguments. Each item's source line and note sit above its excerpt.
   Step through bundles from the editor with previous/next links in the order
   of the list the bundle was opened from, with the way back to that view.
+- Add a Runs page to the web app: every recorded model-driven run by workflow,
+  most recent first, with raw token usage and catalog cost estimates, and a
+  per-run page with usage by model or tool and each input's outcome, produced
+  bundles, and usage. Bundle proposals are one workflow among those listed.
 - Record each hand-run harness workflow in the application
   (`PUT /api/v1/runs/{run_id}`, `GET /api/v1/runs`) with raw usage and the
   catalog cost estimate; the bundle list and editor show what a run or a
@@ -82,6 +86,10 @@ This project does not currently declare a Semantic Versioning policy.
 
 ### Changed
 
+- Mark each evidence item's speaker with a small user, assistant, or tool glyph
+  beside the role name, drop the "Whole message" scope label (a narrower scope
+  is still named), and remove the item reorder arrows. Token and cost figures
+  leave the bundle pages for a dedicated runs page.
 - Prioritize the conversation library and expand the roadmap and design records
   for recovery, enrolled cross-machine push collection, and reviewed evidence
   bundles.
