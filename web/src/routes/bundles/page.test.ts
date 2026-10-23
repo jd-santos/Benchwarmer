@@ -2,7 +2,7 @@
 
 import { cleanup, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { BundlesResponse, BundleSummary } from '$lib/api/types';
+import type { BundlesResponse, BundleSummary, RunSummary } from '$lib/api/types';
 import Page from './+page.svelte';
 import { _filtersFor, _viewFrom, type BundleView } from './+page';
 
@@ -40,12 +40,29 @@ function renderPage(
 	bundles: Promise<BundlesResponse>,
 	view: BundleView = 'all',
 	proposedCount: Promise<number | null> | null = Promise.resolve(null),
-	run: string | null = null
+	run: string | null = null,
+	runs: Promise<RunSummary[]> | null = null
 ) {
 	return render(Page, {
-		props: { data: { view, run, bundles, proposedCount }, params: {} }
+		props: { data: { view, run, bundles, proposedCount, runs }, params: {} }
 	});
 }
+
+const runSummary: RunSummary = {
+	run_id: proposed.run_id ?? '',
+	workflow: 'propose-bundles',
+	provider: 'anthropic',
+	model: 'claude-sonnet-5-5',
+	thinking_level: null,
+	base_url_override: null,
+	started_at: '2026-10-19T10:00:00Z',
+	finished_at: '2026-10-19T10:00:29Z',
+	input_count: 1,
+	bundle_count: 1,
+	total_tokens: 55810,
+	estimated_cost: 0.136,
+	pricing_source: 'pi-ai model catalog estimate'
+};
 
 afterEach(cleanup);
 
@@ -113,6 +130,36 @@ describe('bundle list page', () => {
 		expect(link.getAttribute('href')).toBe('/bundles?view=proposed');
 		expect(views.querySelector('.view-links__count')?.textContent).toBe('1');
 		expect(getByRole('link', { name: 'All bundles' }).getAttribute('aria-current')).toBe('page');
+	});
+
+	it('groups proposed drafts by run, naming each run and linking to it', async () => {
+		const older: BundleSummary = {
+			...proposed,
+			id: 'bundle-3',
+			summary: 'An older proposal',
+			run_id: 'propose-bundles-2026-10-18T09-00-00-000Z'
+		};
+		const { findAllByRole, getByRole, getAllByRole } = renderPage(
+			Promise.resolve({ items: [proposed, older] }),
+			'proposed',
+			null,
+			null,
+			Promise.resolve([runSummary])
+		);
+
+		const headings = await findAllByRole('columnheader', { name: /Run / });
+		expect(headings.length).toBe(2);
+		expect(headings[0].textContent).toContain('claude-sonnet-5-5');
+		expect(headings[0].textContent).toContain('1 draft');
+		// The second run has no record, so it is named by its id alone.
+		expect(headings[1].textContent).not.toContain('claude-sonnet-5-5');
+		expect(getByRole('link', { name: 'Run 2026-10-19T10-00-00-000Z' }).getAttribute('href')).toBe(
+			'/runs/propose-bundles-2026-10-19T10-00-00-000Z'
+		);
+		expect(getAllByRole('link', { name: 'Only this run' })[1].getAttribute('href')).toBe(
+			'/bundles?view=proposed&run=propose-bundles-2026-10-18T09-00-00-000Z'
+		);
+		expect(getByRole('link', { name: 'An older proposal' })).toBeTruthy();
 	});
 
 	it('explains the proposed view and its empty state separately', async () => {

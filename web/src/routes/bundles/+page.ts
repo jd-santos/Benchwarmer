@@ -1,5 +1,5 @@
-import { getBundles } from '$lib/api/client';
-import type { BundleOrigin, BundleStatus } from '$lib/api/types';
+import { getBundles, getRuns } from '$lib/api/client';
+import type { BundleOrigin, BundleStatus, RunSummary } from '$lib/api/types';
 import type { PageLoad } from './$types';
 
 /** Which slice of the bundle list is shown; each view is a link, so it survives reloads. */
@@ -42,6 +42,14 @@ export const load: PageLoad = ({ fetch, url }) => {
 		view,
 		run,
 		bundles: getBundles(_filtersFor(view, run), { fetch }),
+		// The proposed view groups drafts by the run that proposed them; run records
+		// name each group. Missing records only leave a group unnamed.
+		runs:
+			view === 'proposed' && !run
+				? getRuns({}, { fetch })
+						.then((response) => response.items)
+						.catch((): RunSummary[] => [])
+				: null,
 		// The count is a hint beside the view link; its failure must not hide the list.
 		proposedCount:
 			view === 'proposed'

@@ -88,6 +88,9 @@ This project does not currently declare a Semantic Versioning policy.
 
 - Mark evidence items whose conversation changed in a later import, with a
   count in the bundle header, so a reviewer knows the cited version is pinned.
+- Group the Proposed drafts view by the run that proposed each draft, naming
+  the run's model and start time with links to the run page and to that run
+  alone.
 - Mark each evidence item's speaker with a small user, assistant, or tool glyph
   beside the role name, drop the "Whole message" scope label (a narrower scope
   is still named), and remove the item reorder arrows. Token and cost figures

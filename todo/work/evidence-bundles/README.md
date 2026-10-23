@@ -180,8 +180,8 @@ review-console shape of
   tokens and estimated cost, and per run shows usage by model and each input's
   outcome, produced bundles, and usage. Usage is per input, not per bundle; a
   per-bundle figure would need the harness to record usage per proposal call,
-  which is a run record contract change. The list still does not group drafts
-  by run.
+  which is a run record contract change. The Proposed view groups drafts by
+  run, naming each run's model and start time.
 - Each item already shows objective, rationale, missing evidence, excerpts with
   roles (marked with a speaker glyph) in conversation order, gaps, producer,
   jump-to-source, and an "Earlier import" mark (with a header count) when the

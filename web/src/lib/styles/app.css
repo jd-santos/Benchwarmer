@@ -2369,3 +2369,17 @@ input:focus-visible {
 .stale-mark::before {
 	content: '⚠ ';
 }
+
+/* Proposed drafts grouped by the run that proposed them. */
+.bundle-table__group-heading {
+	padding-block: 1rem 0.4rem;
+	border-bottom: 1px solid #d9dee5;
+	color: #2b3947;
+	font-size: 0.85rem;
+	font-weight: 600;
+	text-align: left;
+}
+
+.bundle-table__group-heading a {
+	font-weight: 600;
+}
