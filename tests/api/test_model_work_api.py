@@ -29,7 +29,10 @@ def _fake_harness(path: Path, *, exit_code: int = 0, sleep: float = 0.0) -> Path
             {
                 "name": "fake-harness",
                 "version": "0.0.0",
-                "scripts": {"propose-bundles": "node fake.js"},
+                "scripts": {
+                    "propose-bundles": "node fake.js",
+                    "list-models": "node list.js",
+                },
             }
         )
     )
@@ -38,7 +41,60 @@ def _fake_harness(path: Path, *, exit_code: int = 0, sleep: float = 0.0) -> Path
         "fs.writeFileSync('args.json', JSON.stringify(process.argv.slice(2)));\n"
         f"setTimeout(() => process.exit({exit_code}), {int(sleep * 1000)});\n"
     )
+    (path / "list.js").write_text(
+        "const fs = require('node:fs');\n"
+        "fs.writeFileSync('list-args.json', JSON.stringify(process.argv.slice(2)));\n"
+        "process.stderr.write('models.dev unavailable: offline\\n');\n"
+        f"process.stdout.write(JSON.stringify({json.dumps(_CATALOG)}) + '\\n');\n"
+    )
     return path
+
+
+_CATALOG: dict[str, Any] = {
+    "generated_at": "2026-10-23T12:00:00.000Z",
+    "providers": [
+        {
+            "id": "anthropic",
+            "name": "Anthropic",
+            "key_variables": ["ANTHROPIC_API_KEY"],
+            "base_url_override": None,
+            "provider_list": "listed",
+            "models_dev": "unavailable",
+            "model_count": 2,
+        }
+    ],
+    "models": [
+        {
+            "provider": "anthropic",
+            "id": "claude-sonnet-6",
+            "name": "Claude Sonnet 6",
+            "reasoning": None,
+            "thinking_levels": ["low", "medium", "high", "xhigh", "max"],
+            "context_window": None,
+            "max_output": None,
+            "release_date": "2027-01-15",
+            "cost": None,
+            "sources": ["provider"],
+            "listed_by_provider": True,
+            "runnable": True,
+        },
+        {
+            "provider": "anthropic",
+            "id": "claude-sonnet-5-5",
+            "name": "Claude Sonnet 5.5",
+            "reasoning": True,
+            "thinking_levels": ["low", "medium", "high", "xhigh", "max"],
+            "context_window": 1000000,
+            "max_output": 128000,
+            "release_date": "2026-09-01",
+            "cost": {"input": 3, "output": 15, "cache_read": 0.3, "cache_write": 3.75},
+            "sources": ["pi-ai", "provider"],
+            "listed_by_provider": True,
+            "runnable": True,
+        },
+    ],
+    "notes": ["models.dev could not be read: offline"],
+}
 
 
 def _client(tmp_path: Path, harness: Path | None) -> tuple[TestClient, PlanRunner]:
@@ -256,3 +312,36 @@ def test_startup_marks_plans_left_running_as_interrupted(tmp_path: Path) -> None
     assert "stopped" in recovered["error_summary"]
     runner.terminate_all()
     runner.wait_all(10)
+
+
+def test_lists_models_through_the_harness_without_revealing_keys(
+    tmp_path: Path,
+) -> None:
+    harness = _fake_harness(tmp_path / "harness")
+    client, _ = _client(tmp_path, harness)
+
+    response = client.get("/api/v1/model-work/models")
+    assert response.status_code == 200, response.text
+    catalog = response.json()
+    assert [model["id"] for model in catalog["models"]] == [
+        "claude-sonnet-6",
+        "claude-sonnet-5-5",
+    ]
+    assert catalog["providers"][0]["key_variables"] == ["ANTHROPIC_API_KEY"]
+    assert catalog["notes"] == ["models.dev could not be read: offline"]
+    assert catalog["fetched_at"]
+    assert catalog["models"][1]["cost"]["input"] == 3.0
+    assert json.loads((harness / "list-args.json").read_text()) == ["--json"]
+
+    (harness / "list-args.json").unlink()
+    assert client.get("/api/v1/model-work/models").status_code == 200
+    assert not (harness / "list-args.json").exists(), "a fresh listing is cached"
+    assert client.get("/api/v1/model-work/models?refresh=true").status_code == 200
+    assert (harness / "list-args.json").exists()
+
+
+def test_model_listing_is_unavailable_without_a_harness(tmp_path: Path) -> None:
+    client, _ = _client(tmp_path, None)
+    response = client.get("/api/v1/model-work/models")
+    assert response.status_code == 503
+    assert "BENCHWARMER_HARNESS_DIR" in response.json()["detail"]

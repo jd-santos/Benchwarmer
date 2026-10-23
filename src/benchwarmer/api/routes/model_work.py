@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from benchwarmer.config import BenchwarmerSettings
 from benchwarmer.db import create_engine, create_session_factory
+from benchwarmer.services.model_catalog import CatalogUnavailable, ModelCatalogService
 from benchwarmer.services.model_work_plans import (
     MAX_PLAN_INPUTS,
     THINKING_LEVELS,
@@ -39,6 +40,56 @@ class ModelWorkConfigResponse(_Strict):
     workflows: list[str]
     thinking_levels: list[str]
     max_inputs: int
+
+
+class _Catalog(BaseModel):
+    """Catalog shapes come from the harness as JSON, so numbers are coerced, not strict."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class CatalogCostResponse(_Catalog):
+    """USD per million tokens, from whichever catalog priced the model."""
+
+    input: float
+    output: float
+    cache_read: float
+    cache_write: float
+
+
+class CatalogModelResponse(_Catalog):
+    provider: str
+    id: str
+    name: str
+    reasoning: bool | None
+    thinking_levels: list[str]
+    context_window: int | None
+    max_output: int | None
+    release_date: str | None
+    cost: CatalogCostResponse | None
+    sources: list[Literal["pi-ai", "models.dev", "provider"]]
+    listed_by_provider: bool | None
+    runnable: bool
+
+
+class CatalogProviderResponse(_Catalog):
+    id: str
+    name: str
+    key_variables: list[str]
+    base_url_override: str | None
+    provider_list: Literal["listed", "unavailable", "not_offered", "skipped"]
+    models_dev: Literal["listed", "unavailable", "skipped"]
+    model_count: int
+
+
+class ModelCatalogResponse(_Catalog):
+    """Models the harness can run with the keys in the server's environment."""
+
+    generated_at: dt.datetime
+    fetched_at: dt.datetime
+    providers: list[CatalogProviderResponse]
+    models: list[CatalogModelResponse]
+    notes: list[str]
 
 
 class PlanModelRequest(_Strict):
@@ -136,10 +187,13 @@ def _response(plan: PlanView) -> PlanResponse:
 
 
 def create_model_work_router(
-    settings: BenchwarmerSettings, runner: PlanRunner
+    settings: BenchwarmerSettings,
+    runner: PlanRunner,
+    catalog: ModelCatalogService | None = None,
 ) -> APIRouter:
     """Create the model-work routes for one resolved runtime configuration."""
     router = APIRouter()
+    catalog_service = catalog or ModelCatalogService(settings)
 
     @contextmanager
     def session_scope() -> Iterator[Session]:
@@ -159,6 +213,20 @@ def create_model_work_router(
             workflows=list(WORKFLOWS),
             thinking_levels=list(THINKING_LEVELS),
             max_inputs=MAX_PLAN_INPUTS,
+        )
+
+    @router.get(
+        "/model-work/models",
+        response_model=ModelCatalogResponse,
+        responses={503: {"description": "The harness could not list models"}},
+    )
+    def get_models(refresh: bool = False) -> ModelCatalogResponse:
+        try:
+            snapshot = catalog_service.get(refresh=refresh)
+        except CatalogUnavailable as error:
+            raise HTTPException(status_code=503, detail=str(error)) from None
+        return ModelCatalogResponse.model_validate(
+            {**snapshot.catalog, "fetched_at": snapshot.fetched_at}
         )
 
     @router.get("/model-work/plans", response_model=PlansResponse)

@@ -105,6 +105,13 @@ This project does not currently declare a Semantic Versioning policy.
   with `BENCHWARMER_HARNESS_DIR` set can start a run; others preview and show
   how to run the plan by hand. Plans left running when the application stops
   are marked interrupted and never rerun on their own (ADR 0006, proposed).
+- Choose the model for an app-started run from a list instead of typing it:
+  the harness lists the providers whose keys the server holds and merges each
+  provider's own model list, models.dev, and the pinned pi-ai catalog
+  (`npm run list-models -- --json`, `GET /api/v1/model-work/models`). The
+  thinking selector offers only the chosen model's levels, a model missing from
+  the pinned catalog runs with its nearest sibling's settings and records which
+  price estimate applied, and a typed `provider/model-id` remains available.
 - Mark evidence items whose conversation changed in a later import, with a
   count in the bundle header, so a reviewer knows the cited version is pinned.
 - Group the Proposed drafts view by the run that proposed each draft, naming

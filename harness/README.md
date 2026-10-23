@@ -26,6 +26,7 @@ re-run `npm run check` and `npm test`.
 
 - `src/benchwarmer/client.ts`: typed client for the API routes the harness uses
 - `src/providers.ts`: the pi-ai provider catalog minus an explicit exclusion list, plus key diagnostics
+- `src/catalog.ts`: the merged model list (pinned catalog, models.dev, each provider's own list) and how a model outside the pinned catalog is run
 - `src/format.ts`: compact model-facing renderings of outlines and events
 - `src/tools/library.ts`: the `benchwarmer-library` extension: `list_conversations`,
   `get_outline`, `read_events`, `list_bundles`, `propose_bundle`,
@@ -51,7 +52,12 @@ providers named in `EXCLUDED_PROVIDERS` (`src/providers.ts`), which can never
 be selected and whose keys are never read, so
 `--model openrouter/<id>` reads `OPENROUTER_API_KEY`, `--model google/<id>`
 reads `GEMINI_API_KEY`, and so on; `npm run list-models` prints which common
-providers have keys present. A provider can be routed through a pass-through
+providers have keys present, and `npm run list-models -- --json` merges, for
+each provider with a key, the pinned pi-ai catalog, models.dev, and the
+provider's own model list (Anthropic, OpenAI, OpenRouter, Google) into one
+JSON catalog with release dates, prices, and each model's thinking levels; the
+application's model picker reads that (`--offline` skips the network sources,
+and keys travel only in request headers, never in the output). A provider can be routed through a pass-through
 gateway that accepts the vendor's native request format and swaps in real
 credentials: set its base URL variable (`ANTHROPIC_BASE_URL`,
 `OPENAI_BASE_URL`, `OPENROUTER_BASE_URL`, `GEMINI_BASE_URL`,
@@ -94,7 +100,11 @@ usage counts toward that conversation's pass.
 
 Each run writes `reports/harness/propose-bundles-<timestamp>.json` with the
 conversations processed, the bundles created, and per-conversation usage. Cost
-figures there are pi-ai catalog estimates, not provider charges. When the run
+figures there are catalog estimates, not provider charges, and `pricing_source`
+says which: the pinned pi-ai catalog for a model it lists; otherwise the model
+runs with the request settings of its nearest catalog sibling and is priced
+from models.dev when listed there, or recorded at zero cost when no catalog
+prices it. When the run
 finishes, the same figures are sent to the application as a run record
 (`PUT /api/v1/runs/<run-id>`) so reviewers see what a run or one
 conversation's pass cost beside its proposals; if the API refuses the record

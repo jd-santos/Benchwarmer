@@ -20,6 +20,12 @@ No request starts without valid disclosure permission and exact bounded approval
   - [x] Preview a frozen plan and approve it by digest from the Bundles page;
     run the proposer as one subprocess per plan; cancel; mark plans left
     running at startup as interrupted (`model_work_plans`, migration 0007)
+  - [x] Pick the model from the providers whose keys the server holds: the
+    harness merges each provider's own list, models.dev, and the pinned pi-ai
+    catalog (`list-models --json`, `GET /model-work/models`, cached ten
+    minutes); the thinking selector follows the chosen model; a model outside
+    the pinned catalog runs with its nearest sibling's settings and records the
+    price estimate's source
   - [ ] Durable budget reservation once a pricing source exists for the plan
   - [ ] Bounded retries and outcome-unknown recovery
   - [ ] Offer other workflows (judges, anonymizer) once their limits are defined

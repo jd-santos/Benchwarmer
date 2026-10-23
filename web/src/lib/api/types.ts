@@ -362,6 +362,51 @@ export interface ModelWorkConfig {
 	max_inputs: number;
 }
 
+/** USD per million tokens, from whichever catalog priced the model. */
+export interface CatalogCost {
+	input: number;
+	output: number;
+	cache_read: number;
+	cache_write: number;
+}
+
+export type CatalogSource = 'pi-ai' | 'models.dev' | 'provider';
+
+/** One model the harness can run with the keys present on the server. */
+export interface CatalogModel {
+	provider: string;
+	id: string;
+	name: string;
+	reasoning: boolean | null;
+	thinking_levels: string[];
+	context_window: number | null;
+	max_output: number | null;
+	release_date: string | null;
+	cost: CatalogCost | null;
+	sources: CatalogSource[];
+	/** Whether the provider's own list includes it; null when that list was not available. */
+	listed_by_provider: boolean | null;
+	runnable: boolean;
+}
+
+export interface CatalogProvider {
+	id: string;
+	name: string;
+	key_variables: string[];
+	base_url_override: string | null;
+	provider_list: 'listed' | 'unavailable' | 'not_offered' | 'skipped';
+	models_dev: 'listed' | 'unavailable' | 'skipped';
+	model_count: number;
+}
+
+export interface ModelCatalog {
+	generated_at: string;
+	fetched_at: string;
+	providers: CatalogProvider[];
+	models: CatalogModel[];
+	notes: string[];
+}
+
 export type PlanStatus =
 	'proposed' | 'approved' | 'running' | 'finished' | 'failed' | 'cancelled' | 'interrupted';
 
