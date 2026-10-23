@@ -8,6 +8,7 @@
 		BundleDocument,
 		BundleStatus,
 		EvidenceRole,
+		ObjectiveType,
 		ResolvedBundleItem
 	} from '$lib/api/types';
 	import {
@@ -15,6 +16,8 @@
 		excerptCode,
 		formatArguments,
 		isCodeExcerpt,
+		objectiveTypeLabel,
+		objectiveTypeOptions,
 		producerLabel,
 		roleOptions,
 		scopeLabel,
@@ -63,6 +66,7 @@
 
 	let summary = $derived(current.document.summary);
 	let objective = $derived(current.document.objective);
+	let objectiveType = $derived<ObjectiveType>(current.document.objective_type);
 	let goal = $derived(current.document.goal);
 	let status = $derived<BundleStatus>(current.document.status);
 	let rationale = $derived(current.document.rationale ?? '');
@@ -78,6 +82,7 @@
 	const draft = $derived<BundleDocument>({
 		summary: summary.trim(),
 		objective: objective.trim(),
+		objective_type: objectiveType,
 		goal: goal.trim(),
 		status,
 		rationale: rationale.trim() || null,
@@ -113,6 +118,7 @@
 		return {
 			summary: document.summary,
 			objective: document.objective,
+			objective_type: document.objective_type,
 			goal: document.goal,
 			status: document.status,
 			rationale: document.rationale,
@@ -189,6 +195,9 @@
 		</h1>
 		<p class="meta-line">
 			<span>{statusLabel(current.document.status)}</span>
+			{#if current.document.objective_type !== 'unknown'}
+				<span class="bundle-type">{objectiveTypeLabel(current.document.objective_type)}</span>
+			{/if}
 			<span title={current.producer}>{producerLabel(current.origin, current.producer)}</span>
 			{#if current.provenance}
 				<span title={current.provenance.report_path ?? current.provenance.run_id}>
@@ -279,6 +288,23 @@
 						dates, or figures.
 					</p>
 				{/if}
+			</div>
+
+			<div class="field">
+				<label for="bundle-objective-type">Type of work</label>
+				<select
+					id="bundle-objective-type"
+					bind:value={objectiveType}
+					disabled={readOnly}
+					aria-describedby="bundle-objective-type-hint"
+				>
+					{#each objectiveTypeOptions as option (option.value)}
+						<option value={option.value}>{option.label}</option>
+					{/each}
+				</select>
+				<p id="bundle-objective-type-hint" class="field__hint">
+					{objectiveTypeOptions.find((option) => option.value === objectiveType)?.hint}
+				</p>
 			</div>
 
 			<fieldset class="field">

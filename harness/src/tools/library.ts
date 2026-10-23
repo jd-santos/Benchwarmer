@@ -12,11 +12,13 @@ import { createHash } from 'node:crypto';
 import { Type } from '@earendil-works/pi-ai';
 import { defineExtension, defineTool, type Extension } from '@earendil-works/pi-durable';
 
-import type {
-	BenchwarmerClient,
-	BundleDocument,
-	BundleItem,
-	RunProvenance
+import {
+	OBJECTIVE_TYPES,
+	type BenchwarmerClient,
+	type BundleDocument,
+	type BundleItem,
+	type ObjectiveType,
+	type RunProvenance
 } from '../benchwarmer/client.ts';
 import { formatEvents, formatOutline } from '../format.ts';
 
@@ -29,6 +31,8 @@ export type ProposedBundleRecord = {
 	objective: string;
 	goal: string;
 	item_count: number;
+	/** Set by the classification step after the proposals; null when that step did not reach it. */
+	objective_type: string | null;
 };
 
 /**
@@ -48,7 +52,25 @@ export interface LibraryExtensionOptions {
 	provenance?: RunProvenance;
 	/** Receives each bundle the model creates, for the run report. */
 	onBundleCreated?: (record: ProposedBundleRecord) => void;
+	/** Receives each classification the model records, for the run report. */
+	onBundleClassified?: (bundleId: string, objectiveType: ObjectiveType) => void;
 }
+
+/** What each type means, for the classifier and for anyone reading its output. */
+export const OBJECTIVE_TYPE_GUIDE: Record<ObjectiveType, string> = {
+	bug: 'diagnose or fix behavior that was wrong',
+	feature: 'add or extend a capability',
+	refactor: 'restructure without changing behavior',
+	test: 'write tests, verify a change, or replay inputs to check it',
+	performance: 'measure or improve speed, size, or cost',
+	infrastructure: 'environments, deployment, CI, configuration, tooling setup',
+	analytics: 'query, transform, migrate, or analyze data',
+	research: 'fact finding, comparing options, reading sources',
+	design: 'architecture, specifications, decisions, planning',
+	writing: 'documentation, prose, communication',
+	review: 'critique or review of existing work',
+	unknown: 'the evidence does not show the kind of work, or several apply equally'
+};
 
 function text(value: string) {
 	return { output: [{ type: 'text' as const, text: value }] };
@@ -142,7 +164,7 @@ export function createLibraryExtension(
 				bundles
 					.map(
 						(b) =>
-							`${b.id}  rev=${b.revision}  ${b.status}  items=${b.item_count}  ${b.summary || b.goal || b.objective || '(untitled)'}` +
+							`${b.id}  rev=${b.revision}  ${b.status}  type=${b.objective_type}  items=${b.item_count}  ${b.summary || b.goal || b.objective || '(untitled)'}` +
 							(b.objective ? `  [${b.objective}]` : '')
 					)
 					.join('\n')
@@ -242,7 +264,8 @@ export function createLibraryExtension(
 				summary: args.summary,
 				objective: args.objective,
 				goal: args.goal,
-				item_count: items.length
+				item_count: items.length,
+				objective_type: null
 			};
 			if (!result.existing) options.onBundleCreated?.(record);
 			return {
@@ -256,8 +279,46 @@ export function createLibraryExtension(
 		}
 	});
 
+	const setObjectiveType = defineTool({
+		name: 'set_objective_type',
+		description:
+			'Record which type of work a bundle represents, from the closed vocabulary. Saves a new generated revision of the bundle with only the type changed.',
+		parameters: Type.Object({
+			bundle_id: Type.String(),
+			objective_type: Type.Union(
+				OBJECTIVE_TYPES.map((value) => Type.Literal(value)),
+				{
+					description: Object.entries(OBJECTIVE_TYPE_GUIDE)
+						.map(([k, v]) => `${k}: ${v}`)
+						.join('; ')
+				}
+			),
+			reason: Type.String({ minLength: 1, maxLength: 1000, description: 'One sentence on why this type' })
+		}),
+		replay: 'unsafe',
+		execute: async (args) => {
+			const detail = await client.getBundle(args.bundle_id);
+			if (detail.document.objective_type === args.objective_type) {
+				return text(`Bundle ${args.bundle_id} is already typed ${args.objective_type}.`);
+			}
+			const saved = await client.updateBundle(
+				args.bundle_id,
+				{ ...detail.document, objective_type: args.objective_type },
+				detail.revision,
+				'generated',
+				options.producer,
+				options.provenance ? { provenance: options.provenance } : {}
+			);
+			options.onBundleClassified?.(args.bundle_id, args.objective_type);
+			return {
+				...text(`Bundle ${args.bundle_id} typed ${args.objective_type} (revision ${saved.revision}).`),
+				details: { bundle_id: args.bundle_id, objective_type: args.objective_type, reason: args.reason }
+			};
+		}
+	});
+
 	return defineExtension({
 		name: 'benchwarmer-library',
-		tools: [listConversations, getOutline, readEvents, listBundles, proposeBundle]
+		tools: [listConversations, getOutline, readEvents, listBundles, proposeBundle, setObjectiveType]
 	});
 }

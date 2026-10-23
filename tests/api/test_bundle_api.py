@@ -439,7 +439,8 @@ def test_goal_and_objective_are_separate_and_version_1_upgrades(
     )
     assert created.status_code == 201, created.text
     document = created.json()["document"]
-    assert document["schema_version"] == 2
+    assert document["schema_version"] == 3
+    assert document["objective_type"] == "unknown"
     assert document["goal"].startswith("Find why")
     listed = client.get("/api/v1/bundles").json()["items"]
     assert listed[0]["summary"] == document["summary"]
@@ -470,15 +471,60 @@ def test_goal_and_objective_are_separate_and_version_1_upgrades(
     )
     assert legacy.status_code == 201, legacy.text
     assert legacy.json()["document"] | {} == legacy.json()["document"] | {
-        "schema_version": 2,
+        "schema_version": 3,
         "goal": "Find why duplicate sessions appear",
         "objective": "Find why duplicate sessions appear",
+        "objective_type": "unknown",
     }
+    # Version 2 documents had no type; they read as unknown until classified.
+    version_two = client.post(
+        "/api/v1/bundles",
+        json={
+            "document": {
+                "schema_version": 2,
+                "objective": "diagnose duplicate records from a batch job",
+                "goal": "Find the duplicate sessions",
+                "items": items,
+            }
+        },
+    )
+    assert version_two.status_code == 201, version_two.text
+    assert version_two.json()["document"]["objective_type"] == "unknown"
     assert (
         client.post(
             "/api/v1/bundles",
-            json={"document": {"schema_version": 3, "items": items}},
+            json={"document": {"schema_version": 4, "items": items}},
         ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            "/api/v1/bundles",
+            json={"document": {"objective_type": "chores", "items": items}},
+        ).status_code
+        == 422
+    )
+
+
+def test_filters_bundles_by_objective_type(client: TestClient) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    items = [{"ref": _ref(detail, "u0"), "role": "requirement"}]
+    bug = client.post(
+        "/api/v1/bundles",
+        json={"document": {"objective_type": "bug", "items": items, "summary": "a"}},
+    ).json()
+    client.post(
+        "/api/v1/bundles",
+        json={
+            "document": {"objective_type": "research", "items": items, "summary": "b"}
+        },
+    )
+
+    listed = client.get("/api/v1/bundles", params={"objective_type": "bug"}).json()
+    assert [item["id"] for item in listed["items"]] == [bug["id"]]
+    assert listed["items"][0]["objective_type"] == "bug"
+    assert (
+        client.get("/api/v1/bundles", params={"objective_type": "nope"}).status_code
         == 422
     )
 

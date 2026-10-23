@@ -201,6 +201,33 @@ describe('reviewing a proposed bundle', () => {
 		expect(queryByText(/tokens/)).toBeNull();
 	});
 
+	it('lets a reviewer set the type of work and sends it with the revision', async () => {
+		const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					...bundle,
+					revision: 2,
+					latest_revision: 2,
+					document: { ...bundle.document, objective_type: 'test' }
+				}),
+				{ status: 200, headers: { 'content-type': 'application/json' } }
+			)
+		);
+		vi.stubGlobal('fetch', fetchMock);
+		const user = userEvent.setup();
+		const { getByRole, getByText } = render(BundleEditor, { props: { detail: bundle } });
+
+		const select = getByRole('combobox', { name: 'Type of work' }) as HTMLSelectElement;
+		expect(select.value).toBe('unknown');
+		await user.selectOptions(select, 'test');
+		expect(getByText('Write tests, verify a change, or replay inputs')).toBeTruthy();
+		await user.click(getByRole('button', { name: 'Save revision' }));
+
+		const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+		expect(body.document.objective_type).toBe('test');
+		vi.unstubAllGlobals();
+	});
+
 	it('marks items whose conversation changed in a later import, and counts them', () => {
 		const stale = {
 			...bundle,

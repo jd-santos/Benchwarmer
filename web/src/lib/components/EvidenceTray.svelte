@@ -66,6 +66,7 @@
 					await createBundle({
 						summary: '',
 						objective: '',
+						objective_type: 'unknown',
 						goal: '',
 						status: 'draft',
 						items,

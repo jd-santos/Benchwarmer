@@ -190,12 +190,29 @@ export interface BundleItem {
 	note?: string | null;
 }
 
+/** The closed vocabulary of work types; mirrors `ObjectiveType` in Python. */
+export type ObjectiveType =
+	| 'bug'
+	| 'feature'
+	| 'refactor'
+	| 'test'
+	| 'performance'
+	| 'infrastructure'
+	| 'analytics'
+	| 'research'
+	| 'design'
+	| 'writing'
+	| 'review'
+	| 'unknown';
+
 export interface BundleDocument {
-	schema_version?: 2;
+	schema_version?: 3;
 	/** What the bundle represents, in a sentence or two for a human reader. */
 	summary: string;
 	/** The kind of work in general terms; the axis bundles are grouped on. */
 	objective: string;
+	/** The closed category of that work; the first grouping level above the objective. */
+	objective_type: ObjectiveType;
 	/** What this particular piece of work tried to achieve. */
 	goal: string;
 	status: BundleStatus;
@@ -264,6 +281,7 @@ export interface BundleSummary {
 	revision: number;
 	summary: string;
 	objective: string;
+	objective_type: ObjectiveType;
 	goal: string;
 	status: BundleStatus;
 	origin: BundleOrigin;

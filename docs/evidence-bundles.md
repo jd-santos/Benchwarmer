@@ -69,10 +69,15 @@ nightly reconciliation posted duplicate credits to 14 accounts." The
 dates, or figures: "diagnose duplicate records produced by a scheduled batch
 job." Bundles are later grouped by objective into categories of work, so two
 bundles that are the same kind of work should share an objective even when
-their goals differ. The **summary** is a sentence or two for a person
+their goals differ. Above the objective sits the **objective type**, one value
+from a closed vocabulary that is the first grouping level: `bug`, `feature`,
+`refactor`, `test`, `performance`, `infrastructure`, `analytics`, `research`,
+`design`, `writing`, `review`, or `unknown`. The proposer assigns it in a
+separate step after the bundle is drafted, from the finished statements, and
+a reviewer can change it. The **summary** is a sentence or two for a person
 scanning a list, saying what happened and how it ended; it is the bundle's
-title. The objective serves classification, the goal is metadata, and the
-summary is for people. Record requested capability, subject
+title. The type and objective serve classification, the goal is metadata, and
+the summary is for people. Record requested capability, subject
 matter, behavior, outcome, recovery, and suitability for evaluation
 separately. "Unknown" and "ambiguous" are legitimate values. Keep human
 corrections and earlier generated versions; regenerating a bundle never

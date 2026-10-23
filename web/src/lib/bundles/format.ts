@@ -3,6 +3,7 @@ import type {
 	BundleStatus,
 	CitedToolCall,
 	EvidenceRole,
+	ObjectiveType,
 	HarnessRunRecord,
 	ResolvedBundleItem,
 	RunUsageTotal
@@ -30,6 +31,42 @@ export const statusOptions: { value: BundleStatus; label: string; hint: string }
 		hint: 'Not useful evidence; kept with the reason so proposals can improve'
 	}
 ];
+
+/** The work-type vocabulary in display order, with the hint the editor shows for each. */
+export const objectiveTypeOptions: { value: ObjectiveType; label: string; hint: string }[] = [
+	{ value: 'bug', label: 'Bug', hint: 'Diagnose or fix behavior that was wrong' },
+	{ value: 'feature', label: 'Feature', hint: 'Add or extend a capability' },
+	{ value: 'refactor', label: 'Refactor', hint: 'Restructure without changing behavior' },
+	{ value: 'test', label: 'Test', hint: 'Write tests, verify a change, or replay inputs' },
+	{ value: 'performance', label: 'Performance', hint: 'Measure or improve speed, size, or cost' },
+	{
+		value: 'infrastructure',
+		label: 'Infrastructure',
+		hint: 'Environments, deployment, CI, configuration, tooling setup'
+	},
+	{ value: 'analytics', label: 'Analytics', hint: 'Query, transform, migrate, or analyze data' },
+	{
+		value: 'research',
+		label: 'Research',
+		hint: 'Fact finding, comparing options, reading sources'
+	},
+	{ value: 'design', label: 'Design', hint: 'Architecture, specifications, decisions, planning' },
+	{ value: 'writing', label: 'Writing', hint: 'Documentation, prose, communication' },
+	{ value: 'review', label: 'Review', hint: 'Critique or review of existing work' },
+	{
+		value: 'unknown',
+		label: 'Unknown',
+		hint: 'Not shown by the evidence, or several apply equally'
+	}
+];
+
+export const objectiveTypes: ReadonlySet<string> = new Set(
+	objectiveTypeOptions.map((option) => option.value)
+);
+
+export function objectiveTypeLabel(type: ObjectiveType): string {
+	return objectiveTypeOptions.find((option) => option.value === type)?.label ?? type;
+}
 
 export function originLabel(origin: BundleOrigin): string {
 	return origin === 'generated' ? 'Proposed' : 'Human';

@@ -28,11 +28,14 @@ re-run `npm run check` and `npm test`.
 - `src/providers.ts`: the pi-ai provider catalog minus an explicit exclusion list, plus key diagnostics
 - `src/format.ts`: compact model-facing renderings of outlines and events
 - `src/tools/library.ts`: the `benchwarmer-library` extension: `list_conversations`,
-  `get_outline`, `read_events`, `list_bundles`, `propose_bundle`
+  `get_outline`, `read_events`, `list_bundles`, `propose_bundle`,
+  `set_objective_type`
 - `src/tools/fixtures.ts`: the `benchwarmer-fixtures` extension:
   `read_scrubbed_session`, `check_fixture`, `write_fixture_draft`
-- `src/workflows/propose-bundles.ts`: one Pi Durable conversation per library
-  conversation, sequential, with a JSON run report
+- `src/workflows/propose-bundles.ts`: per library conversation, one Pi Durable
+  conversation that proposes bundles, then a second short one that types each
+  new bundle from the closed objective-type vocabulary; sequential, with a
+  JSON run report
 - `src/workflows/anonymize-fixture.ts`: one Pi Durable conversation per raw Pi
   session file, producing a synthetic fixture draft for human review
 - `src/fixture.ts`: the disclosure gate and the fixture document shape
@@ -79,6 +82,13 @@ npm run propose-bundles -- \
 Options: `--thinking <level>`, `--instructions "<operator notes>"`,
 `--storage <sqlite file>` (default `.benchwarmer/harness/propose-bundles.sqlite`,
 gitignored), `--reports <dir>` (default `reports/harness`, gitignored).
+
+After the proposals for a conversation settle, a second conversation reads
+only the new bundles' summary, goal, and objective and calls
+`set_objective_type` for each, saving a generated revision with the type
+(`bug`, `feature`, `refactor`, `test`, `performance`, `infrastructure`,
+`analytics`, `research`, `design`, `writing`, `review`, or `unknown`). Its
+usage counts toward that conversation's pass.
 
 Each run writes `reports/harness/propose-bundles-<timestamp>.json` with the
 conversations processed, the bundles created, and per-conversation usage. Cost
