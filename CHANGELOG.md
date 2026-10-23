@@ -86,6 +86,8 @@ This project does not currently declare a Semantic Versioning policy.
 
 ### Changed
 
+- Mark evidence items whose conversation changed in a later import, with a
+  count in the bundle header, so a reviewer knows the cited version is pinned.
 - Mark each evidence item's speaker with a small user, assistant, or tool glyph
   beside the role name, drop the "Whole message" scope label (a narrower scope
   is still named), and remove the item reorder arrows. Token and cost figures

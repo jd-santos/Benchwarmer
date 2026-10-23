@@ -184,9 +184,8 @@ review-console shape of
   by run.
 - Each item already shows objective, rationale, missing evidence, excerpts with
   roles (marked with a speaker glyph) in conversation order, gaps, producer,
-  and jump-to-source. Still missing: a stale marker when the cited
-  conversation revision is no longer latest (the detail knows
-  `conversation_is_latest` per item but the editor does not surface it).
+  jump-to-source, and an "Earlier import" mark (with a header count) when the
+  cited conversation revision is no longer latest.
 - Fingerprint what was reviewed: the bundle revision number is the fingerprint,
   and a decision taken against an older revision must be rejected, which the
   409 on stale saves already enforces.
