@@ -191,3 +191,33 @@ def test_settings_are_frozen(tmp_path: Path) -> None:
 
     with pytest.raises(ValidationError):
         setattr(settings, "data_root", tmp_path / "other")
+
+
+def test_import_roots_are_optional_absolute_and_tilde_expanded(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    none = BenchwarmerSettings.from_environment(
+        {"BENCHWARMER_DATA_ROOT": str(tmp_path / "data")},
+        platform_name="darwin",
+        home=home,
+    )
+    assert none.import_roots == ()
+
+    settings = BenchwarmerSettings.from_environment(
+        {
+            "BENCHWARMER_DATA_ROOT": str(tmp_path / "data"),
+            "BENCHWARMER_IMPORT_ROOTS": f"~/inbox{os.pathsep}{tmp_path / 'exports'}",
+        },
+        platform_name="darwin",
+        home=home,
+    )
+    assert settings.import_roots == (home / "inbox", tmp_path / "exports")
+
+    with pytest.raises(ConfigurationError):
+        BenchwarmerSettings.from_environment(
+            {
+                "BENCHWARMER_DATA_ROOT": str(tmp_path / "data"),
+                "BENCHWARMER_IMPORT_ROOTS": "relative/inbox",
+            },
+            platform_name="darwin",
+            home=home,
+        )

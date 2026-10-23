@@ -59,8 +59,10 @@ paths remain documented gaps rather than invented parity.
     Do not commit private content or machine-specific paths.
   - The local read/normalize pass accepted 207 Pi v3 sessions and 51 v1 run
     logs. One file from each layout passed a private temp database import, and
-    the temp directory was removed automatically. Full directory persistence
-    and source rewrite/deletion reconciliation are still pending.
+    the temp directory was removed automatically. Host-local imports now run
+    from the Sources page (`POST /sources/{id}/imports`, paths restricted to
+    `BENCHWARMER_IMPORT_ROOTS`); source rewrite/deletion reconciliation is
+    still pending.
   - Reconcile Pi file rewrite/truncation and ChatGPT missing/exported subjects
     without deleting retained evidence.
 

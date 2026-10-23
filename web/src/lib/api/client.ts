@@ -6,6 +6,9 @@ import type {
 	BundlesResponse,
 	BundleMembership,
 	HarnessRunRecord,
+	ImportBatchSummary,
+	ImportConfig,
+	ImportRun,
 	RunSummary,
 	RunsResponse,
 	BundleStatus,
@@ -344,6 +347,93 @@ export async function getSources(options: ApiRequestOptions = {}): Promise<Sourc
 	const value = await getJson('/api/v1/sources', options.signal, options.fetch);
 	if (!isSourcesResponse(value)) {
 		throw new ApiClientError('The API sources response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
+}
+
+function isImportConfig(value: unknown): value is ImportConfig {
+	return (
+		isRecord(value) &&
+		Array.isArray(value.roots) &&
+		value.roots.every((root) => typeof root === 'string') &&
+		Array.isArray(value.kinds) &&
+		value.kinds.every((kind) => typeof kind === 'string')
+	);
+}
+
+function isImportBatch(value: unknown): value is ImportBatchSummary {
+	return (
+		isRecord(value) &&
+		typeof value.id === 'string' &&
+		typeof value.outcome === 'string' &&
+		typeof value.started_at === 'string' &&
+		typeof value.completed_at === 'string' &&
+		isNullableString(value.error_summary)
+	);
+}
+
+function isImportRun(value: unknown): value is ImportRun {
+	return (
+		isRecord(value) &&
+		typeof value.batch_id === 'string' &&
+		(value.outcome === 'succeeded' ||
+			value.outcome === 'failed' ||
+			value.outcome === 'unchanged') &&
+		isCount(value.conversations) &&
+		isCount(value.revisions) &&
+		isCount(value.snapshots) &&
+		isNullableString(value.error_summary)
+	);
+}
+
+/** The server's import roots and the source kinds that accept a file path. */
+export async function getImportConfig(options: ApiRequestOptions = {}): Promise<ImportConfig> {
+	const value = await getJson('/api/v1/imports/config', options.signal, options.fetch);
+	if (!isImportConfig(value)) {
+		throw new ApiClientError('The API import config response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
+}
+
+/** Import attempts for one source, most recent first. */
+export async function getSourceImports(
+	sourceId: string,
+	options: ApiRequestOptions = {}
+): Promise<ImportBatchSummary[]> {
+	const value = await getJson(
+		`/api/v1/sources/${encodeURIComponent(sourceId)}/imports`,
+		options.signal,
+		options.fetch
+	);
+	if (!isRecord(value) || !Array.isArray(value.items) || !value.items.every(isImportBatch)) {
+		throw new ApiClientError('The API source imports response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value.items;
+}
+
+/**
+ * Import the files at a host path into a source. The server accepts only paths
+ * under its configured import roots; a 422 carries the reason in `body.detail`.
+ */
+export async function startImport(
+	sourceId: string,
+	path: string,
+	options: ApiRequestOptions = {}
+): Promise<ImportRun> {
+	const value = await requestJson(
+		`/api/v1/sources/${encodeURIComponent(sourceId)}/imports`,
+		{ method: 'POST', body: { path } },
+		options.signal,
+		options.fetch
+	);
+	if (!isImportRun(value)) {
+		throw new ApiClientError('The API import response did not match its contract.', {
 			kind: 'invalid-contract'
 		});
 	}

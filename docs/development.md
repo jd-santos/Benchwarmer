@@ -64,6 +64,8 @@ below creates one and prints its location so cleanup remains deliberate:
 export BENCHWARMER_DATA_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/benchwarmer-development.XXXXXX")"
 export BENCHWARMER_UI_ROOT="$(pwd)/web/build"
 printf 'Development data root: %s\n' "$BENCHWARMER_DATA_ROOT"
+# Optional: directories the web app may import conversation files from.
+# export BENCHWARMER_IMPORT_ROOTS="$HOME/benchwarmer-inbox"
 
 npm --prefix web run build
 uv run alembic upgrade head

@@ -2436,3 +2436,77 @@ input:focus-visible {
 .bundle-mark--rejected:focus-visible {
 	text-decoration: line-through underline;
 }
+
+/* Import from this machine: one form per importable source, history folded below it. */
+.import-panel {
+	margin-block-start: 2.5rem;
+	max-width: 48rem;
+}
+
+.import-panel h2 {
+	margin: 0 0 0.5rem;
+	font-size: 1.1rem;
+}
+
+.import-panel__roots code,
+[data-import-off] code {
+	overflow-wrap: anywhere;
+}
+
+.import-panel__sources {
+	display: grid;
+	gap: 1.5rem;
+	margin: 1rem 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.import-source__name {
+	margin: 0 0 0.4rem;
+	font-size: 0.95rem;
+}
+
+.import-form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 0.6rem;
+}
+
+.import-form__path {
+	flex: 1 1 18rem;
+	min-width: 0;
+}
+
+.import-form__path input {
+	inline-size: 100%;
+	font-family: var(--font-mono, ui-monospace, monospace);
+	font-size: 0.85rem;
+}
+
+.import-result {
+	margin: 0.6rem 0 0;
+}
+
+.import-result--failed {
+	border-color: #a12d2d;
+}
+
+.import-history {
+	margin-block-start: 0.5rem;
+	font-size: 0.85rem;
+}
+
+.import-history ul {
+	margin: 0.4rem 0 0;
+	padding-inline-start: 1.1rem;
+}
+
+.import-outcome--failed {
+	color: #a12d2d;
+	font-weight: 600;
+}
+
+.import-outcome--succeeded {
+	color: #1f6b3a;
+}

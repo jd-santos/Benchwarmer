@@ -31,6 +31,30 @@ export interface SourcesResponse {
 	items: SourceStatus[];
 }
 
+/** Where this host may import files from, and which source kinds accept a path. */
+export interface ImportConfig {
+	roots: string[];
+	kinds: string[];
+}
+
+export interface ImportBatchSummary {
+	id: string;
+	outcome: string;
+	started_at: string;
+	completed_at: string;
+	error_summary: string | null;
+}
+
+/** What one requested import did; `unchanged` means these exact files were imported before. */
+export interface ImportRun {
+	batch_id: string;
+	outcome: 'succeeded' | 'failed' | 'unchanged';
+	conversations: number;
+	revisions: number;
+	snapshots: number;
+	error_summary: string | null;
+}
+
 export type CaptureState = CoverageValue | 'redacted';
 
 export interface SourceRef {

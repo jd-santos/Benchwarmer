@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiClientError, getHealth, getRuns, getSources } from './client';
+import { ApiClientError, getHealth, getRuns, getSources, startImport } from './client';
 import type { HealthResponse, RunsResponse, SourcesResponse } from './types';
 
 const healthResponse: HealthResponse = {
@@ -250,5 +250,44 @@ describe('getRuns', () => {
 		vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(invalid)));
 
 		await expect(getRuns()).rejects.toMatchObject({ kind: 'invalid-contract' });
+	});
+});
+
+describe('startImport', () => {
+	it('posts the path to the source and returns what the import did', async () => {
+		const run = {
+			batch_id: 'pi-ui-1',
+			outcome: 'succeeded',
+			conversations: 2,
+			revisions: 2,
+			snapshots: 2,
+			error_summary: null
+		};
+		const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(run));
+		vi.stubGlobal('fetch', fetchMock);
+
+		await expect(startImport('pi-a', '/srv/inbox/sessions')).resolves.toEqual(run);
+		expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/sources/pi-a/imports');
+		expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+			method: 'POST',
+			body: JSON.stringify({ path: '/srv/inbox/sessions' })
+		});
+	});
+
+	it('keeps the 422 reason on the error so the form can show it', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn<typeof fetch>().mockResolvedValue(
+				new Response(JSON.stringify({ detail: 'path is outside the configured import roots' }), {
+					status: 422,
+					headers: { 'content-type': 'application/json' }
+				})
+			)
+		);
+
+		await expect(startImport('pi-a', '/elsewhere')).rejects.toMatchObject({
+			status: 422,
+			body: { detail: 'path is outside the configured import roots' }
+		});
 	});
 });
