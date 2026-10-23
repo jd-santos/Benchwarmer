@@ -19,6 +19,7 @@ import type {
 	ImportBatchSummary,
 	ImportConfig,
 	ImportRun,
+	ModelCatalog,
 	ModelWorkConfig,
 	ModelWorkPlan,
 	ObjectiveType,
@@ -510,6 +511,50 @@ export async function getModelWorkConfig(
 		});
 	}
 	return value as unknown as ModelWorkConfig;
+}
+
+function isCatalogModel(value: unknown): boolean {
+	return (
+		isRecord(value) &&
+		typeof value.provider === 'string' &&
+		typeof value.id === 'string' &&
+		typeof value.name === 'string' &&
+		Array.isArray(value.thinking_levels) &&
+		Array.isArray(value.sources) &&
+		typeof value.runnable === 'boolean'
+	);
+}
+
+function isModelCatalog(value: unknown): value is ModelCatalog {
+	return (
+		isRecord(value) &&
+		typeof value.generated_at === 'string' &&
+		typeof value.fetched_at === 'string' &&
+		Array.isArray(value.providers) &&
+		value.providers.every(
+			(item) => isRecord(item) && typeof item.id === 'string' && typeof item.name === 'string'
+		) &&
+		Array.isArray(value.models) &&
+		value.models.every(isCatalogModel) &&
+		Array.isArray(value.notes)
+	);
+}
+
+/** Models the harness can run with the server's keys; 503 when the harness is not configured. */
+export async function getModelCatalog(
+	options: ApiRequestOptions & { refresh?: boolean } = {}
+): Promise<ModelCatalog> {
+	const value = await getJson(
+		`/api/v1/model-work/models${options.refresh ? '?refresh=true' : ''}`,
+		options.signal,
+		options.fetch
+	);
+	if (!isModelCatalog(value)) {
+		throw new ApiClientError('The API model catalog response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
 }
 
 export async function getPlans(options: ApiRequestOptions = {}): Promise<ModelWorkPlan[]> {
