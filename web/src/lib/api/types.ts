@@ -354,6 +354,50 @@ export interface BundleMembership {
 	event_ids: string[];
 }
 
+/** Whether this application can start harness runs, and what a plan may name. */
+export interface ModelWorkConfig {
+	can_run: boolean;
+	workflows: string[];
+	thinking_levels: string[];
+	max_inputs: number;
+}
+
+export type PlanStatus =
+	'proposed' | 'approved' | 'running' | 'finished' | 'failed' | 'cancelled' | 'interrupted';
+
+export interface PlanInput {
+	conversation_id: string;
+	revision: string;
+	title: string | null;
+}
+
+/** A frozen plan for model work; `estimated_cost` is null until a run reports usage. */
+export interface ModelWorkPlan {
+	id: string;
+	workflow: string;
+	status: PlanStatus;
+	digest: string;
+	inputs: PlanInput[];
+	model: { provider: string; model_id: string; thinking_level: string | null };
+	max_inputs: number;
+	instructions: string | null;
+	estimated_cost: null;
+	run_id: string | null;
+	exit_code: number | null;
+	error_summary: string | null;
+	created_at: string;
+	approved_at: string | null;
+	started_at: string | null;
+	finished_at: string | null;
+}
+
+export interface PlanRequest {
+	workflow: string;
+	conversation_ids: string[];
+	model: { provider: string; model_id: string; thinking_level: string | null };
+	instructions: string | null;
+}
+
 /** One run at a glance, as the runs list returns it; ``estimated_cost`` is a catalog estimate in USD. */
 export interface RunSummary {
 	run_id: string;

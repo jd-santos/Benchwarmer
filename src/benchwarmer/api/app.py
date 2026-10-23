@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 import os
 from pathlib import Path
 from typing import Literal
@@ -13,10 +15,12 @@ from pydantic import BaseModel, ConfigDict
 from benchwarmer.api.routes.bundles import create_bundles_router
 from benchwarmer.api.routes.conversations import create_conversations_router
 from benchwarmer.api.routes.fixtures import create_fixtures_router
+from benchwarmer.api.routes.model_work import create_model_work_router
 from benchwarmer.api.routes.runs import create_runs_router
 from benchwarmer.api.routes.sources import create_sources_router
 from benchwarmer.config import BenchwarmerSettings, ConfigurationError
-from benchwarmer.db import create_engine, current_revision
+from benchwarmer.db import create_engine, create_session_factory, current_revision
+from benchwarmer.services.model_work_plans import PlanRunner, mark_interrupted
 
 
 class HealthResponse(BaseModel):
@@ -32,6 +36,8 @@ class HealthResponse(BaseModel):
 def create_app(
     settings: BenchwarmerSettings | None = None,
     ui_root: Path | None = None,
+    *,
+    plan_runner: PlanRunner | None = None,
 ) -> FastAPI:
     """Create the HTTP application with explicit settings and optional built UI."""
     environment_app = settings is None
@@ -39,7 +45,18 @@ def create_app(
         BenchwarmerSettings.from_environment() if environment_app else settings
     )
     resolved_ui_root = _resolve_ui_root(ui_root, environment_app=environment_app)
-    app = FastAPI()
+    runner = plan_runner or PlanRunner(resolved_settings)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        # A plan that was running when the last process stopped is interrupted,
+        # never rerun on its own. Done at startup, not at construction, so that
+        # building the app touches nothing on disk.
+        _recover_interrupted_plans(resolved_settings)
+        yield
+        runner.terminate_all()
+
+    app = FastAPI(lifespan=lifespan)
     router = APIRouter(prefix="/api/v1")
 
     @router.get("/health", response_model=HealthResponse)
@@ -60,6 +77,7 @@ def create_app(
     router.include_router(create_bundles_router(resolved_settings))
     router.include_router(create_fixtures_router())
     router.include_router(create_runs_router(resolved_settings))
+    router.include_router(create_model_work_router(resolved_settings, runner))
     app.include_router(router)
 
     if resolved_ui_root is not None:
@@ -71,6 +89,23 @@ def create_app(
             return _serve_ui_file(resolved_ui_root, requested_path)
 
     return app
+
+
+def _recover_interrupted_plans(settings: BenchwarmerSettings) -> None:
+    """Mark plans left ``running`` by an earlier process as interrupted."""
+    try:
+        engine = create_engine(settings)
+    except Exception:  # noqa: BLE001 - startup must not fail on an unprovisioned data root
+        return
+    try:
+        if current_revision(engine) is None:
+            return
+        with create_session_factory(engine)() as session:
+            mark_interrupted(session)
+    except Exception:  # noqa: BLE001 - an older schema without the table is not fatal here
+        return
+    finally:
+        engine.dispose()
 
 
 def _resolve_ui_root(ui_root: Path | None, *, environment_app: bool) -> Path | None:

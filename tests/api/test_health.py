@@ -53,7 +53,7 @@ def test_health_reports_the_real_revision_of_a_migrated_database(
     assert response.status_code == 200
     assert response.json() == {
         "status": "ok",
-        "alembic_revision": "0006",
+        "alembic_revision": "0007",
         "data_root_writable": True,
     }
 

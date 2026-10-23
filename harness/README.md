@@ -57,12 +57,14 @@ credentials: set its base URL variable (`ANTHROPIC_BASE_URL`,
 `OPENAI_BASE_URL`, `OPENROUTER_BASE_URL`, `GEMINI_BASE_URL`,
 `MISTRAL_BASE_URL`) and keep the gateway's virtual key in the usual key
 variable. The provider id, catalog, and cost estimates are unchanged, and the
-run report records the override under `model.base_url_override`. Nothing in the Benchwarmer
-application starts a harness run, and generated bundles land as
-`origin=generated`, `status=draft` revisions that a human reviews in the app.
-This is the pilot exception recorded in
-[the evidence bundle work record](../todo/work/evidence-bundles/README.md);
-the bounded model-work service replaces it later.
+run report records the override under `model.base_url_override`. The
+Benchwarmer application can also start `propose-bundles`, but only from a plan
+the operator previewed and approved by its digest in the Bundles page; it then
+runs this same command as a subprocess with `--run-id` set to the plan's run
+and the keys from its own environment (see
+[ADR 0006](../docs/decisions/0006-app-started-model-work.md)). Either way,
+generated bundles land as `origin=generated`, `status=draft` revisions that a
+human reviews in the app.
 
 ## Run
 

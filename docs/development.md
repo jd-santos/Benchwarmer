@@ -66,6 +66,8 @@ export BENCHWARMER_UI_ROOT="$(pwd)/web/build"
 printf 'Development data root: %s\n' "$BENCHWARMER_DATA_ROOT"
 # Optional: directories the web app may import conversation files from.
 # export BENCHWARMER_IMPORT_ROOTS="$HOME/benchwarmer-inbox"
+# Optional: let the app start approved harness runs (ADR 0006).
+# export BENCHWARMER_HARNESS_DIR="$PWD/harness"
 
 npm --prefix web run build
 uv run alembic upgrade head

@@ -19,7 +19,10 @@ import type {
 	ImportBatchSummary,
 	ImportConfig,
 	ImportRun,
+	ModelWorkConfig,
+	ModelWorkPlan,
 	ObjectiveType,
+	PlanRequest,
 	RunsResponse,
 	RunSummary,
 	SourceCoverage,
@@ -401,6 +404,54 @@ export async function getImportConfig(options: ApiRequestOptions = {}): Promise<
 	return value;
 }
 
+const planStatuses: ReadonlySet<string> = new Set([
+	'proposed',
+	'approved',
+	'running',
+	'finished',
+	'failed',
+	'cancelled',
+	'interrupted'
+]);
+
+function isModelWorkPlan(value: unknown): value is ModelWorkPlan {
+	return (
+		isRecord(value) &&
+		typeof value.id === 'string' &&
+		typeof value.workflow === 'string' &&
+		typeof value.status === 'string' &&
+		planStatuses.has(value.status) &&
+		typeof value.digest === 'string' &&
+		Array.isArray(value.inputs) &&
+		value.inputs.every(
+			(item) =>
+				isRecord(item) &&
+				typeof item.conversation_id === 'string' &&
+				typeof item.revision === 'string' &&
+				isNullableString(item.title)
+		) &&
+		isRecord(value.model) &&
+		typeof value.model.provider === 'string' &&
+		typeof value.model.model_id === 'string' &&
+		isNullableString(value.model.thinking_level) &&
+		isCount(value.max_inputs) &&
+		isNullableString(value.instructions) &&
+		value.estimated_cost === null &&
+		isNullableString(value.run_id) &&
+		isNullableString(value.error_summary) &&
+		typeof value.created_at === 'string'
+	);
+}
+
+function modelWorkPlan(value: unknown): ModelWorkPlan {
+	if (!isModelWorkPlan(value)) {
+		throw new ApiClientError('The API plan response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
+}
+
 /** Import attempts for one source, most recent first. */
 export async function getSourceImports(
 	sourceId: string,
@@ -440,6 +491,90 @@ export async function startImport(
 		});
 	}
 	return value;
+}
+
+/** Whether this application can start harness runs itself. */
+export async function getModelWorkConfig(
+	options: ApiRequestOptions = {}
+): Promise<ModelWorkConfig> {
+	const value = await getJson('/api/v1/model-work/config', options.signal, options.fetch);
+	if (
+		!isRecord(value) ||
+		typeof value.can_run !== 'boolean' ||
+		!Array.isArray(value.workflows) ||
+		!Array.isArray(value.thinking_levels) ||
+		!isCount(value.max_inputs)
+	) {
+		throw new ApiClientError('The API model-work config response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value as unknown as ModelWorkConfig;
+}
+
+export async function getPlans(options: ApiRequestOptions = {}): Promise<ModelWorkPlan[]> {
+	const value = await getJson('/api/v1/model-work/plans', options.signal, options.fetch);
+	if (!isRecord(value) || !Array.isArray(value.items)) {
+		throw new ApiClientError('The API plans response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value.items.map(modelWorkPlan);
+}
+
+export async function getPlan(id: string, options: ApiRequestOptions = {}): Promise<ModelWorkPlan> {
+	return modelWorkPlan(
+		await getJson(
+			`/api/v1/model-work/plans/${encodeURIComponent(id)}`,
+			options.signal,
+			options.fetch
+		)
+	);
+}
+
+/** Freeze a plan: the server pins each conversation's current revision and returns the digest. */
+export async function createPlan(
+	request: PlanRequest,
+	options: ApiRequestOptions = {}
+): Promise<ModelWorkPlan> {
+	return modelWorkPlan(
+		await requestJson(
+			'/api/v1/model-work/plans',
+			{ method: 'POST', body: request },
+			options.signal,
+			options.fetch
+		)
+	);
+}
+
+/** Approve exactly this plan by quoting its digest; the server starts the run. */
+export async function approvePlan(
+	id: string,
+	digest: string,
+	options: ApiRequestOptions = {}
+): Promise<ModelWorkPlan> {
+	return modelWorkPlan(
+		await requestJson(
+			`/api/v1/model-work/plans/${encodeURIComponent(id)}/approve`,
+			{ method: 'POST', body: { digest } },
+			options.signal,
+			options.fetch
+		)
+	);
+}
+
+export async function cancelPlan(
+	id: string,
+	options: ApiRequestOptions = {}
+): Promise<ModelWorkPlan> {
+	return modelWorkPlan(
+		await requestJson(
+			`/api/v1/model-work/plans/${encodeURIComponent(id)}/cancel`,
+			{ method: 'POST' },
+			options.signal,
+			options.fetch
+		)
+	);
 }
 
 export interface ConversationQuery {

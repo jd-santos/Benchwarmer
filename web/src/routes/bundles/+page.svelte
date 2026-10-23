@@ -12,6 +12,7 @@
 		shortRunId,
 		statusLabel
 	} from '$lib/bundles/format';
+	import ProposeRunPanel from '$lib/components/ProposeRunPanel.svelte';
 	import { formatDate, formatTimestamp, plural } from '$lib/conversations/format';
 	import { goto } from '$app/navigation';
 	import { _views, type BundleView } from './+page';
@@ -149,6 +150,8 @@
 			</a>
 		{/each}
 	</nav>
+
+	<ProposeRunPanel />
 
 	<form class="list-filter" onsubmit={(event) => event.preventDefault()}>
 		<label class="list-filter__field">

@@ -42,6 +42,8 @@ export interface ProposeBundlesOptions {
 	harnessVersion: string;
 	/** Extra operator instructions appended to the analyst instructions. */
 	extraInstructions?: string;
+	/** A run id chosen by the caller (the application names approved plans' runs); default is derived from the start time. */
+	runId?: string;
 	log?: (line: string) => void;
 }
 
@@ -118,7 +120,7 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 	const context = BACKGROUND_CONTEXT;
 	const log = options.log ?? (() => undefined);
 	const startedAt = new Date();
-	const runId = `${WORKFLOW_NAME}-${startedAt.toISOString().replace(/[:.]/g, '-')}`;
+	const runId = options.runId ?? `${WORKFLOW_NAME}-${startedAt.toISOString().replace(/[:.]/g, '-')}`;
 	const producer = `benchwarmer-harness/${WORKFLOW_NAME}@${options.harnessVersion} ${options.provider}/${options.modelId}`;
 
 	const models = createHarnessModels();

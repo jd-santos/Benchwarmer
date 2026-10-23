@@ -221,3 +221,26 @@ def test_import_roots_are_optional_absolute_and_tilde_expanded(tmp_path: Path) -
             platform_name="darwin",
             home=home,
         )
+
+
+def test_harness_dir_is_optional_absolute_and_tilde_expanded(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    base = {"BENCHWARMER_DATA_ROOT": str(tmp_path / "data")}
+    assert (
+        BenchwarmerSettings.from_environment(
+            base, platform_name="darwin", home=home
+        ).harness_dir
+        is None
+    )
+    settings = BenchwarmerSettings.from_environment(
+        base | {"BENCHWARMER_HARNESS_DIR": "~/Repos/Benchwarmer/harness"},
+        platform_name="darwin",
+        home=home,
+    )
+    assert settings.harness_dir == home / "Repos/Benchwarmer/harness"
+    with pytest.raises(ConfigurationError):
+        BenchwarmerSettings.from_environment(
+            base | {"BENCHWARMER_HARNESS_DIR": "harness"},
+            platform_name="darwin",
+            home=home,
+        )

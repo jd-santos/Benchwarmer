@@ -41,8 +41,10 @@
 - Keep benchmark task definitions independent of Pi or any other agent harness.
 - Deterministic parsing (outlines, segmentation, headings, reference checks) is
   typed Python exposed over `/api/v1`. The `harness/` package only orchestrates
-  models around those routes and never opens the database. Running a harness
-  workflow by hand is the pilot approval for its model work; see
+  models around those routes and never opens the database. Model work starts
+  either from a harness command the operator runs by hand or from a plan the
+  operator previewed and approved by its digest in the app (ADR 0006); the
+  app never starts a run on its own. See
   [analysis harness](todo/work/analysis-harness/README.md).
 - Do not combine quality and economics into a single winner score. Preserve
   criterion-level and per-trial results.

@@ -144,6 +144,12 @@ price does not itself authorize sending private conversations to a new provider.
 Remote processing sends selected content outside the machine; local processing
 still consumes resources. Both need visible scope and controls.
 
+The application starts model work only from an approved plan. The operator
+previews the frozen plan (inputs pinned to their revisions, model, limits),
+approves it by quoting its digest, and the application runs the harness once
+for that plan; see [ADR 0006](decisions/0006-app-started-model-work.md). A
+plan running when the application stops is marked interrupted, never rerun.
+
 Actual execution requires durable budget reservation and cancellation, bounded
 retries, and recovery that never silently repeats an uncertain paid request.
 Disclose estimated limits and possible in-flight overrun; do not promise a hard

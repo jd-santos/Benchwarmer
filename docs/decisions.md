@@ -105,7 +105,11 @@ limits, price evidence, and permitted content/provider scope. Unknown pricing
 requires a separately agreed non-monetary policy, not unbounded execution.
 Durable budget reservations, cancellation, and outcome-unknown recovery must
 exist before any paid stage is dispatched. A pure preview/approval validator is
-only a prerequisite, not that execution service.
+only a prerequisite, not that execution service. The first slice of that
+service is proposed in [ADR 0006](decisions/0006-app-started-model-work.md):
+the application starts the bundle proposer from a digest-approved plan, with
+cancellation and an interrupted-not-rerun rule; reservation and retries are
+still open.
 
 ## Before the first simulation
 

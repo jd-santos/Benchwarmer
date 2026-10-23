@@ -99,6 +99,12 @@ This project does not currently declare a Semantic Versioning policy.
   `unknown`. The proposer types each new bundle in a separate step after
   drafting it, a reviewer can change the type in the editor, and the list
   shows and filters by it.
+- Start the bundle proposer from the Bundles page: choose conversations and
+  a model, preview the frozen plan with its digest, approve exactly that
+  plan, and watch it run, cancel it, or open its run. Only an application
+  with `BENCHWARMER_HARNESS_DIR` set can start a run; others preview and show
+  how to run the plan by hand. Plans left running when the application stops
+  are marked interrupted and never rerun on their own (ADR 0006, proposed).
 - Mark evidence items whose conversation changed in a later import, with a
   count in the bundle header, so a reviewer knows the cited version is pinned.
 - Group the Proposed drafts view by the run that proposed each draft, naming
