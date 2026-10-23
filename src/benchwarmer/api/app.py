@@ -20,6 +20,7 @@ from benchwarmer.api.routes.runs import create_runs_router
 from benchwarmer.api.routes.sources import create_sources_router
 from benchwarmer.config import BenchwarmerSettings, ConfigurationError
 from benchwarmer.db import create_engine, create_session_factory, current_revision
+from benchwarmer.services.model_catalog import ModelCatalogService
 from benchwarmer.services.model_work_plans import PlanRunner, mark_interrupted
 
 
@@ -38,6 +39,7 @@ def create_app(
     ui_root: Path | None = None,
     *,
     plan_runner: PlanRunner | None = None,
+    model_catalog: ModelCatalogService | None = None,
 ) -> FastAPI:
     """Create the HTTP application with explicit settings and optional built UI."""
     environment_app = settings is None
@@ -46,6 +48,7 @@ def create_app(
     )
     resolved_ui_root = _resolve_ui_root(ui_root, environment_app=environment_app)
     runner = plan_runner or PlanRunner(resolved_settings)
+    catalog = model_catalog or ModelCatalogService(resolved_settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -77,7 +80,7 @@ def create_app(
     router.include_router(create_bundles_router(resolved_settings))
     router.include_router(create_fixtures_router())
     router.include_router(create_runs_router(resolved_settings))
-    router.include_router(create_model_work_router(resolved_settings, runner))
+    router.include_router(create_model_work_router(resolved_settings, runner, catalog))
     app.include_router(router)
 
     if resolved_ui_root is not None:
