@@ -96,6 +96,34 @@ export function usageTotals(usage: RunUsageTotal): { tokens: number; estimate: n
 	return { tokens, estimate };
 }
 
+/** Workflow ids known to the UI, in reader terms; anything else is shown as written. */
+const workflowLabels: Record<string, string> = {
+	'propose-bundles': 'Propose bundles'
+};
+
+export function workflowLabel(workflow: string): string {
+	return workflowLabels[workflow] ?? workflow;
+}
+
+/** The timestamp part of a run id, which is what distinguishes runs of one workflow. */
+export function shortRunId(runId: string): string {
+	return runId.replace(/^[a-z-]+-(?=\d{4})/, '');
+}
+
+/** A generated id cut to its prefix and the first eight hex digits; the full id suits a title. */
+export function shortId(id: string): string {
+	return id.replace(/^([a-z]+-)?([0-9a-f]{8})[0-9a-f]{24,}$/, '$1$2');
+}
+
+/** Elapsed time between two timestamps, such as "29s" or "4m 12s". */
+export function formatDuration(startedAt: string, finishedAt: string): string {
+	const seconds = Math.max(0, Math.round((Date.parse(finishedAt) - Date.parse(startedAt)) / 1000));
+	if (seconds < 60) return `${seconds}s`;
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+	return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
 /** The run input (one conversation's pass) whose proposals include this bundle, if recorded. */
 export function runInputFor(run: HarnessRunRecord, bundleId: string) {
 	return run.inputs.find((input) => input.bundle_ids.includes(bundleId)) ?? null;

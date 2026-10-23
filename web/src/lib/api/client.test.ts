@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiClientError, getHealth, getSources } from './client';
-import type { HealthResponse, SourcesResponse } from './types';
+import { ApiClientError, getHealth, getRuns, getSources } from './client';
+import type { HealthResponse, RunsResponse, SourcesResponse } from './types';
 
 const healthResponse: HealthResponse = {
 	status: 'ok',
@@ -206,5 +206,49 @@ describe('getSources', () => {
 			name: 'ApiClientError',
 			kind: 'invalid-contract'
 		});
+	});
+});
+
+const runsResponse: RunsResponse = {
+	items: [
+		{
+			run_id: 'propose-bundles-2026-10-19T10-00-00-000Z',
+			workflow: 'propose-bundles',
+			provider: 'anthropic',
+			model: 'claude-sonnet-5-5',
+			thinking_level: null,
+			base_url_override: null,
+			started_at: '2026-10-19T10:00:00Z',
+			finished_at: '2026-10-19T10:00:29Z',
+			input_count: 1,
+			bundle_count: 2,
+			total_tokens: 55810,
+			estimated_cost: 0.136,
+			pricing_source: 'pi-ai model catalog estimate'
+		}
+	]
+};
+
+describe('getRuns', () => {
+	it('lists every run, or one workflow when asked', async () => {
+		const fetchMock = vi
+			.fn<typeof fetch>()
+			.mockImplementation(() => Promise.resolve(jsonResponse(runsResponse)));
+		vi.stubGlobal('fetch', fetchMock);
+
+		await expect(getRuns()).resolves.toEqual(runsResponse);
+		expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/runs');
+		await getRuns({ workflow: 'propose-bundles' });
+		expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/v1/runs?workflow=propose-bundles');
+	});
+
+	it('rejects a run summary missing its cost rather than showing a blank figure', async () => {
+		const invalid = structuredClone(runsResponse) as unknown as {
+			items: Array<{ estimated_cost: unknown }>;
+		};
+		delete invalid.items[0]!.estimated_cost;
+		vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(invalid)));
+
+		await expect(getRuns()).rejects.toMatchObject({ kind: 'invalid-contract' });
 	});
 });

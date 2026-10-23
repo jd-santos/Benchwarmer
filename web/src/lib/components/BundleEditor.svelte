@@ -18,6 +18,7 @@
 		producerLabel,
 		roleOptions,
 		scopeLabel,
+		shortRunId,
 		statusLabel,
 		statusOptions,
 		toolCallPreview
@@ -143,12 +144,7 @@
 	}
 
 	function runHref(runId: string): ResolvedPathname {
-		return `${resolve('/bundles')}?${new URLSearchParams({ run: runId })}` as ResolvedPathname;
-	}
-
-	/** The timestamp part of a run id, which is what distinguishes runs of one workflow. */
-	function shortRunId(runId: string): string {
-		return runId.replace(/^[a-z-]+-(?=\d{4})/, '');
+		return resolve('/runs/[id]', { id: runId });
 	}
 
 	function revisionHref(number: number | null): ResolvedPathname {

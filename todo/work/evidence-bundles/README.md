@@ -175,12 +175,16 @@ covers the fuller queue; these notes record what remains, with the
 review-console shape of
 [offgrid-review](https://github.com/jd-santos/offgrid-review) as a reference:
 
-- The list now filters by run (`?run=<run id>`, linked from the editor) but
-  does not yet group by run or show how many conversations the run inspected
-  and skipped; that needs the run report read through the API.
+- The list filters by run (`?run=<run id>`). The editor's run link opens the
+  run's page under Runs, which lists every recorded model run by workflow with
+  tokens and estimated cost, and per run shows usage by model and each input's
+  outcome, produced bundles, and usage. Usage is per input, not per bundle; a
+  per-bundle figure would need the harness to record usage per proposal call,
+  which is a run record contract change. The list still does not group drafts
+  by run.
 - Each item already shows objective, rationale, missing evidence, excerpts with
-  roles in conversation order, gaps, producer, and jump-to-source. Still
-  missing: a link to the run report and a stale marker when the cited
+  roles (marked with a speaker glyph) in conversation order, gaps, producer,
+  and jump-to-source. Still missing: a stale marker when the cited
   conversation revision is no longer latest (the detail knows
   `conversation_is_latest` per item but the editor does not surface it).
 - Fingerprint what was reviewed: the bundle revision number is the fingerprint,

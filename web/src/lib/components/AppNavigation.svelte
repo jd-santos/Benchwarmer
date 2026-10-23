@@ -80,6 +80,9 @@
 					>
 				</li>
 				<li>
+					<a href={resolve('/runs')} aria-current={isCurrent('/runs') ? 'page' : undefined}>Runs</a>
+				</li>
+				<li>
 					<a href={sourcesHref} aria-current={isCurrent('/sources') ? 'page' : undefined}>Sources</a
 					>
 				</li>

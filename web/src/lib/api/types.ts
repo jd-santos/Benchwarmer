@@ -301,6 +301,27 @@ export interface HarnessRunRecord {
 	report_path: string | null;
 }
 
+/** One run at a glance, as the runs list returns it; ``estimated_cost`` is a catalog estimate in USD. */
+export interface RunSummary {
+	run_id: string;
+	workflow: string;
+	provider: string;
+	model: string;
+	thinking_level: string | null;
+	base_url_override: string | null;
+	started_at: string;
+	finished_at: string;
+	input_count: number;
+	bundle_count: number;
+	total_tokens: number;
+	estimated_cost: number;
+	pricing_source: string;
+}
+
+export interface RunsResponse {
+	items: RunSummary[];
+}
+
 export interface EvidenceIssue {
 	item_index: number | null;
 	code: string;

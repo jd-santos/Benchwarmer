@@ -5,6 +5,8 @@ import type {
 	BundleOrigin,
 	BundlesResponse,
 	HarnessRunRecord,
+	RunSummary,
+	RunsResponse,
 	BundleStatus,
 	BundleSummary,
 	EvidenceIssue,
@@ -623,6 +625,44 @@ function isHarnessRunRecord(value: unknown): value is HarnessRunRecord {
 				isRunUsage(input.usage)
 		)
 	);
+}
+
+function isRunSummary(value: unknown): value is RunSummary {
+	return (
+		isRecord(value) &&
+		typeof value.run_id === 'string' &&
+		typeof value.workflow === 'string' &&
+		typeof value.provider === 'string' &&
+		typeof value.model === 'string' &&
+		isNullableString(value.thinking_level) &&
+		isNullableString(value.base_url_override) &&
+		typeof value.started_at === 'string' &&
+		typeof value.finished_at === 'string' &&
+		typeof value.input_count === 'number' &&
+		typeof value.bundle_count === 'number' &&
+		typeof value.total_tokens === 'number' &&
+		typeof value.estimated_cost === 'number' &&
+		typeof value.pricing_source === 'string'
+	);
+}
+
+/**
+ * Every recorded model-driven run, most recent first, optionally one workflow's.
+ * Any workflow that invokes a model records here, so the list is the audit trail
+ * for token usage and estimated spend across the whole tool.
+ */
+export async function getRuns(
+	filters: { workflow?: string | null } = {},
+	options: ApiRequestOptions = {}
+): Promise<RunsResponse> {
+	const search = filters.workflow ? `?${new URLSearchParams({ workflow: filters.workflow })}` : '';
+	const value = await getJson(`/api/v1/runs${search}`, options.signal, options.fetch);
+	if (!isRecord(value) || !Array.isArray(value.items) || !value.items.every(isRunSummary)) {
+		throw new ApiClientError('The API runs response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return { items: value.items };
 }
 
 /** The record of one hand-run harness workflow, with raw usage and catalog cost estimates. */
