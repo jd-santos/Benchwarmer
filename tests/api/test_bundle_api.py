@@ -481,3 +481,49 @@ def test_goal_and_objective_are_separate_and_version_1_upgrades(
         ).status_code
         == 422
     )
+
+
+def test_lists_which_events_each_bundle_cites(client: TestClient) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    other = _conversation(client, "demo-ruff-flag")
+    conversation_id = detail["summary"]["id"]
+    proposed = client.post(
+        "/api/v1/bundles",
+        json={
+            "document": {
+                "items": [
+                    {"ref": _ref(detail, "u0"), "role": "requirement"},
+                    {"ref": _ref(detail, "a0", 0), "role": "action"},
+                    {"ref": _ref(detail, "a0"), "role": "context"},
+                ]
+            },
+            "origin": "generated",
+            "producer": "benchwarmer-harness/propose-bundles@0.0.1 anthropic/test",
+            "provenance": {
+                "run_id": "propose-bundles-2026-10-23T00-00-00-000Z",
+                "workflow": "propose-bundles",
+                "harness_version": "0.0.1",
+                "provider": "anthropic",
+                "model": "test",
+            },
+        },
+    ).json()
+    # A bundle over another conversation is not listed for this one.
+    client.post(
+        "/api/v1/bundles",
+        json={"document": {"items": [{"ref": _ref(other, "q1"), "role": "context"}]}},
+    )
+
+    listed = client.get(f"/api/v1/conversations/{conversation_id}/bundles").json()
+    assert [item["id"] for item in listed["items"]] == [proposed["id"]]
+    membership = listed["items"][0]
+    assert membership["status"] == "draft"
+    assert membership["origin"] == "generated"
+    assert membership["run_id"] == "propose-bundles-2026-10-23T00-00-00-000Z"
+    # Two citations of one event (a block and the whole turn) count once.
+    assert membership["event_ids"] == [
+        _event(detail, "u0")["id"],
+        _event(detail, "a0")["id"],
+    ]
+
+    assert client.get("/api/v1/conversations/nope/bundles").json() == {"items": []}

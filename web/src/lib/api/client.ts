@@ -4,6 +4,7 @@ import type {
 	BundleDocument,
 	BundleOrigin,
 	BundlesResponse,
+	BundleMembership,
 	HarnessRunRecord,
 	RunSummary,
 	RunsResponse,
@@ -533,6 +534,38 @@ export async function getBundles(
 		});
 	}
 	return { items: value.items };
+}
+
+function isBundleMembership(value: unknown): value is BundleMembership {
+	return (
+		isRecord(value) &&
+		typeof value.id === 'string' &&
+		typeof value.revision === 'number' &&
+		typeof value.summary === 'string' &&
+		typeof value.status === 'string' &&
+		typeof value.origin === 'string' &&
+		isNullableString(value.run_id) &&
+		Array.isArray(value.event_ids) &&
+		value.event_ids.every((id) => typeof id === 'string')
+	);
+}
+
+/** Bundles that cite a conversation and the events they cite, for marking turns in the reader. */
+export async function getConversationBundles(
+	conversationId: string,
+	options: ApiRequestOptions = {}
+): Promise<BundleMembership[]> {
+	const value = await getJson(
+		`/api/v1/conversations/${encodeURIComponent(conversationId)}/bundles`,
+		options.signal,
+		options.fetch
+	);
+	if (!isRecord(value) || !Array.isArray(value.items) || !value.items.every(isBundleMembership)) {
+		throw new ApiClientError('The API conversation bundles response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value.items;
 }
 
 export async function getBundle(

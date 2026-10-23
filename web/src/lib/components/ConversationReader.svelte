@@ -5,6 +5,7 @@
 	import type {
 		Branch,
 		BundleItem,
+		BundleMembership,
 		ContentBlock,
 		ConversationDetail,
 		ConversationEvent,
@@ -41,7 +42,11 @@
 	import { onMount, tick } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 
-	let { detail, query = null }: { detail: ConversationDetail; query?: string | null } = $props();
+	let {
+		detail,
+		query = null,
+		bundles = []
+	}: { detail: ConversationDetail; query?: string | null; bundles?: BundleMembership[] } = $props();
 
 	const COLLAPSE_LINES = 6;
 	const narrowQuery = '(max-width: 63.999rem)';
@@ -58,6 +63,15 @@
 		}, new Map<string, number>())
 	);
 	const positionsKey = $derived(`benchwarmer:positions:${summary.id}`);
+	// Bundles citing each event, so the reader can mark cited turns. A pending
+	// generated draft is marked apart from human or reviewed bundles, so a mark
+	// never reads as approval.
+	const bundlesByEvent = $derived(
+		bundles.reduce((index, bundle) => {
+			for (const id of bundle.event_ids) index.set(id, [...(index.get(id) ?? []), bundle]);
+			return index;
+		}, new Map<string, BundleMembership[]>())
+	);
 
 	// Open unless the reader closed it; narrow screens start closed in onMount.
 	let outlineOpen = $state(readStorage(outlineKey) !== 'false');
@@ -146,6 +160,24 @@
 		const kind = event.content.find((item) => item.id === range.blockId)?.kind ?? null;
 		selection.set(refKey(ref), { ref, role: defaultRole(event.role, kind) });
 		window.getSelection()?.removeAllRanges();
+	}
+
+	/** Pending generated drafts and rejections are marked apart from accepted or human bundles. */
+	function bundleMarkKind(bundle: BundleMembership): 'proposed' | 'rejected' | 'bundle' {
+		if (bundle.status === 'rejected') return 'rejected';
+		if (bundle.origin === 'generated' && bundle.status === 'draft') return 'proposed';
+		return 'bundle';
+	}
+
+	function bundleMarkLabel(bundle: BundleMembership): string {
+		switch (bundleMarkKind(bundle)) {
+			case 'proposed':
+				return 'Proposed draft';
+			case 'rejected':
+				return 'Rejected bundle';
+			default:
+				return bundle.status === 'draft' ? 'Draft bundle' : 'Bundle';
+		}
 	}
 
 	function clearSelection(): void {
@@ -538,6 +570,21 @@
 	</button>
 {/snippet}
 
+{#snippet bundleMarks(eventId: string)}
+	{@const cited = bundlesByEvent.get(eventId) ?? []}
+	{#if cited.length > 0}
+		<span class="event__bundles" aria-label="Bundles citing this turn">
+			{#each cited as bundle (bundle.id)}
+				<a
+					class="bundle-mark bundle-mark--{bundleMarkKind(bundle)}"
+					href={resolve('/bundles/[id]', { id: bundle.id })}
+					title={bundle.summary || 'Untitled bundle'}>{bundleMarkLabel(bundle)}</a
+				>
+			{/each}
+		</span>
+	{/if}
+{/snippet}
+
 {#snippet selectToggle(event: ConversationEvent)}
 	<label class="turn__select">
 		<input
@@ -813,6 +860,7 @@
 									{#if currentPath?.divergence && event.id === currentPath.branch.divergent_event_id}
 										<span class="event__tag">Path diverges here</span>
 									{/if}
+									{@render bundleMarks(event.id)}
 								</header>
 								{#if event.content.length === 0}
 									<p class="block-gap">No content captured</p>
@@ -835,6 +883,7 @@
 								<p class="event__marker">
 									{@render markerIcon(event)}
 									<span>{markerLabel(event)}</span>
+									{@render bundleMarks(event.id)}
 								</p>
 								{#each event.content as item (item.id)}
 									{@render block(item)}

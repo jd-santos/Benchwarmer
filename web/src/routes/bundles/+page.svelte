@@ -161,8 +161,8 @@
 				<h2 id="no-bundles-heading">{emptyHeading[data.view]}</h2>
 				{#if data.view === 'all'}
 					<p>
-						In a <a href={resolve('/conversations')}>conversation</a>, choose
-						<strong>Select evidence</strong>, pick messages or highlight text, then create a bundle.
+						In a <a href={resolve('/conversations')}>conversation</a>, tick the checkbox beside a
+						turn or highlight text, then create a bundle from the evidence tray.
 					</p>
 				{:else if data.view === 'proposed'}
 					<p>

@@ -18,6 +18,48 @@ afterEach(() => {
 });
 
 describe('conversation reader', () => {
+	it('marks turns that bundles cite, telling pending drafts from accepted bundles', () => {
+		const { getByRole, getAllByRole, queryByRole } = render(ConversationReader, {
+			props: {
+				detail,
+				bundles: [
+					{
+						id: 'bundle-1',
+						revision: 2,
+						summary: 'Refund handling',
+						status: 'reviewed',
+						origin: 'human',
+						run_id: null,
+						event_ids: ['e1', 'e3']
+					},
+					{
+						id: 'bundle-2',
+						revision: 1,
+						summary: 'A model guess',
+						status: 'draft',
+						origin: 'generated',
+						run_id: 'propose-bundles-2026-10-19T10-00-00-000Z',
+						event_ids: ['e1']
+					}
+				]
+			}
+		});
+
+		const marks = getAllByRole('link', { name: 'Bundle' });
+		expect(marks.length).toBe(2);
+		expect(marks[0].getAttribute('href')).toBe('/bundles/bundle-1');
+		expect(marks[0].getAttribute('title')).toBe('Refund handling');
+		const proposed = getByRole('link', { name: 'Proposed draft' });
+		expect(proposed.getAttribute('href')).toBe('/bundles/bundle-2');
+		expect(proposed.className).toContain('bundle-mark--proposed');
+		expect(queryByRole('link', { name: 'Rejected bundle' })).toBeNull();
+	});
+
+	it('shows no bundle marks when nothing cites the conversation', () => {
+		const { queryByLabelText } = render(ConversationReader, { props: { detail } });
+		expect(queryByLabelText('Bundles citing this turn')).toBeNull();
+	});
+
 	it('reads the latest path and marks gaps instead of inventing content', () => {
 		const { getByRole, getByText, queryByText } = render(ConversationReader, {
 			props: { detail }

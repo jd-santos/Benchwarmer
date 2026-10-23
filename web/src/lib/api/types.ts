@@ -301,6 +301,17 @@ export interface HarnessRunRecord {
 	report_path: string | null;
 }
 
+/** One bundle that cites a conversation, and which of its events, from the latest revision. */
+export interface BundleMembership {
+	id: string;
+	revision: number;
+	summary: string;
+	status: BundleStatus;
+	origin: BundleOrigin;
+	run_id: string | null;
+	event_ids: string[];
+}
+
 /** One run at a glance, as the runs list returns it; ``estimated_cost`` is a catalog estimate in USD. */
 export interface RunSummary {
 	run_id: string;

@@ -2383,3 +2383,56 @@ input:focus-visible {
 .bundle-table__group-heading a {
 	font-weight: 600;
 }
+
+/* Marks on turns that evidence bundles cite. The label carries the meaning; color only echoes it. */
+.event__bundles {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+	margin-inline-start: auto;
+}
+
+.event__marker .event__bundles {
+	margin-inline-start: 0.6rem;
+}
+
+.bundle-mark {
+	padding: 0.05rem 0.5rem;
+	border: 1px solid #b9c4d0;
+	border-radius: 999px;
+	color: #2b3947;
+	background: #f5f6f8;
+	font-size: 0.72rem;
+	font-weight: 600;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.bundle-mark:hover,
+.bundle-mark:focus-visible {
+	text-decoration: underline;
+}
+
+.bundle-mark--bundle {
+	border-color: #2f6fb3;
+	color: #1f4f85;
+	background: #e9f1fb;
+}
+
+.bundle-mark--proposed {
+	border-style: dashed;
+	border-color: #8a5a00;
+	color: #714b12;
+	background: #fbf3e2;
+}
+
+.bundle-mark--rejected {
+	border-color: #c9ced6;
+	color: #6b7785;
+	text-decoration: line-through;
+}
+
+.bundle-mark--rejected:hover,
+.bundle-mark--rejected:focus-visible {
+	text-decoration: line-through underline;
+}
