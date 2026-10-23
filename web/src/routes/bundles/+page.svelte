@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
-	import type { BundleSummary } from '$lib/api/types';
+	import type { BundleSummary, ObjectiveType } from '$lib/api/types';
 	import {
 		bundleLabel,
 		describeProducer,
+		objectiveTypeLabel,
+		objectiveTypeOptions,
 		originLabel,
 		shortModel,
 		shortRunId,
 		statusLabel
 	} from '$lib/bundles/format';
 	import { formatDate, formatTimestamp, plural } from '$lib/conversations/format';
+	import { goto } from '$app/navigation';
 	import { _views, type BundleView } from './+page';
 	import type { PageProps } from './$types';
 
@@ -18,11 +21,16 @@
 
 	const listHref = resolve('/bundles');
 
-	function viewHref(view: BundleView, run: string | null = data.run): ResolvedPathname {
+	function viewHref(
+		view: BundleView,
+		run: string | null = data.run,
+		type: ObjectiveType | null = data.type
+	): ResolvedPathname {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built per call, never stored
 		const params = new URLSearchParams();
 		if (view !== 'all') params.set('view', view);
 		if (run) params.set('run', run);
+		if (type) params.set('type', type);
 		const search = params.toString();
 		return `${listHref}${search ? `?${search}` : ''}` as ResolvedPathname;
 	}
@@ -77,8 +85,12 @@
 					{plural(bundle.conversation_ids.length, 'conversation')}
 				</span>
 			{/if}
-			{#if bundle.objective.trim()}
-				<span class="bundle-table__note bundle-table__meta">{bundle.objective}</span>
+			{#if bundle.objective.trim() || bundle.objective_type !== 'unknown'}
+				<span class="bundle-table__note bundle-table__meta">
+					{#if bundle.objective_type !== 'unknown'}{objectiveTypeLabel(bundle.objective_type)}{/if}
+					{#if bundle.objective_type !== 'unknown' && bundle.objective.trim()}·{/if}
+					{bundle.objective}
+				</span>
 			{/if}
 			<span class="bundle-table__note bundle-table__meta" title={bundle.producer}>
 				<span class="bundle-status bundle-status--{bundle.status}"
@@ -88,6 +100,9 @@
 				· <time datetime={bundle.updated_at}>{formatTimestamp(bundle.updated_at)}</time>
 			</span>
 		</th>
+		<td class="wide-only nowrap" class:muted={bundle.objective_type === 'unknown'}>
+			{objectiveTypeLabel(bundle.objective_type)}
+		</td>
 		<td class="wide-only muted">
 			{#if bundle.objective.trim()}{bundle.objective}{:else}Not set{/if}
 		</td>
@@ -135,6 +150,29 @@
 		{/each}
 	</nav>
 
+	<form class="list-filter" onsubmit={(event) => event.preventDefault()}>
+		<label class="list-filter__field">
+			<span>Type of work</span>
+			<select
+				value={data.type ?? ''}
+				onchange={(event) =>
+					goto(
+						viewHref(
+							data.view,
+							data.run,
+							(event.currentTarget.value || null) as ObjectiveType | null
+						),
+						{ keepFocus: true }
+					)}
+			>
+				<option value="">All types</option>
+				{#each objectiveTypeOptions as option (option.value)}
+					<option value={option.value}>{option.label}</option>
+				{/each}
+			</select>
+		</label>
+	</form>
+
 	{#if data.run}
 		<p class="muted view-note" data-run-note>
 			Showing bundles whose latest revision came from harness run
@@ -180,6 +218,7 @@
 			<table class="data-table bundle-table">
 				<colgroup>
 					<col class="bundle-table__col-summary" />
+					<col class="bundle-table__col-type" />
 					<col class="bundle-table__col-objective" />
 					<col />
 					<col />
@@ -189,6 +228,7 @@
 				<thead>
 					<tr>
 						<th scope="col">Bundle</th>
+						<th scope="col" class="wide-only nowrap">Type</th>
 						<th scope="col" class="wide-only">Objective</th>
 						<th scope="col" class="wide-only nowrap">Status</th>
 						<th scope="col" class="wide-only nowrap">Origin</th>
@@ -202,7 +242,7 @@
 							{@const record = runs.find((run) => run.run_id === group.runId) ?? null}
 							<tbody class="bundle-table__group">
 								<tr>
-									<th scope="colgroup" colspan="6" class="bundle-table__group-heading">
+									<th scope="colgroup" colspan="7" class="bundle-table__group-heading">
 										{#if group.runId}
 											<a href={resolve('/runs/[id]', { id: group.runId })}
 												>Run {shortRunId(group.runId)}</a

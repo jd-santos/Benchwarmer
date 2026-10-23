@@ -19,6 +19,7 @@ from benchwarmer.evidence import (
     BundleItem,
     BundleOrigin,
     BundleStatus,
+    ObjectiveType,
     RunProvenance,
 )
 from benchwarmer.services.evidence_bundles import (
@@ -107,6 +108,7 @@ class BundleSummaryResponse(_Strict):
     revision: int
     summary: str
     objective: str
+    objective_type: ObjectiveType
     goal: str
     status: BundleStatus
     origin: BundleOrigin
@@ -229,6 +231,7 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
         origin: BundleOrigin | None = None,
         status: BundleStatus | None = None,
         run_id: Annotated[str | None, Query(max_length=255)] = None,
+        objective_type: ObjectiveType | None = None,
     ) -> BundlesResponse:
         with session_scope() as session:
             summaries = list_bundles(
@@ -237,6 +240,7 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                 origin=origin,
                 status=status,
                 run_id=run_id,
+                objective_type=objective_type,
             )
             return BundlesResponse(
                 items=[
@@ -245,6 +249,7 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                         revision=item.revision,
                         summary=item.summary,
                         objective=item.objective,
+                        objective_type=item.objective_type,  # type: ignore[arg-type]
                         goal=item.goal,
                         status=item.status,  # type: ignore[arg-type]
                         origin=item.origin,  # type: ignore[arg-type]

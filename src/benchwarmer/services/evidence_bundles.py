@@ -106,6 +106,7 @@ class BundleSummary:
     revision: int
     summary: str
     objective: str
+    objective_type: str
     goal: str
     status: str
     origin: str
@@ -573,11 +574,13 @@ def list_bundles(
     origin: str | None = None,
     status: str | None = None,
     run_id: str | None = None,
+    objective_type: str | None = None,
 ) -> tuple[BundleSummary, ...]:
     """List latest bundle revisions, most recently updated first.
 
-    ``origin``, ``status``, and ``run_id`` filter on the latest revision, so a
-    generated draft that a human later reviewed no longer counts as generated.
+    ``origin``, ``status``, ``run_id``, and ``objective_type`` filter on the
+    latest revision, so a generated draft that a human later reviewed no
+    longer counts as generated.
     """
     query = (
         select(EvidenceBundle, EvidenceBundleRevision)
@@ -596,6 +599,8 @@ def list_bundles(
         document = BundleDocument.model_validate(revision.document)
         if status is not None and document.status != status:
             continue
+        if objective_type is not None and document.objective_type != objective_type:
+            continue
         revision_run = (
             None if revision.provenance is None else revision.provenance.get("run_id")
         )
@@ -612,6 +617,7 @@ def list_bundles(
                 revision=revision.number,
                 summary=document.summary,
                 objective=document.objective,
+                objective_type=document.objective_type,
                 goal=document.goal,
                 status=document.status,
                 origin=revision.origin,

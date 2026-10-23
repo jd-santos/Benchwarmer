@@ -177,12 +177,31 @@ export interface BundleItem {
 	note?: string | null;
 }
 
+/** The closed vocabulary of work types; mirrors `ObjectiveType` in Python. */
+export const OBJECTIVE_TYPES = [
+	'bug',
+	'feature',
+	'refactor',
+	'test',
+	'performance',
+	'infrastructure',
+	'analytics',
+	'research',
+	'design',
+	'writing',
+	'review',
+	'unknown'
+] as const;
+export type ObjectiveType = (typeof OBJECTIVE_TYPES)[number];
+
 export interface BundleDocument {
-	schema_version?: 2;
+	schema_version?: 3;
 	/** What the bundle represents, in a sentence or two for a human reader. */
 	summary?: string;
 	/** The kind of work in general terms; bundles are grouped on it. */
 	objective?: string;
+	/** The closed category of that work; the first grouping level above the objective. */
+	objective_type?: ObjectiveType;
 	/** What this particular piece of work tried to achieve. */
 	goal?: string;
 	status?: BundleStatus;
@@ -213,6 +232,7 @@ export interface BundleSummary {
 	revision: number;
 	summary: string;
 	objective: string;
+	objective_type: ObjectiveType;
 	goal: string;
 	status: BundleStatus;
 	origin: BundleOrigin;
@@ -452,6 +472,31 @@ export class BenchwarmerClient {
 			throw new BenchwarmerApiError(response.status, 'POST', '/bundles', await response.text());
 		}
 		return { ok: true, existing: response.status === 200, bundle: (await response.json()) as BundleDetail };
+	}
+
+	async getBundle(id: string): Promise<BundleDetail> {
+		return this.json<BundleDetail>('GET', `/bundles/${encodeURIComponent(id)}`);
+	}
+
+	/**
+	 * Save a new revision of a bundle. `baseRevision` must be the revision the
+	 * caller read; the API answers 409 when the bundle changed meanwhile.
+	 */
+	async updateBundle(
+		id: string,
+		document: BundleDocument,
+		baseRevision: number,
+		origin: BundleOrigin,
+		producer: string,
+		options: { provenance?: RunProvenance } = {}
+	): Promise<BundleDetail> {
+		return this.json<BundleDetail>('PUT', `/bundles/${encodeURIComponent(id)}`, {
+			document,
+			base_revision: baseRevision,
+			origin,
+			producer,
+			...(options.provenance ? { provenance: options.provenance } : {})
+		});
 	}
 
 	/** Record a finished run; sending the same run id again replaces the earlier record. */

@@ -16,6 +16,7 @@ const summaries: BundleSummary[] = ['bundle-1', 'bundle-2', 'bundle-3'].map((id)
 	revision: 1,
 	summary: `Summary ${id}`,
 	objective: 'Resolve a customer refund request',
+	objective_type: 'unknown',
 	goal: '',
 	status: 'draft',
 	origin: 'generated',

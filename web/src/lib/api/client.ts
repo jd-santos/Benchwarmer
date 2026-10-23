@@ -2,29 +2,31 @@ import type {
 	Branch,
 	BundleDetail,
 	BundleDocument,
+	BundleMembership,
 	BundleOrigin,
 	BundlesResponse,
-	BundleMembership,
-	HarnessRunRecord,
-	ImportBatchSummary,
-	ImportConfig,
-	ImportRun,
-	RunSummary,
-	RunsResponse,
 	BundleStatus,
 	BundleSummary,
-	EvidenceIssue,
 	ContentBlock,
 	ConversationDetail,
 	ConversationEvent,
-	ConversationSummary,
 	ConversationsResponse,
+	ConversationSummary,
 	CoverageValue,
+	EvidenceIssue,
+	HarnessRunRecord,
 	HealthResponse,
+	ImportBatchSummary,
+	ImportConfig,
+	ImportRun,
+	ObjectiveType,
+	RunsResponse,
+	RunSummary,
 	SourceCoverage,
-	SourceStatus,
-	SourcesResponse
+	SourcesResponse,
+	SourceStatus
 } from './types';
+import { objectiveTypes } from '$lib/bundles/format';
 
 export type ApiErrorKind = 'network' | 'http' | 'malformed-json' | 'invalid-contract';
 
@@ -509,6 +511,8 @@ function isBundleDocument(value: unknown): value is BundleDocument {
 		isRecord(value) &&
 		typeof value.summary === 'string' &&
 		typeof value.objective === 'string' &&
+		typeof value.objective_type === 'string' &&
+		objectiveTypes.has(value.objective_type) &&
 		typeof value.goal === 'string' &&
 		typeof value.status === 'string' &&
 		bundleStatuses.has(value.status) &&
@@ -574,6 +578,8 @@ function isBundleSummary(value: unknown): value is BundleSummary {
 		isCount(value.revision) &&
 		typeof value.summary === 'string' &&
 		typeof value.objective === 'string' &&
+		typeof value.objective_type === 'string' &&
+		objectiveTypes.has(value.objective_type) &&
 		typeof value.goal === 'string' &&
 		typeof value.status === 'string' &&
 		bundleStatuses.has(value.status) &&
@@ -604,6 +610,8 @@ export interface BundleFilters {
 	status?: BundleStatus;
 	/** Only bundles whose latest revision came from this harness run. */
 	runId?: string;
+	/** Only bundles of this type of work. */
+	objectiveType?: ObjectiveType;
 }
 
 export async function getBundles(
@@ -615,6 +623,7 @@ export async function getBundles(
 	if (filters.origin) params.set('origin', filters.origin);
 	if (filters.status) params.set('status', filters.status);
 	if (filters.runId) params.set('run_id', filters.runId);
+	if (filters.objectiveType) params.set('objective_type', filters.objectiveType);
 	const query = params.toString();
 	const search = query ? `?${query}` : '';
 	const value = await getJson(`/api/v1/bundles${search}`, options.signal, options.fetch);

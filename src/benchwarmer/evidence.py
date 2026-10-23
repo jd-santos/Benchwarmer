@@ -24,10 +24,42 @@ from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-BUNDLE_SCHEMA_VERSION = 2
+BUNDLE_SCHEMA_VERSION = 3
 MAX_BUNDLE_ITEMS = 200
 
 EvidenceRole = Literal["requirement", "action", "result", "correction", "context"]
+
+# The closed vocabulary of work types bundles are grouped by. The free-text
+# objective stays alongside it as the finer description. ``unknown`` is a
+# legitimate value, not a failure.
+ObjectiveType = Literal[
+    "bug",
+    "feature",
+    "refactor",
+    "test",
+    "performance",
+    "infrastructure",
+    "analytics",
+    "research",
+    "design",
+    "writing",
+    "review",
+    "unknown",
+]
+OBJECTIVE_TYPES: tuple[ObjectiveType, ...] = (
+    "bug",
+    "feature",
+    "refactor",
+    "test",
+    "performance",
+    "infrastructure",
+    "analytics",
+    "research",
+    "design",
+    "writing",
+    "review",
+    "unknown",
+)
 BundleStatus = Literal["draft", "reviewed", "analysis_only", "rejected"]
 BundleOrigin = Literal["human", "generated"]
 
@@ -90,11 +122,13 @@ class BundleItem(_Strict):
 class BundleDocument(_Strict):
     """The reviewable content of one bundle revision."""
 
-    schema_version: Literal[2] = BUNDLE_SCHEMA_VERSION
+    schema_version: Literal[3] = BUNDLE_SCHEMA_VERSION
     # What the bundle represents, in a sentence or two for a human reader.
     summary: _Note = ""
     # The kind of work, in general terms; the axis bundles are grouped on.
     objective: _Note = ""
+    # The closed category of that work; the first grouping level above the objective.
+    objective_type: ObjectiveType = "unknown"
     # What this particular piece of work tried to achieve.
     goal: _Note = ""
     status: BundleStatus = "draft"
@@ -104,17 +138,20 @@ class BundleDocument(_Strict):
 
     @model_validator(mode="before")
     @classmethod
-    def _upgrade_version_1(cls, data: Any) -> Any:
-        """Read a version 1 document as version 2.
+    def _upgrade_earlier_versions(cls, data: Any) -> Any:
+        """Read version 1 and 2 documents as version 3.
 
         Version 1 kept the specific aim in ``objective``, so it becomes the
         ``goal``. The text also stays in ``objective`` until a reviewer writes
-        the general kind of work, so a reviewed bundle stays valid.
+        the general kind of work, so a reviewed bundle stays valid. Version 2
+        had no ``objective_type``; it reads as ``unknown`` until classified.
         """
-        if isinstance(data, dict) and data.get("schema_version") == 1:
+        if isinstance(data, dict) and data.get("schema_version") in (1, 2):
             upgraded = dict(data)
+            if upgraded["schema_version"] == 1:
+                upgraded.setdefault("goal", upgraded.get("objective", ""))
             upgraded["schema_version"] = BUNDLE_SCHEMA_VERSION
-            upgraded.setdefault("goal", upgraded.get("objective", ""))
+            upgraded.setdefault("objective_type", "unknown")
             return upgraded
         return data
 

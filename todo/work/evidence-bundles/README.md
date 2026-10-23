@@ -62,7 +62,13 @@ Decided with the user on 2026-10-22, after the first operator run:
   projects; the first run's objectives were too specific and are the goals
   under this split. Version 1 documents upgrade on read with their objective
   copied into the goal; reviewers generalize the objective when they touch
-  the bundle. A reviewed bundle still needs an objective.
+  the bundle. A reviewed bundle still needs an objective. Version 3 adds
+  `objective_type`, a closed vocabulary (bug, feature, refactor, test,
+  performance, infrastructure, analytics, research, design, writing, review,
+  unknown) that is the first grouping level above the objective; version 2
+  documents read as unknown. The harness assigns it in a second conversation
+  after a conversation's proposals settle (`set_objective_type`), and the
+  editor lets a reviewer change it.
 - A third statement, `summary`, is the bundle's title for people: one or two
   plain sentences saying what happened and how it ended. The objective is for
   classification, the goal is metadata shown only in the editor, and the

@@ -4,13 +4,14 @@ import { cleanup, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { BundlesResponse, BundleSummary, RunSummary } from '$lib/api/types';
 import Page from './+page.svelte';
-import { _filtersFor, _viewFrom, type BundleView } from './+page';
+import { _filtersFor, _typeFrom, _viewFrom, type BundleView } from './+page';
 
 const human: BundleSummary = {
 	id: 'bundle-1',
 	revision: 2,
 	summary: 'Refund handling',
 	objective: 'Resolve a customer refund request',
+	objective_type: 'unknown',
 	goal: 'Refund the second item',
 	status: 'reviewed',
 	origin: 'human',
@@ -26,6 +27,7 @@ const proposed: BundleSummary = {
 	revision: 1,
 	summary: 'Refund request and the offered resolution',
 	objective: 'Resolve a customer refund request',
+	objective_type: 'unknown',
 	goal: 'Get the second item refunded',
 	status: 'draft',
 	origin: 'generated',
@@ -44,7 +46,7 @@ function renderPage(
 	runs: Promise<RunSummary[]> | null = null
 ) {
 	return render(Page, {
-		props: { data: { view, run, bundles, proposedCount, runs }, params: {} }
+		props: { data: { view, run, type: null, bundles, proposedCount, runs }, params: {} }
 	});
 }
 
@@ -101,6 +103,44 @@ describe('bundle list page', () => {
 		// Opening a bundle keeps the view, so its previous/next arrows step through this list.
 		expect(getByRole('link', { name: proposed.summary }).getAttribute('href')).toBe(
 			'/bundles/bundle-2?view=proposed&run=propose-bundles-2026-10-19T10-00-00-000Z'
+		);
+	});
+
+	it('reads the type filter from the URL and shows the type of work per bundle', async () => {
+		expect(_typeFrom(new URLSearchParams('type=bug'))).toBe('bug');
+		expect(_typeFrom(new URLSearchParams('type=chores'))).toBeNull();
+		expect(_filtersFor('proposed', null, 'bug')).toEqual({
+			origin: 'generated',
+			status: 'draft',
+			objectiveType: 'bug'
+		});
+
+		const { findByRole, getByRole, getAllByText } = render(Page, {
+			props: {
+				data: {
+					view: 'all',
+					run: null,
+					type: 'bug',
+					runs: null,
+					bundles: Promise.resolve({
+						items: [{ ...human, objective_type: 'bug' as const }, proposed]
+					}),
+					proposedCount: Promise.resolve(null)
+				},
+				params: {}
+			}
+		});
+
+		expect(await findByRole('columnheader', { name: 'Type' })).toBeTruthy();
+		// The filter option, the desktop cell, and the folded phone line name the type; unknown stays quiet.
+		expect(getAllByText(/^Bug/).length).toBe(3);
+		// The unknown row shows its type only in the desktop cell (plus the filter option).
+		expect(getAllByText('Unknown').length).toBe(2);
+		const filter = getByRole('combobox', { name: 'Type of work' }) as HTMLSelectElement;
+		expect(filter.value).toBe('bug');
+		// Other links keep the type so the filter survives changing views.
+		expect(getByRole('link', { name: /Proposed drafts/ }).getAttribute('href')).toBe(
+			'/bundles?view=proposed&type=bug'
 		);
 	});
 

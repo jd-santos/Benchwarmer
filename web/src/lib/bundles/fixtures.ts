@@ -20,9 +20,10 @@ export const bundle: BundleDetail = {
 	created_at: '2026-10-19T10:00:00Z',
 	updated_at: '2026-10-19T10:00:00Z',
 	document: {
-		schema_version: 2,
+		schema_version: 3,
 		summary: '',
 		objective: '',
+		objective_type: 'unknown',
 		goal: '',
 		status: 'draft',
 		rationale: null,
@@ -102,6 +103,7 @@ export const proposedBundle: BundleDetail = {
 		...bundle.document,
 		summary: 'Refund request and the offered resolution',
 		objective: 'Resolve a customer refund request',
+		objective_type: 'bug',
 		goal: 'Get the second item refunded',
 		rationale: 'The user asked for a refund and the assistant offered one.'
 	},

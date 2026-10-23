@@ -17,7 +17,11 @@ import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite
 import { BenchwarmerClient } from '../benchwarmer/client.ts';
 import type { RunProvenance } from '../benchwarmer/client.ts';
 import { createHarnessModels, missingKeyHint, providerBaseUrlOverride } from '../providers.ts';
-import { createLibraryExtension, type ProposedBundleRecord } from '../tools/library.ts';
+import {
+	OBJECTIVE_TYPE_GUIDE,
+	createLibraryExtension,
+	type ProposedBundleRecord
+} from '../tools/library.ts';
 import { emptyUsage, sumUsage, toRunUsage, usageDelta } from '../usage.ts';
 
 export { usageDelta } from '../usage.ts';
@@ -91,6 +95,25 @@ Report only what the evidence supports. Say "the test failed before the correcti
 
 When finished, answer with a short list of the bundles you created (id, summary, objective) or the reason none were created.`;
 
+/**
+ * The second step runs after the proposals, in its own conversation, so the
+ * type is decided from the finished bundle rather than mid-analysis. It sees
+ * only the bundle statements, not the transcript.
+ */
+export const CLASSIFIER_INSTRUCTIONS = `You classify evidence bundles by the type of work they represent.
+
+Each bundle has a summary, a goal, and an objective. Pick exactly one type for each bundle from this closed vocabulary:
+${Object.entries(OBJECTIVE_TYPE_GUIDE)
+	.map(([type, meaning]) => `- ${type}: ${meaning}`)
+	.join('\n')}
+
+Rules:
+- Classify the work the agent actually did, not what was asked for. A request for a feature that turned into a bug hunt is a bug.
+- When two types fit, prefer the one the evidence spends most of its effort on. Use unknown only when the statements do not show the kind of work, or several apply equally; it is a legitimate answer, not a failure.
+- Call set_objective_type once per bundle with a one-sentence reason. Do not call any other tool, and do not re-read the conversation.
+
+When finished, answer with one line per bundle: id, type.`;
+
 export async function proposeBundles(options: ProposeBundlesOptions): Promise<RunReport> {
 	const context = BACKGROUND_CONTEXT;
 	const log = options.log ?? (() => undefined);
@@ -126,6 +149,11 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 			created.push(record);
 			log(`  created ${record.bundle_id}: ${record.summary}`);
 			log(`    objective: ${record.objective}`);
+		},
+		onBundleClassified: (bundleId, objectiveType) => {
+			const record = created.find((item) => item.bundle_id === bundleId);
+			if (record) record.objective_type = objectiveType;
+			log(`  typed ${bundleId}: ${objectiveType}`);
 		}
 	});
 	const registry = createRegistry();
@@ -183,6 +211,41 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 				const settled = await submission.wait(context);
 				report.status = settled.status;
 				if (settled.status === 'unanswered') report.reason = settled.reason;
+
+				// Second step: type each new bundle from its finished statements.
+				const proposals = created.slice(createdBefore);
+				if (settled.status === 'done' && proposals.length > 0) {
+					const classifier = await harness.createConversation(
+						{
+							ownership: { kind: 'ownerless' },
+							agent: {
+								model: { provider: options.provider, modelId: options.modelId },
+								...(options.thinkingLevel ? { thinkingLevel: options.thinkingLevel } : {}),
+								instructions: CLASSIFIER_INSTRUCTIONS
+							}
+						},
+						context
+					);
+					const listing = proposals
+						.map(
+							(record) =>
+								`bundle ${record.bundle_id}\n  summary: ${record.summary}\n  goal: ${record.goal}\n  objective: ${record.objective}`
+						)
+						.join('\n\n');
+					const classified = await classifier.submit(
+						{
+							type: 'input',
+							content: `Classify each of these bundles by type of work.\n\n${listing}`,
+							requestId: `${runId}:${conversationId}:classify`
+						},
+						context
+					);
+					const typed = await classified.wait(context);
+					if (typed.status !== 'done') {
+						report.reason = `classification ${typed.status}${typed.status === 'unanswered' ? `: ${typed.reason}` : ''}`;
+						log(`  ${report.reason}`);
+					}
+				}
 			} catch (error) {
 				report.status = 'error';
 				report.reason = error instanceof Error ? error.message : String(error);

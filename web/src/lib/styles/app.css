@@ -1610,7 +1610,11 @@ a.workflow__step:hover .workflow__label {
 	}
 
 	.bundle-table__col-objective {
-		width: 26%;
+		width: 24%;
+	}
+
+	.bundle-table__col-type {
+		width: 7.5rem;
 	}
 }
 
@@ -2509,4 +2513,22 @@ input:focus-visible {
 
 .import-outcome--succeeded {
 	color: #1f6b3a;
+}
+
+/* Type of work: a quiet label in headers, a filter above the bundle list. */
+.bundle-type {
+	font-weight: 600;
+	color: #2b3947;
+}
+
+.list-filter {
+	margin: 0.75rem 0 0;
+}
+
+.list-filter__field {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+	color: #526272;
 }

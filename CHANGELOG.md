@@ -92,6 +92,13 @@ This project does not currently declare a Semantic Versioning policy.
 
 ### Changed
 
+- Classify each evidence bundle by type of work from a closed vocabulary
+  (`bug`, `feature`, `refactor`, `test`, `performance`, `infrastructure`,
+  `analytics`, `research`, `design`, `writing`, `review`, `unknown`). The
+  bundle document is now schema version 3; earlier versions read as
+  `unknown`. The proposer types each new bundle in a separate step after
+  drafting it, a reviewer can change the type in the editor, and the list
+  shows and filters by it.
 - Mark evidence items whose conversation changed in a later import, with a
   count in the bundle header, so a reviewer knows the cited version is pinned.
 - Group the Proposed drafts view by the run that proposed each draft, naming
