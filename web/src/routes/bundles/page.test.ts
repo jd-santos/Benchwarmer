@@ -90,7 +90,11 @@ describe('bundle list page', () => {
 
 	it('shows who produced each bundle and counts proposals awaiting review', async () => {
 		const { findByRole, getByRole, getByText, getAllByText, getAllByTitle, queryByText } =
-			renderPage(Promise.resolve({ items: [proposed, human] }), 'all', Promise.resolve(1));
+			renderPage(
+				Promise.resolve({ items: [{ ...proposed, summary: '' }, human] }),
+				'all',
+				Promise.resolve(1)
+			);
 
 		expect(await findByRole('link', { name: 'Refund handling' })).toBeTruthy();
 		// Without a summary the title falls back to the objective, never the goal.
