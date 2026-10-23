@@ -7,10 +7,11 @@
 		describeProducer,
 		formatEstimate,
 		originLabel,
+		shortModel,
 		statusLabel,
 		usageTotals
 	} from '$lib/bundles/format';
-	import { formatTimestamp, plural } from '$lib/conversations/format';
+	import { formatDate, formatTimestamp, plural } from '$lib/conversations/format';
 	import { _views, type BundleView } from './+page';
 	import type { PageProps } from './$types';
 
@@ -31,7 +32,7 @@
 	function producerNote(bundle: BundleSummary): string | null {
 		if (bundle.origin !== 'generated') return null;
 		const { workflow, model } = describeProducer(bundle.producer);
-		return model ?? workflow;
+		return model ? shortModel(model) : workflow;
 	}
 
 	const emptyHeading: Record<BundleView, string> = {
@@ -128,14 +129,22 @@
 			</section>
 		{:else}
 			<table class="data-table bundle-table">
+				<colgroup>
+					<col class="bundle-table__col-summary" />
+					<col class="bundle-table__col-objective" />
+					<col />
+					<col />
+					<col />
+					<col />
+				</colgroup>
 				<thead>
 					<tr>
 						<th scope="col">Bundle</th>
 						<th scope="col" class="wide-only">Objective</th>
-						<th scope="col" class="wide-only">Status</th>
-						<th scope="col" class="wide-only">Origin</th>
+						<th scope="col" class="wide-only nowrap">Status</th>
+						<th scope="col" class="wide-only nowrap">Origin</th>
 						<th scope="col" class="numeric">Items</th>
-						<th scope="col">Updated</th>
+						<th scope="col" class="wide-only nowrap">Updated</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -144,40 +153,45 @@
 						<tr>
 							<th scope="row">
 								<a
-									class:untitled={!bundle.goal.trim() && !bundle.objective.trim()}
+									class:untitled={bundleLabel(bundle) === 'Untitled bundle'}
 									href={resolve('/bundles/[id]', { id: bundle.id })}
 								>
-									{bundleLabel(bundle.goal, bundle.objective)}
+									{bundleLabel(bundle)}
 								</a>
-								{#if bundle.goal.trim() && bundle.objective.trim()}
-									<span class="bundle-table__note bundle-table__meta">{bundle.objective}</span>
-								{/if}
 								{#if bundle.conversation_ids.length > 1}
 									<span class="bundle-table__note">
 										{plural(bundle.conversation_ids.length, 'conversation')}
 									</span>
+								{/if}
+								{#if bundle.objective.trim()}
+									<span class="bundle-table__note bundle-table__meta">{bundle.objective}</span>
 								{/if}
 								<span class="bundle-table__note bundle-table__meta" title={bundle.producer}>
 									<span class="bundle-status bundle-status--{bundle.status}"
 										>{statusLabel(bundle.status)}</span
 									>
 									· {originLabel(bundle.origin)}{note ? `, ${note}` : ''}
+									· <time datetime={bundle.updated_at}>{formatTimestamp(bundle.updated_at)}</time>
 								</span>
 							</th>
 							<td class="wide-only muted">
 								{#if bundle.objective.trim()}{bundle.objective}{:else}Not set{/if}
 							</td>
-							<td class="wide-only"
+							<td class="wide-only nowrap"
 								><span class="bundle-status bundle-status--{bundle.status}"
 									>{statusLabel(bundle.status)}</span
 								></td
 							>
-							<td class="wide-only" title={bundle.producer}>
+							<td class="wide-only nowrap" title={bundle.producer}>
 								{originLabel(bundle.origin)}
 								{#if note}<span class="bundle-table__note">{note}</span>{/if}
 							</td>
 							<td class="numeric">{bundle.item_count}</td>
-							<td class="muted">{formatTimestamp(bundle.updated_at)}</td>
+							<td class="wide-only muted nowrap">
+								<time datetime={bundle.updated_at} title={formatTimestamp(bundle.updated_at)}
+									>{formatDate(bundle.updated_at)}</time
+								>
+							</td>
 						</tr>
 					{/each}
 				</tbody>

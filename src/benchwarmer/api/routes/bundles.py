@@ -80,6 +80,7 @@ class BundleSummaryResponse(_Strict):
 
     id: str
     revision: int
+    summary: str
     objective: str
     goal: str
     status: BundleStatus
@@ -211,6 +212,7 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                     BundleSummaryResponse(
                         id=item.id,
                         revision=item.revision,
+                        summary=item.summary,
                         objective=item.objective,
                         goal=item.goal,
                         status=item.status,  # type: ignore[arg-type]

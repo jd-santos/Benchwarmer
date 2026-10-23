@@ -25,6 +25,7 @@ export type ProposedBundleRecord = {
 	bundle_id: string;
 	conversation_id: string;
 	revision: string;
+	summary: string;
 	objective: string;
 	goal: string;
 	item_count: number;
@@ -141,8 +142,8 @@ export function createLibraryExtension(
 				bundles
 					.map(
 						(b) =>
-							`${b.id}  rev=${b.revision}  ${b.status}  items=${b.item_count}  ${b.goal || b.objective || '(untitled)'}` +
-							(b.goal && b.objective ? `  [${b.objective}]` : '')
+							`${b.id}  rev=${b.revision}  ${b.status}  items=${b.item_count}  ${b.summary || b.goal || b.objective || '(untitled)'}` +
+							(b.objective ? `  [${b.objective}]` : '')
 					)
 					.join('\n')
 			);
@@ -173,6 +174,12 @@ export function createLibraryExtension(
 		parameters: Type.Object({
 			conversation_id: Type.String(),
 			revision: Type.String(),
+			summary: Type.String({
+				minLength: 1,
+				maxLength: 4000,
+				description:
+					'One or two plain sentences for a person scanning a list: what happened in this piece of work and how it ended'
+			}),
 			goal: Type.String({
 				minLength: 1,
 				maxLength: 4000,
@@ -209,6 +216,7 @@ export function createLibraryExtension(
 				items.push({ ref, role: item.role, note: item.note ?? null });
 			}
 			const document: BundleDocument = {
+				summary: args.summary,
 				objective: args.objective,
 				goal: args.goal,
 				status: 'draft',
@@ -231,6 +239,7 @@ export function createLibraryExtension(
 				bundle_id: result.bundle.id,
 				conversation_id: args.conversation_id,
 				revision: args.revision,
+				summary: args.summary,
 				objective: args.objective,
 				goal: args.goal,
 				item_count: items.length

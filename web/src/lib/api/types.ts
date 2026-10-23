@@ -168,6 +168,8 @@ export interface BundleItem {
 
 export interface BundleDocument {
 	schema_version?: 2;
+	/** What the bundle represents, in a sentence or two for a human reader. */
+	summary: string;
 	/** The kind of work in general terms; the axis bundles are grouped on. */
 	objective: string;
 	/** What this particular piece of work tried to achieve. */
@@ -228,6 +230,7 @@ export interface BundleDetail {
 export interface BundleSummary {
 	id: string;
 	revision: number;
+	summary: string;
 	objective: string;
 	goal: string;
 	status: BundleStatus;

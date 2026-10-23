@@ -78,7 +78,8 @@ Work like this:
 1. Call get_outline first. It is deterministic and complete; use it to decide which exchanges matter.
 2. Call list_bundles to see what already exists for this conversation and do not duplicate it.
 3. Read only the events you need with read_events. Prefer citing a specific block; cite a text range (code points, half-open) when a block is long and only part of it is evidence.
-4. Propose one bundle per distinct piece of work with propose_bundle. Include failures, recoveries, and routine successes alike. Give each bundle two statements:
+4. Propose one bundle per distinct piece of work with propose_bundle. Include failures, recoveries, and routine successes alike. Give each bundle three statements:
+   - summary: one or two plain sentences for a person scanning a list, saying what happened and how it ended ("The agent added a unique index without checking for existing duplicates; the statement failed and it switched to looking for duplicates first."). No ids, no field lists.
    - goal: what this particular piece of work tried to achieve, with its specifics ("find why the nightly reconciliation posted duplicate credits to 14 accounts").
    - objective: the kind of work in general terms, as one short imperative phrase that could describe the same work in another project ("diagnose duplicate records produced by a scheduled batch job", "verify a fix by replaying historical inputs against a scratch copy"). No project names, dates, identifiers, or figures. Bundles are later grouped by objective, so reuse the same wording when two bundles are the same kind of work.
    Write the rationale as why these items were selected.
@@ -88,7 +89,7 @@ Work like this:
 
 Report only what the evidence supports. Say "the test failed before the correction", not "the agent misunderstood"; interpretations are not part of the bundle record. If the conversation holds no coherent piece of work, create no bundle and say so.
 
-When finished, answer with a short list of the bundles you created (id, objective, goal) or the reason none were created.`;
+When finished, answer with a short list of the bundles you created (id, summary, objective) or the reason none were created.`;
 
 export async function proposeBundles(options: ProposeBundlesOptions): Promise<RunReport> {
 	const context = BACKGROUND_CONTEXT;
@@ -123,7 +124,7 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 		provenance,
 		onBundleCreated: (record) => {
 			created.push(record);
-			log(`  created ${record.bundle_id}: ${record.goal}`);
+			log(`  created ${record.bundle_id}: ${record.summary}`);
 			log(`    objective: ${record.objective}`);
 		}
 	});

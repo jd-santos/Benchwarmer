@@ -60,7 +60,7 @@ these separate and record who or what produced the interpretation and how
 uncertain it is. If an event was not captured, we cannot conclude it did not
 happen.
 
-Each bundle has a versioned record of its goal, its objective, selected
+Each bundle has a versioned record of its summary, goal, objective, selected
 evidence, the role of each item, required context, why those items were
 chosen, missing evidence, origin, and review status. The **goal** is what this
 particular piece of work tried to achieve, with its specifics: "find why the
@@ -69,7 +69,10 @@ nightly reconciliation posted duplicate credits to 14 accounts." The
 dates, or figures: "diagnose duplicate records produced by a scheduled batch
 job." Bundles are later grouped by objective into categories of work, so two
 bundles that are the same kind of work should share an objective even when
-their goals differ. Record requested capability, subject
+their goals differ. The **summary** is a sentence or two for a person
+scanning a list, saying what happened and how it ended; it is the bundle's
+title. The objective serves classification, the goal is metadata, and the
+summary is for people. Record requested capability, subject
 matter, behavior, outcome, recovery, and suitability for evaluation
 separately. "Unknown" and "ambiguous" are legitimate values. Keep human
 corrections and earlier generated versions; regenerating a bundle never

@@ -14,7 +14,7 @@
 		title = 'Bundle';
 		data.bundle.then(
 			(detail) => {
-				if (current) title = bundleLabel(detail.document.goal, detail.document.objective);
+				if (current) title = bundleLabel(detail.document);
 			},
 			() => undefined
 		);

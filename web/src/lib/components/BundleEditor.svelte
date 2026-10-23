@@ -49,6 +49,7 @@
 	const current = $derived(saved ?? detail);
 	const readOnly = $derived(current.revision !== current.latest_revision);
 
+	let summary = $derived(current.document.summary);
 	let objective = $derived(current.document.objective);
 	let goal = $derived(current.document.goal);
 	let status = $derived<BundleStatus>(current.document.status);
@@ -63,6 +64,7 @@
 	let confirmation = $state('');
 
 	const draft = $derived<BundleDocument>({
+		summary: summary.trim(),
 		objective: objective.trim(),
 		goal: goal.trim(),
 		status,
@@ -95,6 +97,7 @@
 
 	function normalized(document: BundleDocument): BundleDocument {
 		return {
+			summary: document.summary,
 			objective: document.objective,
 			goal: document.goal,
 			status: document.status,
@@ -179,8 +182,8 @@
 
 <div class="bundle-editor">
 	<header class="bundle-editor__header">
-		<h1 class:untitled={!current.document.goal && !current.document.objective}>
-			{bundleLabel(current.document.goal, current.document.objective)}
+		<h1 class:untitled={bundleLabel(current.document) === 'Untitled bundle'}>
+			{bundleLabel(current.document)}
 		</h1>
 		<p class="meta-line">
 			<span>{statusLabel(current.document.status)}</span>
@@ -244,6 +247,16 @@
 	>
 		<fieldset class="bundle-summary" disabled={readOnly}>
 			<legend class="visually-hidden">Summary</legend>
+			<div class="field">
+				<label for="bundle-summary">Summary</label>
+				<textarea
+					id="bundle-summary"
+					rows="2"
+					maxlength="4000"
+					placeholder="What this bundle shows, in a sentence or two for a reader"
+					bind:value={summary}></textarea>
+			</div>
+
 			<div class="field">
 				<label for="bundle-goal">Goal</label>
 				<textarea

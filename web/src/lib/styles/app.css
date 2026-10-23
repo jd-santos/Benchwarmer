@@ -1599,6 +1599,29 @@ a.workflow__step:hover .workflow__label {
 	max-width: 64rem;
 }
 
+/* Fixed proportions keep the short columns from wrapping word by word at desktop width. */
+@media (min-width: 48rem) {
+	.bundle-table {
+		table-layout: fixed;
+	}
+
+	.bundle-table__col-summary {
+		width: 44%;
+	}
+
+	.bundle-table__col-objective {
+		width: 26%;
+	}
+}
+
+.bundle-table .nowrap {
+	white-space: nowrap;
+}
+
+.bundle-table tbody th {
+	line-height: 1.35;
+}
+
 .bundle-table tbody th a {
 	text-decoration: none;
 }

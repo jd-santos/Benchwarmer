@@ -10,8 +10,9 @@ import { _filtersFor, _viewFrom, type BundleView } from './+page';
 const human: BundleSummary = {
 	id: 'bundle-1',
 	revision: 2,
+	summary: 'Refund handling',
 	objective: 'Resolve a customer refund request',
-	goal: 'Refund handling',
+	goal: 'Refund the second item',
 	status: 'reviewed',
 	origin: 'human',
 	producer: 'web',
@@ -24,8 +25,9 @@ const human: BundleSummary = {
 const proposed: BundleSummary = {
 	id: 'bundle-2',
 	revision: 1,
+	summary: 'Refund request and the offered resolution',
 	objective: 'Resolve a customer refund request',
-	goal: 'Refund request and the offered resolution',
+	goal: 'Get the second item refunded',
 	status: 'draft',
 	origin: 'generated',
 	producer: 'benchwarmer-harness/propose-bundles@0.0.1 anthropic/claude-sonnet-5-5',
@@ -87,11 +89,8 @@ describe('bundle list page', () => {
 	});
 
 	it('shows who produced each bundle and counts proposals awaiting review', async () => {
-		const { findByRole, getByRole, getByText, getAllByText, getAllByTitle } = renderPage(
-			Promise.resolve({ items: [proposed, human] }),
-			'all',
-			Promise.resolve(1)
-		);
+		const { findByRole, getByRole, getByText, getAllByText, getAllByTitle, queryByText } =
+			renderPage(Promise.resolve({ items: [proposed, human] }), 'all', Promise.resolve(1));
 
 		expect(await findByRole('link', { name: 'Refund handling' })).toBeTruthy();
 		// The objective groups bundles: a column at desktop width, a folded line at phone width.
@@ -101,7 +100,9 @@ describe('bundle list page', () => {
 		const cells = getAllByTitle(proposed.producer);
 		expect(cells.length).toBe(2);
 		expect(cells.every((cell) => cell.textContent?.includes('Proposed'))).toBe(true);
-		expect(getByText('anthropic/claude-sonnet-5-5')).toBeTruthy();
+		expect(getAllByText('claude-sonnet-5-5').length).toBe(1);
+		// The goal is metadata for the editor, not a list column.
+		expect(queryByText('Get the second item refunded')).toBeNull();
 		const views = getByRole('navigation', { name: 'Bundle views' });
 		const link = getByRole('link', { name: /Proposed drafts/ });
 		expect(link.getAttribute('href')).toBe('/bundles?view=proposed');

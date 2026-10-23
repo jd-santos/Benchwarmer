@@ -414,6 +414,7 @@ const bundleOrigins: ReadonlySet<string> = new Set(['human', 'generated']);
 function isBundleDocument(value: unknown): value is BundleDocument {
 	return (
 		isRecord(value) &&
+		typeof value.summary === 'string' &&
 		typeof value.objective === 'string' &&
 		typeof value.goal === 'string' &&
 		typeof value.status === 'string' &&
@@ -471,6 +472,7 @@ function isBundleSummary(value: unknown): value is BundleSummary {
 		isRecord(value) &&
 		typeof value.id === 'string' &&
 		isCount(value.revision) &&
+		typeof value.summary === 'string' &&
 		typeof value.objective === 'string' &&
 		typeof value.goal === 'string' &&
 		typeof value.status === 'string' &&

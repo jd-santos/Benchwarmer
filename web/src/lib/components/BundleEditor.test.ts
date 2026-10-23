@@ -59,6 +59,7 @@ describe('bundle editor', () => {
 			props: { detail: bundle }
 		});
 
+		await user.type(getByLabelText('Summary'), 'A refund was requested and offered.');
 		await user.type(getByLabelText('Goal'), 'Refund for the second item');
 		await user.type(getByLabelText('Objective'), 'Refund handling');
 		await user.selectOptions(getByLabelText('Role of item 2'), 'correction');
@@ -69,6 +70,7 @@ describe('bundle editor', () => {
 		expect(url).toBe('/api/v1/bundles/bundle-1');
 		const body = JSON.parse(String(init?.body));
 		expect(body.base_revision).toBe(1);
+		expect(body.document.summary).toBe('A refund was requested and offered.');
 		expect(body.document.goal).toBe('Refund for the second item');
 		expect(body.document.objective).toBe('Refund handling');
 		expect(body.document.items[1].role).toBe('correction');
@@ -133,7 +135,7 @@ describe('reviewing a proposed bundle', () => {
 		expect(getByRole('button', { name: 'Save revision' }).hasAttribute('disabled')).toBe(false);
 	});
 
-	it('titles a proposal by its goal and shows what its pass cost', async () => {
+	it('titles a proposal by its summary and shows what its pass cost', async () => {
 		const { getByRole, findByText } = render(BundleEditor, {
 			props: { detail: proposedBundle, run: Promise.resolve(proposedRun) }
 		});

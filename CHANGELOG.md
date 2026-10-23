@@ -53,8 +53,9 @@ This project does not currently declare a Semantic Versioning policy.
   URL variable such as `ANTHROPIC_BASE_URL`; run reports record the override.
 - Split a bundle's `goal` (what this piece of work tried to achieve) from its
   `objective` (the kind of work in general terms, for grouping bundles later).
-  Bundle documents are version 2; version 1 documents are read with their
-  objective carried into the goal. The proposer, list, and editor use both.
+  Add a human-readable `summary` as the bundle's title. Bundle documents are
+  version 2; version 1 documents are read with their objective carried into
+  the goal. The proposer, list, and editor use all three.
 - Record each hand-run harness workflow in the application
   (`PUT /api/v1/runs/{run_id}`, `GET /api/v1/runs`) with raw usage and the
   catalog cost estimate; the bundle list and editor show what a run or a

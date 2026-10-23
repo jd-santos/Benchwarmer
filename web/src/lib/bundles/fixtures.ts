@@ -21,6 +21,7 @@ export const bundle: BundleDetail = {
 	updated_at: '2026-10-19T10:00:00Z',
 	document: {
 		schema_version: 2,
+		summary: '',
 		objective: '',
 		goal: '',
 		status: 'draft',
@@ -97,8 +98,9 @@ export const proposedBundle: BundleDetail = {
 	request_id: `${proposedProvenance.run_id}:conversation-a:abc123`,
 	document: {
 		...bundle.document,
+		summary: 'Refund request and the offered resolution',
 		objective: 'Resolve a customer refund request',
-		goal: 'Refund request and the offered resolution',
+		goal: 'Get the second item refunded',
 		rationale: 'The user asked for a refund and the assistant offered one.'
 	},
 	revisions: [

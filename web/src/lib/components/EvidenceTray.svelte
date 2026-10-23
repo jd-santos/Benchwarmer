@@ -64,6 +64,7 @@
 			} else {
 				id = (
 					await createBundle({
+						summary: '',
 						objective: '',
 						goal: '',
 						status: 'draft',
@@ -106,7 +107,7 @@
 				<select bind:value={target} disabled={pending}>
 					<option value="">New bundle</option>
 					{#each bundles as bundle (bundle.id)}
-						<option value={bundle.id}>{bundleLabel(bundle.goal, bundle.objective)}</option>
+						<option value={bundle.id}>{bundleLabel(bundle)}</option>
 					{/each}
 				</select>
 			</label>

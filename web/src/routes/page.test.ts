@@ -80,8 +80,9 @@ const bundles: BundleSummary[] = [
 	{
 		id: 'bundle-1',
 		revision: 2,
+		summary: 'Refund handling',
 		objective: 'Resolve a customer refund request',
-		goal: 'Refund handling',
+		goal: 'Refund the second item',
 		status: 'reviewed',
 		origin: 'human',
 		producer: 'web',
@@ -93,6 +94,7 @@ const bundles: BundleSummary[] = [
 	{
 		id: 'bundle-2',
 		revision: 1,
+		summary: '',
 		objective: '',
 		goal: '',
 		status: 'draft',

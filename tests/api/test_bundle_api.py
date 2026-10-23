@@ -407,6 +407,8 @@ def test_goal_and_objective_are_separate_and_version_1_upgrades(
         "/api/v1/bundles",
         json={
             "document": {
+                "summary": "The nightly import created duplicate sessions; the "
+                "agent traced them to an overlapping window.",
                 "objective": "Diagnose duplicate records from a scheduled import",
                 "goal": "Find why duplicate sessions appear after the nightly import",
                 "items": items,
@@ -418,6 +420,7 @@ def test_goal_and_objective_are_separate_and_version_1_upgrades(
     assert document["schema_version"] == 2
     assert document["goal"].startswith("Find why")
     listed = client.get("/api/v1/bundles").json()["items"]
+    assert listed[0]["summary"] == document["summary"]
     assert listed[0]["goal"] == document["goal"]
     assert listed[0]["objective"] == document["objective"]
 

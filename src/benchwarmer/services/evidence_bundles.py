@@ -94,6 +94,7 @@ class BundleDetail:
 class BundleSummary:
     id: str
     revision: int
+    summary: str
     objective: str
     goal: str
     status: str
@@ -564,6 +565,7 @@ def list_bundles(
             BundleSummary(
                 id=bundle.id,
                 revision=revision.number,
+                summary=document.summary,
                 objective=document.objective,
                 goal=document.goal,
                 status=document.status,

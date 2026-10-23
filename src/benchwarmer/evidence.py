@@ -4,11 +4,13 @@ A reference pins one conversation revision, one event, and optionally one
 content block and a text range within it. Text ranges count Unicode code points
 and are half-open: ``text[start:end]`` in Python selects the referenced text.
 
-A bundle states two things about the work it covers. The ``goal`` is what this
-particular piece of work tried to achieve ("find why the nightly reconciliation
-posted duplicate credits"). The ``objective`` names the kind of work in general
-terms ("diagnose duplicate records from a scheduled batch job"), so bundles can
-later be grouped by objective into categories of work. Version 1 had only
+A bundle states three things about the work it covers. The ``summary`` is a
+sentence or two for a person scanning a list: what the bundle represents. The
+``objective`` names the kind of work in general terms ("diagnose duplicate
+records from a scheduled batch job"), so bundles can later be grouped by
+objective into categories of work. The ``goal`` is what this particular piece
+of work tried to achieve, kept as metadata ("find why the nightly
+reconciliation posted duplicate credits to 14 accounts"). Version 1 had only
 ``objective`` and used it for the specific aim; version 1 documents are
 upgraded on read.
 
@@ -89,6 +91,8 @@ class BundleDocument(_Strict):
     """The reviewable content of one bundle revision."""
 
     schema_version: Literal[2] = BUNDLE_SCHEMA_VERSION
+    # What the bundle represents, in a sentence or two for a human reader.
+    summary: _Note = ""
     # The kind of work, in general terms; the axis bundles are grouped on.
     objective: _Note = ""
     # What this particular piece of work tried to achieve.

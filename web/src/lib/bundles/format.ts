@@ -65,9 +65,16 @@ export function statusLabel(status: BundleStatus): string {
 	return statusOptions.find((option) => option.value === status)?.label ?? status;
 }
 
-/** The bundle's name for lists and titles: its specific goal, else its general objective. */
-export function bundleLabel(goal: string, objective = ''): string {
-	return goal.trim() || objective.trim() || 'Untitled bundle';
+/** The bundle's name for lists and titles: its summary, else its goal, else its objective. */
+export function bundleLabel(bundle: { summary: string; goal: string; objective: string }): string {
+	return (
+		bundle.summary.trim() || bundle.goal.trim() || bundle.objective.trim() || 'Untitled bundle'
+	);
+}
+
+/** The model id without its provider, for tight table cells; the full name suits a title. */
+export function shortModel(model: string): string {
+	return model.slice(model.indexOf('/') + 1);
 }
 
 /** A dollar figure for a catalog estimate; small amounts keep enough precision to compare. */

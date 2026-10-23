@@ -63,6 +63,11 @@ Decided with the user on 2026-10-22, after the first operator run:
   under this split. Version 1 documents upgrade on read with their objective
   copied into the goal; reviewers generalize the objective when they touch
   the bundle. A reviewed bundle still needs an objective.
+- A third statement, `summary`, is the bundle's title for people: one or two
+  plain sentences saying what happened and how it ended. The objective is for
+  classification, the goal is metadata shown only in the editor, and the
+  list shows summary and objective. Decided after the second run showed
+  goals too dense to scan in a table.
 - Run usage belongs in the application, not only in a report file. Each
   workflow records its run (`PUT /api/v1/runs/{run_id}`) with per-input raw
   usage and the catalog estimate; the editor shows what the pass that
@@ -129,8 +134,17 @@ informs the extraction schema and later in-app review of suggested groups.
       order, and each carried a rationale and `missing_evidence`. Catalog
       estimate 0.14 USD: 3.9k output tokens, 23.5k cache-write, 28.4k
       cache-read, 10 uncached input. Review of the drafts is pending.
-    - [ ] Remaining three synthetic fixtures (branch, compaction, no headings),
-      then a private import once anonymized.
+    - [x] Second synthetic run, 2026-10-22, on the 45-event branched sensor
+      backfill fixture with the goal/objective instructions: five drafts in
+      about a minute, the run recorded in the application (98.5k tokens,
+      estimate 0.18 USD). Two bundles on sibling branches received the same
+      objective, "check existing data for constraint violations before adding
+      a unique index and write the migration", which is the grouping the
+      objective exists for. Goals proved too dense for a list, which led to
+      the summary field; these drafts predate it and show their goal until a
+      reviewer adds a summary.
+    - [ ] Remaining two synthetic fixtures (compaction, no headings), then a
+      private import once anonymized.
   - [ ] Decide whether the model should receive shortened event ids. Current
     ids repeat the conversation id in every event and block reference, which
     inflates prompts on long conversations.
