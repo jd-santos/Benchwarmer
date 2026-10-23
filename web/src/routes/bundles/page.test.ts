@@ -93,8 +93,10 @@ describe('bundle list page', () => {
 			renderPage(Promise.resolve({ items: [proposed, human] }), 'all', Promise.resolve(1));
 
 		expect(await findByRole('link', { name: 'Refund handling' })).toBeTruthy();
+		// Without a summary the title falls back to the objective, never the goal.
+		expect(await findByRole('link', { name: 'Resolve a customer refund request' })).toBeTruthy();
 		// The objective groups bundles: a column at desktop width, a folded line at phone width.
-		expect(getAllByText('Resolve a customer refund request').length).toBe(4);
+		expect(getAllByText('Resolve a customer refund request').length).toBe(5);
 		expect(getByText('Human')).toBeTruthy();
 		// The origin cell at desktop width and the folded line at phone width both name the producer.
 		const cells = getAllByTitle(proposed.producer);

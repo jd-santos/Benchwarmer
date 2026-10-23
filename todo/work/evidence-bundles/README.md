@@ -142,8 +142,8 @@ informs the extraction schema and later in-app review of suggested groups.
       a unique index and write the migration", which is the grouping the
       objective exists for. Goals proved too dense for a list, which led to
       the summary field; these drafts predate it and show their goal until a
-      reviewer adds a summary. The title never falls back to the goal: a
-      bundle without a summary is shown as untitled.
+      reviewer adds a summary. The title falls back to the objective, never
+      to the goal.
     - [ ] Remaining two synthetic fixtures (compaction, no headings), then a
       private import once anonymized.
   - [ ] Decide whether the model should receive shortened event ids. Current
