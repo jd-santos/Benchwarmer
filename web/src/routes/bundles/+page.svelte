@@ -153,7 +153,7 @@
 						<tr>
 							<th scope="row">
 								<a
-									class:untitled={bundleLabel(bundle) === 'Untitled bundle'}
+									class:untitled={!bundle.summary.trim()}
 									href={resolve('/bundles/[id]', { id: bundle.id })}
 								>
 									{bundleLabel(bundle)}

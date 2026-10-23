@@ -182,7 +182,7 @@
 
 <div class="bundle-editor">
 	<header class="bundle-editor__header">
-		<h1 class:untitled={bundleLabel(current.document) === 'Untitled bundle'}>
+		<h1 class:untitled={!current.document.summary.trim()}>
 			{bundleLabel(current.document)}
 		</h1>
 		<p class="meta-line">

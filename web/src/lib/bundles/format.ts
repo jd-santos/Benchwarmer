@@ -65,11 +65,9 @@ export function statusLabel(status: BundleStatus): string {
 	return statusOptions.find((option) => option.value === status)?.label ?? status;
 }
 
-/** The bundle's name for lists and titles: its summary, else its goal, else its objective. */
-export function bundleLabel(bundle: { summary: string; goal: string; objective: string }): string {
-	return (
-		bundle.summary.trim() || bundle.goal.trim() || bundle.objective.trim() || 'Untitled bundle'
-	);
+/** The bundle's title is its summary alone; goal and objective are not readable as titles. */
+export function bundleLabel(bundle: { summary: string }): string {
+	return bundle.summary.trim() || 'Untitled bundle';
 }
 
 /** The model id without its provider, for tight table cells; the full name suits a title. */
