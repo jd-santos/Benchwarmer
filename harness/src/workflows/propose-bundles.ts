@@ -16,6 +16,7 @@ import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite
 
 import { BenchwarmerClient } from '../benchwarmer/client.ts';
 import type { RunProvenance } from '../benchwarmer/client.ts';
+import { resolveModel } from '../catalog.ts';
 import { createHarnessModels, missingKeyHint, providerBaseUrlOverride } from '../providers.ts';
 import {
 	OBJECTIVE_TYPE_GUIDE,
@@ -73,7 +74,7 @@ export interface RunReport {
 	conversations: ConversationRunReport[];
 	usage_total: UsageState;
 	/** pi-ai's own estimate from its price catalog, not a provider charge. */
-	pricing_source: 'pi-ai model catalog estimate';
+	pricing_source: string;
 }
 
 export const ANALYST_INSTRUCTIONS = `You analyze one captured agent conversation from a private library and propose evidence bundles.
@@ -124,13 +125,10 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 	const producer = `benchwarmer-harness/${WORKFLOW_NAME}@${options.harnessVersion} ${options.provider}/${options.modelId}`;
 
 	const models = createHarnessModels();
-	if (!models.getModel(options.provider, options.modelId)) {
-		throw new Error(
-			`Unknown model ${options.provider}/${options.modelId}. Run "npm run list-models" to see the catalog.`
-		);
-	}
 	const keyHint = missingKeyHint(options.provider);
 	if (keyHint) throw new Error(keyHint);
+	// A model outside the pinned pi-ai catalog runs through its nearest sibling's configuration.
+	const { pricingSource } = await resolveModel(models, options.provider, options.modelId, { log });
 	const reportPath = path.join(options.reportDir, `${runId}.json`);
 	const provenance: RunProvenance = {
 		run_id: runId,
@@ -280,7 +278,7 @@ export async function proposeBundles(options: ProposeBundlesOptions): Promise<Ru
 		storage_path: options.storagePath,
 		conversations: reports,
 		usage_total: total,
-		pricing_source: 'pi-ai model catalog estimate'
+		pricing_source: pricingSource
 	};
 	await mkdir(options.reportDir, { recursive: true });
 	await writeFile(reportPath, JSON.stringify(runReport, null, 2) + '\n');

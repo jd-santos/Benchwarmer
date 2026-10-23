@@ -3,13 +3,14 @@
  *
  *   npm run propose-bundles -- --conversation <id> [--conversation <id>] --model <provider>/<model-id>
  *   npm run anonymize-fixture -- --session <path> --model <provider>/<model-id> --disclose-to <provider> --term <t>
- *   npm run list-models -- [provider]
+ *   npm run list-models -- [provider] [--json] [--offline]
  */
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 
+import { THINKING_LEVELS, buildCatalog } from './catalog.ts';
 import { DISCLOSURE_RULE, DisclosureError } from './fixture.ts';
 import { createHarnessModels, providerBaseUrlOverride, providersWithKeys } from './providers.ts';
 import { anonymizeFixture, type AnonymizeFixtureOptions } from './workflows/anonymize-fixture.ts';
@@ -17,7 +18,7 @@ import { proposeBundles, type ProposeBundlesOptions } from './workflows/propose-
 
 const HARNESS_ROOT = path.resolve(import.meta.dirname, '..');
 const REPO_ROOT = path.resolve(HARNESS_ROOT, '..');
-const THINKING = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
+const THINKING = THINKING_LEVELS;
 
 function harnessVersion(): string {
 	const pkg = JSON.parse(readFileSync(path.join(HARNESS_ROOT, 'package.json'), 'utf8')) as { version: string };
@@ -36,7 +37,8 @@ function usage(): never {
 			'      --disclose-to <provider> [--term <sensitive term>...] [--terms-file <path>]',
 			'      [--api http://127.0.0.1:8000] [--thinking <level>] [--storage <sqlite>] [--reports <dir>]',
 			'      [--instructions "extra operator notes"]',
-			'  list-models [provider]',
+			'  list-models [provider] [--json] [--offline]',
+			'      (--json merges the pinned catalog, models.dev, and the provider\'s own list for providers with keys)',
 			'',
 			DISCLOSURE_RULE,
 			''
@@ -45,7 +47,23 @@ function usage(): never {
 	process.exit(2);
 }
 
-async function listModels(provider?: string): Promise<void> {
+async function listModels(args: string[]): Promise<void> {
+	const { values, positionals } = parseArgs({
+		args,
+		options: { json: { type: 'boolean', default: false }, offline: { type: 'boolean', default: false } },
+		allowPositionals: true,
+		strict: true
+	});
+	const provider = positionals[0];
+	if (values.json) {
+		const catalog = await buildCatalog({
+			...(provider ? { provider } : {}),
+			offline: values.offline,
+			log: (line) => process.stderr.write(`${line}\n`)
+		});
+		process.stdout.write(`${JSON.stringify(catalog)}\n`);
+		return;
+	}
 	const models = createHarnessModels();
 	for (const model of models.getModels(provider)) {
 		process.stdout.write(`${model.provider}/${model.id}\n`);
@@ -61,7 +79,7 @@ async function listModels(provider?: string): Promise<void> {
 async function main(argv: string[]): Promise<void> {
 	const [command, ...rest] = argv;
 	if (command === 'list-models') {
-		await listModels(rest[0]);
+		await listModels(rest);
 		return;
 	}
 	if (command === 'anonymize-fixture') {

@@ -16,6 +16,7 @@ import { createRegistry, Harness, type UsageState } from '@earendil-works/pi-dur
 import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node';
 
 import { BenchwarmerClient } from '../benchwarmer/client.ts';
+import { resolveModel } from '../catalog.ts';
 import { checkDisclosure } from '../fixture.ts';
 import { createHarnessModels, missingKeyHint, providerBaseUrlOverride } from '../providers.ts';
 import {
@@ -70,7 +71,7 @@ export interface RunReport {
 	term_count: number;
 	sessions: SessionRunReport[];
 	usage_total: UsageState;
-	pricing_source: 'pi-ai model catalog estimate';
+	pricing_source: string;
 }
 
 export const ANALYST_INSTRUCTIONS = `You turn one scrubbed, private coding-agent session into a synthetic test fixture. The fixture must be useful for testing conversation tooling and must reveal nothing about the real person, their employer, their projects, or their systems.
@@ -98,13 +99,10 @@ export async function anonymizeFixture(options: AnonymizeFixtureOptions): Promis
 	const draftDir = path.join(options.reportDir, 'fixtures', runId);
 
 	const models = createHarnessModels();
-	if (!models.getModel(options.provider, options.modelId)) {
-		throw new Error(
-			`Unknown model ${options.provider}/${options.modelId}. Run "npm run list-models" to see the catalog and make sure the provider's key is in the environment.`
-		);
-	}
 	const keyHint = missingKeyHint(options.provider);
 	if (keyHint) throw new Error(keyHint);
+	// A model outside the pinned pi-ai catalog runs through its nearest sibling's configuration.
+	const { pricingSource } = await resolveModel(models, options.provider, options.modelId, { log });
 
 	const client = new BenchwarmerClient(options.apiBaseUrl);
 	const session: SessionSlot = { content: '' };
@@ -220,7 +218,7 @@ export async function anonymizeFixture(options: AnonymizeFixtureOptions): Promis
 		term_count: options.terms.length,
 		sessions: reports,
 		usage_total: sumUsage(reports.map((report) => report.usage)),
-		pricing_source: 'pi-ai model catalog estimate'
+		pricing_source: pricingSource
 	};
 	await mkdir(options.reportDir, { recursive: true });
 	const reportPath = path.join(options.reportDir, `${runId}.json`);
