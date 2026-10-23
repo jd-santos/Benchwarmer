@@ -29,6 +29,7 @@ from benchwarmer.services.evidence_bundles import (
     create_bundle,
     find_bundle_by_request_id,
     get_bundle,
+    list_bundle_memberships,
     list_bundles,
     update_bundle,
 )
@@ -81,6 +82,22 @@ class BundleDetailResponse(_Strict):
     document: BundleDocument
     items: list[ResolvedItemResponse]
     revisions: list[BundleRevisionResponse]
+
+
+class BundleMembershipResponse(_Strict):
+    """One bundle that cites a conversation, and which of its events."""
+
+    id: str
+    revision: int
+    summary: str
+    status: BundleStatus
+    origin: BundleOrigin
+    run_id: str | None
+    event_ids: list[str]
+
+
+class BundleMembershipsResponse(_Strict):
+    items: list[BundleMembershipResponse]
 
 
 class BundleSummaryResponse(_Strict):
@@ -238,6 +255,27 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                         updated_at=item.updated_at,
                     )
                     for item in summaries
+                ]
+            )
+
+    @router.get(
+        "/conversations/{conversation_id}/bundles",
+        response_model=BundleMembershipsResponse,
+    )
+    def get_conversation_bundles(conversation_id: str) -> BundleMembershipsResponse:
+        with session_scope() as session:
+            return BundleMembershipsResponse(
+                items=[
+                    BundleMembershipResponse(
+                        id=item.id,
+                        revision=item.revision,
+                        summary=item.summary,
+                        status=item.status,  # type: ignore[arg-type]
+                        origin=item.origin,  # type: ignore[arg-type]
+                        run_id=item.run_id,
+                        event_ids=list(item.event_ids),
+                    )
+                    for item in list_bundle_memberships(session, conversation_id)
                 ]
             )
 

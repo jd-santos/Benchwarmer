@@ -117,6 +117,19 @@ class BundleSummary:
 
 
 @dataclass(frozen=True)
+class BundleMembership:
+    """Which events of one conversation a bundle's latest revision cites."""
+
+    id: str
+    revision: int
+    summary: str
+    status: str
+    origin: str
+    run_id: str | None
+    event_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class _Conversation:
     row: ConversationRevision
     is_latest: bool
@@ -610,3 +623,48 @@ def list_bundles(
             )
         )
     return tuple(summaries)
+
+
+def list_bundle_memberships(
+    session: Session, conversation_id: str
+) -> tuple[BundleMembership, ...]:
+    """Bundles whose latest revision cites ``conversation_id``, with the cited events.
+
+    The reader marks cited turns from this; the status and origin let it show a
+    pending generated draft differently from a reviewed or human bundle.
+    """
+    query = (
+        select(EvidenceBundle, EvidenceBundleRevision)
+        .join(
+            EvidenceBundleRevision,
+            (EvidenceBundleRevision.bundle_id == EvidenceBundle.id)
+            & (EvidenceBundleRevision.number == EvidenceBundle.latest_revision),
+        )
+        .order_by(EvidenceBundle.updated_at.desc(), EvidenceBundle.id)
+    )
+    memberships: list[BundleMembership] = []
+    for bundle, revision in session.execute(query).all():
+        document = BundleDocument.model_validate(revision.document)
+        event_ids = tuple(
+            dict.fromkeys(
+                item.ref.event_id
+                for item in document.items
+                if item.ref.conversation_id == conversation_id
+            )
+        )
+        if not event_ids:
+            continue
+        memberships.append(
+            BundleMembership(
+                id=bundle.id,
+                revision=revision.number,
+                summary=document.summary,
+                status=document.status,
+                origin=revision.origin,
+                run_id=None
+                if revision.provenance is None
+                else revision.provenance.get("run_id"),
+                event_ids=event_ids,
+            )
+        )
+    return tuple(memberships)

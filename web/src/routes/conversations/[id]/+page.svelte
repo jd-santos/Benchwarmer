@@ -39,7 +39,11 @@
 	</section>
 {:then detail}
 	{#key detail.summary.revision}
-		<ConversationReader {detail} query={data.query} />
+		{#await data.bundles}
+			<ConversationReader {detail} query={data.query} />
+		{:then bundles}
+			<ConversationReader {detail} query={data.query} {bundles} />
+		{/await}
 	{/key}
 {:catch error}
 	<section class="status-panel status-panel--error" role="alert">

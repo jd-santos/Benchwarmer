@@ -193,9 +193,10 @@ review-console shape of
   legible. The editor reviews one bundle at a time, with previous/next links
   that follow the order of the list it was opened from (view and run carry in
   the URL) and a "Next bundle" link after a save.
-- The reader does not yet show bundle membership at all. When it does, mark
-  events cited by pending generated drafts distinctly from human bundle
-  membership, so inline review does not read as approval.
+- The reader marks cited turns from `GET /conversations/{id}/bundles`, which
+  lists each citing bundle's latest status, origin, run, and event ids.
+  Pending generated drafts, accepted or human bundles, and rejected bundles
+  carry distinct marks, so inline review does not read as approval.
 - Rejected proposals are evidence for improving the proposer. The "Rejected"
   view keeps them queryable; nothing deletes a bundle.
 
