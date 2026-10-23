@@ -144,6 +144,14 @@ informs the extraction schema and later in-app review of suggested groups.
       the summary field; these drafts predate it and show their goal until a
       reviewer adds a summary. The title falls back to the objective, never
       to the goal.
+    - [x] Third synthetic run, 2026-10-23, over all four fixtures after the
+      summary field landed: 16 drafts, run recorded (`/api/v1/runs`). Every
+      draft carried a readable summary that now serves as its title, and
+      objectives stayed general enough to group: two sibling-branch drafts
+      again shared one objective. Review surfaced two gaps fixed the same
+      day: whole-event citations of tool turns resolved to no excerpt (now
+      the tool output or call, shown as code), and reviewers had no way to
+      step through drafts (now previous/next in the editor).
     - [ ] Remaining two synthetic fixtures (compaction, no headings), then a
       private import once anonymized.
   - [ ] Decide whether the model should receive shortened event ids. Current
@@ -178,7 +186,9 @@ review-console shape of
   and a decision taken against an older revision must be rejected, which the
   409 on stale saves already enforces.
 - Batch accept or reject should stay within one run so cost and coverage stay
-  legible. The editor reviews one bundle at a time today.
+  legible. The editor reviews one bundle at a time, with previous/next links
+  that follow the order of the list it was opened from (view and run carry in
+  the URL) and a "Next bundle" link after a save.
 - The reader does not yet show bundle membership at all. When it does, mark
   events cited by pending generated drafts distinctly from human bundle
   membership, so inline review does not read as approval.

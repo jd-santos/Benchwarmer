@@ -187,6 +187,25 @@ def test_accepts_evidence_across_a_captured_continuation(client: TestClient) -> 
     assert gap.json()["items"][0]["excerpt"] is None
 
 
+def test_whole_event_excerpt_falls_back_to_tool_content(client: TestClient) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    document = {
+        "items": [
+            {"ref": _ref(detail, "a0"), "role": "action"},
+            {"ref": _ref(detail, "t0"), "role": "result"},
+        ]
+    }
+    response = client.post("/api/v1/bundles", json={"document": document})
+    assert response.status_code == 201, response.text
+    prose, output = response.json()["items"]
+    # An assistant turn with prose keeps the prose; its tool call is a block citation.
+    assert prose["block_kind"] is None
+    assert prose["excerpt"].startswith("I'll compare the session IDs")
+    # A tool turn has no prose, so the citation shows the tool output as such.
+    assert output["block_kind"] == "tool_result"
+    assert output["excerpt"].startswith("batch-0-00 | succeeded")
+
+
 def test_rejects_unresolvable_references(client: TestClient) -> None:
     detail = _conversation(client, "demo-import-duplicates")
     older = detail["revisions"][1]["revision"]

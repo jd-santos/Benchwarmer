@@ -32,6 +32,31 @@ describe('bundle editor', () => {
 		expect(getByRole('button', { name: 'Save revision' }).hasAttribute('disabled')).toBe(true);
 	});
 
+	it('shows tool calls and tool output as code, with call arguments indented', () => {
+		const call = {
+			...bundle.items[1],
+			item: { ...bundle.items[1].item, ref: { ...bundle.items[1].item.ref, event_id: 'e5' } },
+			block_kind: 'tool_call',
+			excerpt: '{"command": "ls -la", "cwd": "/repo"}'
+		};
+		const output = {
+			...bundle.items[1],
+			item: { ...bundle.items[1].item, ref: { ...bundle.items[1].item.ref, event_id: 'e6' } },
+			block_kind: 'tool_result',
+			excerpt: 'total 0\ndrwxr-xr-x  2 dev  staff  64 Oct 23 10:00 .'
+		};
+		const { container } = render(BundleEditor, {
+			props: { detail: { ...bundle, items: [...bundle.items, call, output] } }
+		});
+
+		const blocks = container.querySelectorAll('pre.evidence-card__code');
+		expect(blocks.length).toBe(2);
+		expect(blocks[0].textContent).toBe('{\n  "command": "ls -la",\n  "cwd": "/repo"\n}');
+		expect(blocks[0].classList.contains('evidence-card__code--tool_call')).toBe(true);
+		expect(blocks[1].textContent).toContain('drwxr-xr-x');
+		expect(container.textContent).not.toContain('not captured');
+	});
+
 	it('requires a general objective before review; a goal alone is not enough', async () => {
 		const user = userEvent.setup();
 		const { getByRole, getByText, getByLabelText } = render(BundleEditor, {

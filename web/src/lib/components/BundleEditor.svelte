@@ -13,7 +13,9 @@
 	} from '$lib/api/types';
 	import {
 		bundleLabel,
+		excerptCode,
 		formatEstimate,
+		isCodeExcerpt,
 		producerLabel,
 		roleOptions,
 		runInputFor,
@@ -28,8 +30,14 @@
 
 	let {
 		detail,
-		run = Promise.resolve(null)
-	}: { detail: BundleDetail; run?: Promise<HarnessRunRecord | null> } = $props();
+		run = Promise.resolve(null),
+		nextHref = null
+	}: {
+		detail: BundleDetail;
+		run?: Promise<HarnessRunRecord | null>;
+		/** The next bundle in the list the reviewer is working through, offered after a save. */
+		nextHref?: ResolvedPathname | null;
+	} = $props();
 
 	interface Entry {
 		resolved: ResolvedBundleItem;
@@ -360,7 +368,12 @@
 						</div>
 
 						{#if item.excerpt === null}
-							<p class="block-gap">Text not captured</p>
+							<p class="block-gap">{isCodeExcerpt(item) ? 'Content' : 'Text'} not captured</p>
+						{:else if isCodeExcerpt(item)}
+							<pre
+								class="evidence-card__excerpt evidence-card__code evidence-card__code--{item.block_kind}"><code
+									>{excerptCode(item)}</code
+								></pre>
 						{:else}
 							<blockquote class="evidence-card__excerpt">{item.excerpt}</blockquote>
 						{/if}
@@ -442,7 +455,8 @@
 		{#if !readOnly}
 			<div class="save-bar" class:save-bar--dirty={dirty}>
 				<p class="save-bar__status" aria-live="polite">
-					{#if dirty}Unsaved changes{:else if confirmation}{confirmation}{:else}No changes{/if}
+					{#if dirty}Unsaved changes{:else if confirmation}{confirmation}
+						{#if nextHref}<a href={nextHref}>Next bundle →</a>{/if}{:else}No changes{/if}
 				</p>
 				<button class="button button--primary" type="submit" disabled={!dirty || saving || blocked}>
 					{saving ? 'Saving…' : 'Save revision'}

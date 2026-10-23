@@ -86,6 +86,10 @@ describe('bundle list page', () => {
 		expect(getByRole('link', { name: /Proposed drafts/ }).getAttribute('href')).toBe(
 			'/bundles?view=proposed&run=propose-bundles-2026-10-19T10-00-00-000Z'
 		);
+		// Opening a bundle keeps the view, so its previous/next arrows step through this list.
+		expect(getByRole('link', { name: proposed.summary }).getAttribute('href')).toBe(
+			'/bundles/bundle-2?view=proposed&run=propose-bundles-2026-10-19T10-00-00-000Z'
+		);
 	});
 
 	it('shows who produced each bundle and counts proposals awaiting review', async () => {

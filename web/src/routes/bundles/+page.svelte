@@ -28,6 +28,13 @@
 		return `${listHref}${search ? `?${search}` : ''}` as ResolvedPathname;
 	}
 
+	/** A bundle's page, carrying the view so its arrows step through this same list. */
+	function bundleHref(id: string): ResolvedPathname {
+		const search = viewHref(data.view).split('?')[1];
+		const base = resolve('/bundles/[id]', { id });
+		return `${base}${search ? `?${search}` : ''}` as ResolvedPathname;
+	}
+
 	/** The model for a proposal, or the workflow when no model was recorded. */
 	function producerNote(bundle: BundleSummary): string | null {
 		if (bundle.origin !== 'generated') return null;
@@ -154,7 +161,7 @@
 							<th scope="row">
 								<a
 									class:untitled={!bundle.summary.trim() && !bundle.objective.trim()}
-									href={resolve('/bundles/[id]', { id: bundle.id })}
+									href={bundleHref(bundle.id)}
 								>
 									{bundleLabel(bundle)}
 								</a>

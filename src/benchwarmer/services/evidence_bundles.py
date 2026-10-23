@@ -308,12 +308,20 @@ def _validate(
 
 def _excerpt(event: dict[str, Any], ref: EvidenceRef) -> tuple[str | None, str | None]:
     if ref.block_id is None:
-        texts = [
-            part["text"]
-            for part in event["content"]
-            if part["kind"] == "text" and isinstance(part["text"], str) and part["text"]
-        ]
-        return ("\n\n".join(texts) if texts else None), None
+        # A whole-event citation shows the event's prose. An event with none, such
+        # as a tool turn or an assistant turn that only called a tool, shows the
+        # calls or their output instead, and the kind tells the reader which.
+        for kind in ("text", "tool_call", "tool_result"):
+            texts = [
+                part["text"]
+                for part in event["content"]
+                if part["kind"] == kind
+                and isinstance(part["text"], str)
+                and part["text"]
+            ]
+            if texts:
+                return "\n\n".join(texts), (None if kind == "text" else kind)
+        return None, None
     block = next(part for part in event["content"] if part["id"] == ref.block_id)
     text = block["text"]
     if not isinstance(text, str):

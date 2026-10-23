@@ -56,6 +56,12 @@ This project does not currently declare a Semantic Versioning policy.
   Add a human-readable `summary` as the bundle's title. Bundle documents are
   version 2; version 1 documents are read with their objective carried into
   the goal. The proposer, list, and editor use all three.
+- Show tool calls and tool output cited as evidence as code in the bundle
+  editor instead of "Text not captured": a whole-event citation of a turn with
+  no prose resolves to its tool calls or output, call arguments are indented
+  JSON, and the item's scope names the kind. Step through bundles from the
+  editor with previous/next links in the order of the list the bundle was
+  opened from, with the way back to that view.
 - Record each hand-run harness workflow in the application
   (`PUT /api/v1/runs/{run_id}`, `GET /api/v1/runs`) with raw usage and the
   catalog cost estimate; the bundle list and editor show what a run or a

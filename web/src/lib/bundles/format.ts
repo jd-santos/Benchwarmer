@@ -116,3 +116,23 @@ export function scopeLabel(item: ResolvedBundleItem): string {
 			return 'Text block';
 	}
 }
+
+/**
+ * A tool call's arguments as indented JSON when they parse; otherwise the captured text.
+ * Tool output is left as the tool wrote it.
+ */
+export function excerptCode(item: ResolvedBundleItem): string {
+	const text = item.excerpt ?? '';
+	if (item.block_kind !== 'tool_call') return text;
+	try {
+		const parsed: unknown = JSON.parse(text);
+		return typeof parsed === 'object' && parsed !== null ? JSON.stringify(parsed, null, 2) : text;
+	} catch {
+		return text;
+	}
+}
+
+/** Whether an item's excerpt is tool input or output, which reads as code rather than prose. */
+export function isCodeExcerpt(item: ResolvedBundleItem): boolean {
+	return item.block_kind === 'tool_call' || item.block_kind === 'tool_result';
+}
