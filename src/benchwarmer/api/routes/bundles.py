@@ -38,6 +38,13 @@ class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
 
+class ToolCallResponse(_Strict):
+    """A tool call inside a cited event; arguments are the captured text, if any."""
+
+    tool_call_id: str
+    arguments: str | None
+
+
 class ResolvedItemResponse(_Strict):
     """A bundle item and the captured evidence its reference resolves to."""
 
@@ -50,6 +57,7 @@ class ResolvedItemResponse(_Strict):
     block_kind: str | None
     excerpt: str | None
     omitted_before: int | None
+    tool_calls: list[ToolCallResponse]
 
 
 class BundleRevisionResponse(_Strict):
@@ -80,7 +88,9 @@ class BundleSummaryResponse(_Strict):
 
     id: str
     revision: int
+    summary: str
     objective: str
+    goal: str
     status: BundleStatus
     origin: BundleOrigin
     producer: str
@@ -143,6 +153,12 @@ def _detail_response(detail: BundleDetail) -> BundleDetailResponse:
                 block_kind=item.block_kind,
                 excerpt=item.excerpt,
                 omitted_before=item.omitted_before,
+                tool_calls=[
+                    ToolCallResponse(
+                        tool_call_id=call.tool_call_id, arguments=call.arguments
+                    )
+                    for call in item.tool_calls
+                ],
             )
             for item in detail.items
         ],
@@ -210,7 +226,9 @@ def create_bundles_router(settings: BenchwarmerSettings) -> APIRouter:
                     BundleSummaryResponse(
                         id=item.id,
                         revision=item.revision,
+                        summary=item.summary,
                         objective=item.objective,
+                        goal=item.goal,
                         status=item.status,  # type: ignore[arg-type]
                         origin=item.origin,  # type: ignore[arg-type]
                         producer=item.producer,

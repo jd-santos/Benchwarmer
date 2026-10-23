@@ -53,6 +53,26 @@ Decided with the user on 2026-10-19:
   exception; until then every generated revision records its producer string
   and each run writes a usage report under `reports/harness/`.
 
+Decided with the user on 2026-10-22, after the first operator run:
+
+- A bundle states a `goal` (what this piece of work tried to achieve, with
+  specifics) and an `objective` (the kind of work in general terms, with no
+  project names, dates, or figures). The objective is the axis bundles will
+  be grouped on into categories of work, so it must be reusable across
+  projects; the first run's objectives were too specific and are the goals
+  under this split. Version 1 documents upgrade on read with their objective
+  copied into the goal; reviewers generalize the objective when they touch
+  the bundle. A reviewed bundle still needs an objective.
+- A third statement, `summary`, is the bundle's title for people: one or two
+  plain sentences saying what happened and how it ended. The objective is for
+  classification, the goal is metadata shown only in the editor, and the
+  list shows summary and objective. Decided after the second run showed
+  goals too dense to scan in a table.
+- Run usage belongs in the application, not only in a report file. Each
+  workflow records its run (`PUT /api/v1/runs/{run_id}`) with per-input raw
+  usage and the catalog estimate; the editor shows what the pass that
+  proposed a bundle cost and the list shows a run's total.
+
 ## Acceptance criteria
 
 Evidence resolves against pinned conversation revisions and valid branch
@@ -106,6 +126,35 @@ informs the extraction schema and later in-app review of suggested groups.
   - [ ] First operator run against the synthetic demo library, then against a
     private import; record what the model proposed, what review removed or
     added, and token cost per conversation here.
+    - [x] Synthetic run, 2026-10-22: `anthropic/claude-sonnet-5-5` through a
+      pass-through gateway (`ANTHROPIC_BASE_URL`), no thinking, on the
+      41-event ledger debugging fixture. Three drafts in 29 seconds covering
+      diagnosis (8 items), fix with tests (12 items), and verification plus
+      summary (6 items); every reference resolved, spans were disjoint and in
+      order, and each carried a rationale and `missing_evidence`. Catalog
+      estimate 0.14 USD: 3.9k output tokens, 23.5k cache-write, 28.4k
+      cache-read, 10 uncached input. Review of the drafts is pending.
+    - [x] Second synthetic run, 2026-10-22, on the 45-event branched sensor
+      backfill fixture with the goal/objective instructions: five drafts in
+      about a minute, the run recorded in the application (98.5k tokens,
+      estimate 0.18 USD). Two bundles on sibling branches received the same
+      objective, "check existing data for constraint violations before adding
+      a unique index and write the migration", which is the grouping the
+      objective exists for. Goals proved too dense for a list, which led to
+      the summary field; these drafts predate it and show their goal until a
+      reviewer adds a summary. The title falls back to the objective, never
+      to the goal.
+    - [x] Third synthetic run, 2026-10-23, over all four fixtures after the
+      summary field landed: 16 drafts, run recorded (`/api/v1/runs`). Every
+      draft carried a readable summary that now serves as its title, and
+      objectives stayed general enough to group: two sibling-branch drafts
+      again shared one objective. Review surfaced two gaps fixed the same
+      day: whole-event citations of tool turns resolved to no excerpt (now
+      the tool output, shown as code, and every cited turn lists its tool
+      calls), and reviewers had no way to step through drafts (now
+      previous/next in the editor).
+    - [ ] Remaining two synthetic fixtures (compaction, no headings), then a
+      private import once anonymized.
   - [ ] Decide whether the model should receive shortened event ids. Current
     ids repeat the conversation id in every event and block reference, which
     inflates prompts on long conversations.
@@ -138,7 +187,9 @@ review-console shape of
   and a decision taken against an older revision must be rejected, which the
   409 on stale saves already enforces.
 - Batch accept or reject should stay within one run so cost and coverage stay
-  legible. The editor reviews one bundle at a time today.
+  legible. The editor reviews one bundle at a time, with previous/next links
+  that follow the order of the list it was opened from (view and run carry in
+  the URL) and a "Next bundle" link after a save.
 - The reader does not yet show bundle membership at all. When it does, mark
   events cited by pending generated drafts distinctly from human bundle
   membership, so inline review does not read as approval.
@@ -158,7 +209,23 @@ Outlines and the generated path, 2026-10-19: `tests/test_outline.py`,
 `harness/`, `npm run check` and `npm test` pass. A tool smoke run against a
 disposable demo data root listed conversations, outlined one, read events,
 received `event_not_found` for a bad reference, and created a generated draft
-bundle. No model call was made; the first operator run is pending.
+bundle. No model call was made at that point.
+
+First operator run, 2026-10-22: `propose-bundles` against the pilot API with
+`anthropic/claude-sonnet-5-5` on one synthetic conversation produced three
+generated drafts with run provenance and request ids, listed under the
+"Proposed drafts" view with the run link, and a run report under
+`reports/harness/` recording the gateway override. Harness `npm run check`
+and `npm test` pass with the base URL override tests.
+
+Goal/objective split and run records, 2026-10-22: the full Python suite
+(254 tests, including the version 1 upgrade, goal round trip, and run record
+tests), ruff, harness `check` and `test`, and the web suite (62 tests with
+the goal field, objective column, and run usage line) pass. The pilot data
+root migrated to `0006`; the three first-run drafts read back with their
+objective copied into the goal. A second operator run with the new analyst
+instructions, which should produce general objectives and specific goals,
+is pending a provider key.
 
 ## Supporting material
 

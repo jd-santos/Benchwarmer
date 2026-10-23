@@ -6,10 +6,16 @@
  * `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`).
  * The harness never hardcodes one vendor; the operator picks `provider/model-id`
  * on the command line and supplies that provider's key.
+ *
+ * A provider's endpoint can be redirected through a pass-through gateway (one
+ * that accepts the vendor's own request format and swaps credentials) by
+ * setting its base URL variable, for example `ANTHROPIC_BASE_URL`. The
+ * provider id, catalog, and cost estimates are unchanged; only the host the
+ * requests go to differs, and the run report records it.
  */
 
 import { builtinProviders } from '@earendil-works/pi-ai/providers/all';
-import { createModels, type MutableModels } from '@earendil-works/pi-ai/models';
+import { createModels, type MutableModels, type Provider } from '@earendil-works/pi-ai/models';
 
 /**
  * Providers the operator has ruled out. They are never registered, so no model
@@ -29,11 +35,48 @@ export const COMMON_PROVIDER_KEYS: Readonly<Record<string, readonly string[]>> =
 	fireworks: ['FIREWORKS_API_KEY']
 };
 
-/** A models collection with every allowed pi-ai provider registered. */
-export function createHarnessModels(): MutableModels {
+/** Environment variables that redirect a provider's requests to another base URL. */
+export const PROVIDER_BASE_URL_ENV: Readonly<Record<string, string>> = {
+	anthropic: 'ANTHROPIC_BASE_URL',
+	openai: 'OPENAI_BASE_URL',
+	openrouter: 'OPENROUTER_BASE_URL',
+	google: 'GEMINI_BASE_URL',
+	mistral: 'MISTRAL_BASE_URL'
+};
+
+/** The base URL override for `provider` in `env`, with a trailing slash removed, or null. */
+export function providerBaseUrlOverride(provider: string, env: NodeJS.ProcessEnv = process.env): string | null {
+	const name = PROVIDER_BASE_URL_ENV[provider];
+	const value = name ? env[name]?.trim() : undefined;
+	if (!value) return null;
+	if (!/^https?:\/\//.test(value)) {
+		throw new Error(`${name} must be an http(s) URL, got "${value}".`);
+	}
+	return value.replace(/\/+$/, '');
+}
+
+/** `provider` with its own and every model's base URL replaced by `baseUrl`. */
+function withBaseUrl(provider: Provider, baseUrl: string): Provider {
+	const retarget = <T extends { baseUrl: string }>(model: T): T => ({ ...model, baseUrl });
+	const wrapped: Provider = {
+		...provider,
+		baseUrl,
+		getModels: () => provider.getModels().map(retarget)
+	};
+	if (provider.getAllModels) {
+		const getAllModels = provider.getAllModels.bind(provider);
+		wrapped.getAllModels = () => getAllModels().map(retarget);
+	}
+	return wrapped;
+}
+
+/** A models collection with every allowed pi-ai provider registered, honoring base URL overrides. */
+export function createHarnessModels(env: NodeJS.ProcessEnv = process.env): MutableModels {
 	const models = createModels();
 	for (const provider of builtinProviders()) {
-		if (!EXCLUDED_PROVIDERS.has(provider.id)) models.setProvider(provider);
+		if (EXCLUDED_PROVIDERS.has(provider.id)) continue;
+		const override = providerBaseUrlOverride(provider.id, env);
+		models.setProvider(override ? withBaseUrl(provider, override) : provider);
 	}
 	return models;
 }

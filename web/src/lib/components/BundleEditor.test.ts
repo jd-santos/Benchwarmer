@@ -3,7 +3,7 @@
 import { cleanup, render } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bundle, proposedBundle } from '$lib/bundles/fixtures';
+import { bundle, proposedBundle, proposedRun } from '$lib/bundles/fixtures';
 import BundleEditor from './BundleEditor.svelte';
 
 vi.mock('$app/navigation', () => ({ invalidateAll: vi.fn() }));
@@ -32,10 +32,62 @@ describe('bundle editor', () => {
 		expect(getByRole('button', { name: 'Save revision' }).hasAttribute('disabled')).toBe(true);
 	});
 
-	it('requires an objective before review', async () => {
-		const user = userEvent.setup();
-		const { getByRole, getByText } = render(BundleEditor, { props: { detail: bundle } });
+	it('shows tool calls and tool output as code, with call arguments indented', () => {
+		const call = {
+			...bundle.items[1],
+			item: { ...bundle.items[1].item, ref: { ...bundle.items[1].item.ref, event_id: 'e5' } },
+			block_kind: 'tool_call',
+			excerpt: '{"command": "ls -la", "cwd": "/repo"}'
+		};
+		const output = {
+			...bundle.items[1],
+			item: { ...bundle.items[1].item, ref: { ...bundle.items[1].item.ref, event_id: 'e6' } },
+			block_kind: 'tool_result',
+			excerpt: 'total 0\ndrwxr-xr-x  2 dev  staff  64 Oct 23 10:00 .'
+		};
+		const { container } = render(BundleEditor, {
+			props: { detail: { ...bundle, items: [...bundle.items, call, output] } }
+		});
 
+		const blocks = container.querySelectorAll('pre.evidence-card__code');
+		expect(blocks.length).toBe(2);
+		expect(blocks[0].textContent).toBe('{\n  "command": "ls -la",\n  "cwd": "/repo"\n}');
+		expect(blocks[0].classList.contains('evidence-card__code--tool_call')).toBe(true);
+		expect(blocks[1].textContent).toContain('drwxr-xr-x');
+		expect(container.textContent).not.toContain('not captured');
+	});
+
+	it('lists the tool calls of a cited turn under its prose, expandable to the arguments', () => {
+		const turn = {
+			...bundle.items[0],
+			excerpt: "I'll check the file.",
+			tool_calls: [
+				{ tool_call_id: 'call-7', arguments: '{"command": "grep -n health api.py"}' },
+				{ tool_call_id: 'call-8', arguments: null }
+			]
+		};
+		const { getByRole, getByText, container } = render(BundleEditor, {
+			props: { detail: { ...bundle, items: [turn, bundle.items[1]] } }
+		});
+
+		expect(getByText("I'll check the file.")).toBeTruthy();
+		const list = getByRole('list', { name: 'Tool calls in this turn' });
+		expect(list.querySelectorAll('li').length).toBe(2);
+		expect(getByText('command: grep -n health api.py')).toBeTruthy();
+		expect(list.querySelector('details pre')?.textContent).toBe(
+			'{\n  "command": "grep -n health api.py"\n}'
+		);
+		expect(getByText('arguments not captured')).toBeTruthy();
+		expect(container.textContent).not.toContain('Text not captured');
+	});
+
+	it('requires a general objective before review; a goal alone is not enough', async () => {
+		const user = userEvent.setup();
+		const { getByRole, getByText, getByLabelText } = render(BundleEditor, {
+			props: { detail: bundle }
+		});
+
+		await user.type(getByLabelText('Goal'), 'Find the duplicate credits');
 		await user.click(getByRole('radio', { name: /Reviewed/ }));
 
 		expect(getByText('Add an objective before changing the status.')).toBeTruthy();
@@ -56,6 +108,8 @@ describe('bundle editor', () => {
 			props: { detail: bundle }
 		});
 
+		await user.type(getByLabelText('Summary'), 'A refund was requested and offered.');
+		await user.type(getByLabelText('Goal'), 'Refund for the second item');
 		await user.type(getByLabelText('Objective'), 'Refund handling');
 		await user.selectOptions(getByLabelText('Role of item 2'), 'correction');
 		await user.click(getByRole('button', { name: 'Save revision' }));
@@ -65,6 +119,8 @@ describe('bundle editor', () => {
 		expect(url).toBe('/api/v1/bundles/bundle-1');
 		const body = JSON.parse(String(init?.body));
 		expect(body.base_revision).toBe(1);
+		expect(body.document.summary).toBe('A refund was requested and offered.');
+		expect(body.document.goal).toBe('Refund for the second item');
 		expect(body.document.objective).toBe('Refund handling');
 		expect(body.document.items[1].role).toBe('correction');
 	});
@@ -126,6 +182,19 @@ describe('reviewing a proposed bundle', () => {
 
 		await user.type(reason, 'Two unrelated requests');
 		expect(getByRole('button', { name: 'Save revision' }).hasAttribute('disabled')).toBe(false);
+	});
+
+	it('titles a proposal by its summary and shows what its pass cost', async () => {
+		const { getByRole, findByText } = render(BundleEditor, {
+			props: { detail: proposedBundle, run: Promise.resolve(proposedRun) }
+		});
+
+		expect(
+			getByRole('heading', { name: 'Refund request and the offered resolution', level: 1 })
+		).toBeTruthy();
+		const usage = await findByText(/55,810 tokens/);
+		expect(usage.textContent).toContain('and 1 other');
+		expect(usage.textContent).toContain('about $0.136');
 	});
 
 	it('does not flag a human bundle as awaiting review', () => {

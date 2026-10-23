@@ -8,21 +8,38 @@
 		BundleDocument,
 		BundleStatus,
 		EvidenceRole,
+		HarnessRunRecord,
 		ResolvedBundleItem
 	} from '$lib/api/types';
 	import {
 		bundleLabel,
+		excerptCode,
+		formatArguments,
+		formatEstimate,
+		isCodeExcerpt,
 		producerLabel,
 		roleOptions,
+		runInputFor,
 		scopeLabel,
 		statusLabel,
-		statusOptions
+		statusOptions,
+		toolCallPreview,
+		usageTotals
 	} from '$lib/bundles/format';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { refKey } from '$lib/bundles/selection';
 	import { formatTime, formatTimestamp, plural, roleLabel } from '$lib/conversations/format';
 
-	let { detail }: { detail: BundleDetail } = $props();
+	let {
+		detail,
+		run = Promise.resolve(null),
+		nextHref = null
+	}: {
+		detail: BundleDetail;
+		run?: Promise<HarnessRunRecord | null>;
+		/** The next bundle in the list the reviewer is working through, offered after a save. */
+		nextHref?: ResolvedPathname | null;
+	} = $props();
 
 	interface Entry {
 		resolved: ResolvedBundleItem;
@@ -42,7 +59,9 @@
 	const current = $derived(saved ?? detail);
 	const readOnly = $derived(current.revision !== current.latest_revision);
 
+	let summary = $derived(current.document.summary);
 	let objective = $derived(current.document.objective);
+	let goal = $derived(current.document.goal);
 	let status = $derived<BundleStatus>(current.document.status);
 	let rationale = $derived(current.document.rationale ?? '');
 	let missing = $derived(current.document.missing_evidence.join('\n'));
@@ -55,7 +74,9 @@
 	let confirmation = $state('');
 
 	const draft = $derived<BundleDocument>({
+		summary: summary.trim(),
 		objective: objective.trim(),
+		goal: goal.trim(),
 		status,
 		rationale: rationale.trim() || null,
 		missing_evidence: missing
@@ -86,7 +107,9 @@
 
 	function normalized(document: BundleDocument): BundleDocument {
 		return {
+			summary: document.summary,
 			objective: document.objective,
+			goal: document.goal,
 			status: document.status,
 			rationale: document.rationale,
 			missing_evidence: document.missing_evidence,
@@ -169,7 +192,9 @@
 
 <div class="bundle-editor">
 	<header class="bundle-editor__header">
-		<h1 class:untitled={!current.document.objective}>{bundleLabel(current.document.objective)}</h1>
+		<h1 class:untitled={!current.document.summary.trim() && !current.document.objective.trim()}>
+			{bundleLabel(current.document)}
+		</h1>
 		<p class="meta-line">
 			<span>{statusLabel(current.document.status)}</span>
 			<span title={current.producer}>{producerLabel(current.origin, current.producer)}</span>
@@ -194,6 +219,23 @@
 				<span>Revision {current.revision}</span>
 			{/if}
 		</p>
+		{#if current.provenance}
+			{#await run then record}
+				{@const input = record ? runInputFor(record, current.id) : null}
+				{#if record && input}
+					{@const totals = usageTotals(input.usage)}
+					<p class="meta-line" data-run-usage>
+						<span>
+							The pass that proposed this bundle{input.bundle_ids.length > 1
+								? ` and ${input.bundle_ids.length - 1} other${input.bundle_ids.length > 2 ? 's' : ''}`
+								: ''}
+							used {totals.tokens.toLocaleString()} tokens, about {formatEstimate(totals.estimate)}
+							({record.pricing_source})
+						</span>
+					</p>
+				{/if}
+			{/await}
+		{/if}
 		{#if readOnly}
 			<p class="notice" role="status">
 				Viewing an earlier revision. <a href={revisionHref(null)}>View latest</a>
@@ -216,18 +258,43 @@
 		<fieldset class="bundle-summary" disabled={readOnly}>
 			<legend class="visually-hidden">Summary</legend>
 			<div class="field">
+				<label for="bundle-summary">Summary</label>
+				<textarea
+					id="bundle-summary"
+					rows="2"
+					maxlength="4000"
+					placeholder="What this bundle shows, in a sentence or two for a reader"
+					bind:value={summary}></textarea>
+			</div>
+
+			<div class="field">
+				<label for="bundle-goal">Goal</label>
+				<textarea
+					id="bundle-goal"
+					rows="2"
+					maxlength="4000"
+					placeholder="What this piece of work was trying to achieve, with its specifics"
+					bind:value={goal}></textarea>
+			</div>
+
+			<div class="field">
 				<label for="bundle-objective">Objective</label>
 				<textarea
 					id="bundle-objective"
 					rows="2"
 					maxlength="4000"
-					placeholder="What this evidence shows, in a sentence"
+					placeholder="The kind of work in general terms, e.g. verify a fix by replaying historical inputs"
 					bind:value={objective}
-					aria-describedby={needsObjective ? 'bundle-objective-error' : undefined}
+					aria-describedby={needsObjective ? 'bundle-objective-error' : 'bundle-objective-hint'}
 					aria-invalid={needsObjective}></textarea>
 				{#if needsObjective}
 					<p id="bundle-objective-error" class="field__error">
 						Add an objective before changing the status.
+					</p>
+				{:else}
+					<p id="bundle-objective-hint" class="field__hint">
+						Bundles are grouped by objective, so describe the type of work without project names,
+						dates, or figures.
 					</p>
 				{/if}
 			</div>
@@ -302,12 +369,6 @@
 							{/if}
 						</div>
 
-						{#if item.excerpt === null}
-							<p class="block-gap">Text not captured</p>
-						{:else}
-							<blockquote class="evidence-card__excerpt">{item.excerpt}</blockquote>
-						{/if}
-
 						<p class="meta-line evidence-card__source">
 							<span>{roleLabel(item.event_role as never)}</span>
 							{#if item.occurred_at}<span>{formatTime(item.occurred_at)}</span>{/if}
@@ -320,10 +381,6 @@
 								>
 							</span>
 						</p>
-
-						{#if itemIssues[index]}
-							<p class="field__error">{itemIssues[index]}</p>
-						{/if}
 
 						{#if entry.note || openNotes.has(key)}
 							<label class="evidence-card__note">
@@ -344,6 +401,48 @@
 							>
 								Add note
 							</button>
+						{/if}
+
+						{#if item.excerpt === null}
+							{#if item.tool_calls.length === 0}
+								<p class="block-gap">{isCodeExcerpt(item) ? 'Content' : 'Text'} not captured</p>
+							{/if}
+						{:else if isCodeExcerpt(item)}
+							<pre
+								class="evidence-card__excerpt evidence-card__code evidence-card__code--{item.block_kind}"><code
+									>{excerptCode(item)}</code
+								></pre>
+						{:else}
+							<blockquote class="evidence-card__excerpt">{item.excerpt}</blockquote>
+						{/if}
+
+						{#if item.tool_calls.length > 0}
+							<ul class="evidence-card__calls" aria-label="Tool calls in this turn">
+								{#each item.tool_calls as call (call.tool_call_id)}
+									<li>
+										{#if call.arguments === null}
+											<span class="evidence-card__call">
+												<span class="evidence-card__call-id">{call.tool_call_id}</span>
+												<span class="block-gap">arguments not captured</span>
+											</span>
+										{:else}
+											<details class="evidence-card__call">
+												<summary>
+													<span class="evidence-card__call-id">{call.tool_call_id}</span>
+													<span class="evidence-card__call-preview">{toolCallPreview(call)}</span>
+												</summary>
+												<pre class="evidence-card__code evidence-card__code--tool_call"><code
+														>{formatArguments(call.arguments)}</code
+													></pre>
+											</details>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{/if}
+
+						{#if itemIssues[index]}
+							<p class="field__error">{itemIssues[index]}</p>
 						{/if}
 					</li>
 				{/each}
@@ -385,7 +484,8 @@
 		{#if !readOnly}
 			<div class="save-bar" class:save-bar--dirty={dirty}>
 				<p class="save-bar__status" aria-live="polite">
-					{#if dirty}Unsaved changes{:else if confirmation}{confirmation}{:else}No changes{/if}
+					{#if dirty}Unsaved changes{:else if confirmation}{confirmation}
+						{#if nextHref}<a href={nextHref}>Next bundle →</a>{/if}{:else}No changes{/if}
 				</p>
 				<button class="button button--primary" type="submit" disabled={!dirty || saving || blocked}>
 					{saving ? 'Saving…' : 'Save revision'}

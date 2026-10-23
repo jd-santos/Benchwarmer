@@ -4,6 +4,7 @@ import type {
 	BundleDocument,
 	BundleOrigin,
 	BundlesResponse,
+	HarnessRunRecord,
 	BundleStatus,
 	BundleSummary,
 	EvidenceIssue,
@@ -413,7 +414,9 @@ const bundleOrigins: ReadonlySet<string> = new Set(['human', 'generated']);
 function isBundleDocument(value: unknown): value is BundleDocument {
 	return (
 		isRecord(value) &&
+		typeof value.summary === 'string' &&
 		typeof value.objective === 'string' &&
+		typeof value.goal === 'string' &&
 		typeof value.status === 'string' &&
 		bundleStatuses.has(value.status) &&
 		isNullableString(value.rationale) &&
@@ -455,7 +458,14 @@ function isBundleDetail(value: unknown): value is BundleDetail {
 				isNullableString(item.occurred_at) &&
 				isNullableString(item.block_kind) &&
 				isNullableString(item.excerpt) &&
-				(item.omitted_before === null || isCount(item.omitted_before))
+				(item.omitted_before === null || isCount(item.omitted_before)) &&
+				Array.isArray(item.tool_calls) &&
+				item.tool_calls.every(
+					(call) =>
+						isRecord(call) &&
+						typeof call.tool_call_id === 'string' &&
+						isNullableString(call.arguments)
+				)
 		) &&
 		Array.isArray(value.revisions) &&
 		value.revisions.every(
@@ -469,7 +479,9 @@ function isBundleSummary(value: unknown): value is BundleSummary {
 		isRecord(value) &&
 		typeof value.id === 'string' &&
 		isCount(value.revision) &&
+		typeof value.summary === 'string' &&
 		typeof value.objective === 'string' &&
+		typeof value.goal === 'string' &&
 		typeof value.status === 'string' &&
 		bundleStatuses.has(value.status) &&
 		typeof value.origin === 'string' &&
@@ -565,4 +577,68 @@ export async function updateBundle(
 			options.fetch
 		)
 	);
+}
+
+function isRunUsage(value: unknown): value is HarnessRunRecord['usage_total'] {
+	const isModelUsage = (usage: unknown): boolean =>
+		isRecord(usage) &&
+		isCount(usage.input) &&
+		isCount(usage.output) &&
+		isCount(usage.cache_read) &&
+		isCount(usage.cache_write) &&
+		isCount(usage.total_tokens) &&
+		isRecord(usage.cost) &&
+		typeof usage.cost.total === 'number';
+	return (
+		isRecord(value) &&
+		isRecord(value.models) &&
+		Object.values(value.models).every(isModelUsage) &&
+		isRecord(value.tools) &&
+		Object.values(value.tools).every(isModelUsage)
+	);
+}
+
+function isHarnessRunRecord(value: unknown): value is HarnessRunRecord {
+	return (
+		isRecord(value) &&
+		typeof value.run_id === 'string' &&
+		typeof value.workflow === 'string' &&
+		typeof value.started_at === 'string' &&
+		typeof value.finished_at === 'string' &&
+		isRecord(value.model) &&
+		typeof value.model.provider === 'string' &&
+		typeof value.model.model_id === 'string' &&
+		isNullableString(value.model.base_url_override) &&
+		typeof value.producer === 'string' &&
+		typeof value.pricing_source === 'string' &&
+		isRunUsage(value.usage_total) &&
+		Array.isArray(value.inputs) &&
+		value.inputs.every(
+			(input) =>
+				isRecord(input) &&
+				typeof input.id === 'string' &&
+				typeof input.status === 'string' &&
+				Array.isArray(input.bundle_ids) &&
+				input.bundle_ids.every((id) => typeof id === 'string') &&
+				isRunUsage(input.usage)
+		)
+	);
+}
+
+/** The record of one hand-run harness workflow, with raw usage and catalog cost estimates. */
+export async function getRun(
+	runId: string,
+	options: ApiRequestOptions = {}
+): Promise<HarnessRunRecord> {
+	const value = await getJson(
+		`/api/v1/runs/${encodeURIComponent(runId)}`,
+		options.signal,
+		options.fetch
+	);
+	if (!isHarnessRunRecord(value)) {
+		throw new ApiClientError('The API run response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
 }

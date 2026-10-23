@@ -63,6 +63,16 @@ class ResolvedItem:
     block_kind: str | None
     excerpt: str | None
     omitted_before: int | None
+    # The tool calls a whole-event citation covers; a block citation has none.
+    tool_calls: tuple[ToolCallSummary, ...] = ()
+
+
+@dataclass(frozen=True)
+class ToolCallSummary:
+    """One tool call in a cited event, with its captured arguments."""
+
+    tool_call_id: str
+    arguments: str | None
 
 
 @dataclass(frozen=True)
@@ -94,7 +104,9 @@ class BundleDetail:
 class BundleSummary:
     id: str
     revision: int
+    summary: str
     objective: str
+    goal: str
     status: str
     origin: str
     producer: str
@@ -306,12 +318,20 @@ def _validate(
 
 def _excerpt(event: dict[str, Any], ref: EvidenceRef) -> tuple[str | None, str | None]:
     if ref.block_id is None:
-        texts = [
-            part["text"]
-            for part in event["content"]
-            if part["kind"] == "text" and isinstance(part["text"], str) and part["text"]
-        ]
-        return ("\n\n".join(texts) if texts else None), None
+        # A whole-event citation shows the event's prose. A tool turn has none,
+        # so it shows the tool output, and the kind tells the reader which. The
+        # event's tool calls travel separately; see `_tool_calls`.
+        for kind in ("text", "tool_result"):
+            texts = [
+                part["text"]
+                for part in event["content"]
+                if part["kind"] == kind
+                and isinstance(part["text"], str)
+                and part["text"]
+            ]
+            if texts:
+                return "\n\n".join(texts), (None if kind == "text" else kind)
+        return None, None
     block = next(part for part in event["content"] if part["id"] == ref.block_id)
     text = block["text"]
     if not isinstance(text, str):
@@ -319,6 +339,19 @@ def _excerpt(event: dict[str, Any], ref: EvidenceRef) -> tuple[str | None, str |
     if ref.text_start is not None:
         text = text[ref.text_start : ref.text_end]
     return text, block["kind"]
+
+
+def _tool_calls(event: dict[str, Any], ref: EvidenceRef) -> tuple[ToolCallSummary, ...]:
+    if ref.block_id is not None:
+        return ()
+    return tuple(
+        ToolCallSummary(
+            tool_call_id=str(part["tool_call_id"]),
+            arguments=part["text"] if isinstance(part["text"], str) else None,
+        )
+        for part in event["content"]
+        if part["kind"] == "tool_call" and part["tool_call_id"] is not None
+    )
 
 
 def _resolve(
@@ -354,6 +387,7 @@ def _resolve(
                 block_kind=block_kind,
                 excerpt=excerpt,
                 omitted_before=omitted,
+                tool_calls=_tool_calls(event, ref),
             )
         )
     return tuple(resolved)
@@ -563,7 +597,9 @@ def list_bundles(
             BundleSummary(
                 id=bundle.id,
                 revision=revision.number,
+                summary=document.summary,
                 objective=document.objective,
+                goal=document.goal,
                 status=document.status,
                 origin=revision.origin,
                 producer=revision.producer,

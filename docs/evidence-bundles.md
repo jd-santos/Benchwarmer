@@ -60,9 +60,19 @@ these separate and record who or what produced the interpretation and how
 uncertain it is. If an event was not captured, we cannot conclude it did not
 happen.
 
-Each bundle has a versioned record of its objective, selected evidence, the
-role of each item, required context, why those items were chosen, missing
-evidence, origin, and review status. Record requested capability, subject
+Each bundle has a versioned record of its summary, goal, objective, selected
+evidence, the role of each item, required context, why those items were
+chosen, missing evidence, origin, and review status. The **goal** is what this
+particular piece of work tried to achieve, with its specifics: "find why the
+nightly reconciliation posted duplicate credits to 14 accounts." The
+**objective** names the kind of work in general terms, without project names,
+dates, or figures: "diagnose duplicate records produced by a scheduled batch
+job." Bundles are later grouped by objective into categories of work, so two
+bundles that are the same kind of work should share an objective even when
+their goals differ. The **summary** is a sentence or two for a person
+scanning a list, saying what happened and how it ended; it is the bundle's
+title. The objective serves classification, the goal is metadata, and the
+summary is for people. Record requested capability, subject
 matter, behavior, outcome, recovery, and suitability for evaluation
 separately. "Unknown" and "ambiguous" are legitimate values. Keep human
 corrections and earlier generated versions; regenerating a bundle never
@@ -70,6 +80,11 @@ changes the imported history. A generated bundle stays a draft until a person
 saves a revision over it, either accepting it as reviewed or rejecting it with
 a reason. Rejected bundles remain queryable because they show where the
 proposer went wrong.
+
+Each hand-run harness pass is also recorded in the application: the workflow,
+model, endpoint, which bundles each conversation's pass produced, raw token
+usage, and the catalog cost estimate with its pricing source. The estimate
+sits beside the proposals it paid for; it is not a provider charge.
 
 Begin by assembling bundles manually from roughly 20–50 conversations, when
 that many are available. Review routine successes, failures, recoveries, and

@@ -1,4 +1,12 @@
-import type { BundleOrigin, BundleStatus, EvidenceRole, ResolvedBundleItem } from '$lib/api/types';
+import type {
+	BundleOrigin,
+	BundleStatus,
+	CitedToolCall,
+	EvidenceRole,
+	HarnessRunRecord,
+	ResolvedBundleItem,
+	RunUsageTotal
+} from '$lib/api/types';
 
 export const roleOptions: { value: EvidenceRole; label: string }[] = [
 	{ value: 'requirement', label: 'Requirement' },
@@ -58,8 +66,39 @@ export function statusLabel(status: BundleStatus): string {
 	return statusOptions.find((option) => option.value === status)?.label ?? status;
 }
 
-export function bundleLabel(objective: string): string {
-	return objective.trim() || 'Untitled bundle';
+/** The bundle's title is its summary, else its general objective; the goal is never a title. */
+export function bundleLabel(bundle: { summary: string; objective: string }): string {
+	return bundle.summary.trim() || bundle.objective.trim() || 'Untitled bundle';
+}
+
+/** The model id without its provider, for tight table cells; the full name suits a title. */
+export function shortModel(model: string): string {
+	return model.slice(model.indexOf('/') + 1);
+}
+
+/** A dollar figure for a catalog estimate; small amounts keep enough precision to compare. */
+export function formatEstimate(usd: number): string {
+	if (usd === 0) return '$0';
+	if (usd < 0.01) return `$${usd.toFixed(4)}`;
+	if (usd < 1) return `$${usd.toFixed(3)}`;
+	return `$${usd.toFixed(2)}`;
+}
+
+export function usageTotals(usage: RunUsageTotal): { tokens: number; estimate: number } {
+	let tokens = 0;
+	let estimate = 0;
+	for (const bucket of [usage.models, usage.tools]) {
+		for (const entry of Object.values(bucket)) {
+			tokens += entry.total_tokens;
+			estimate += entry.cost.total;
+		}
+	}
+	return { tokens, estimate };
+}
+
+/** The run input (one conversation's pass) whose proposals include this bundle, if recorded. */
+export function runInputFor(run: HarnessRunRecord, bundleId: string) {
+	return run.inputs.find((input) => input.bundle_ids.includes(bundleId)) ?? null;
 }
 
 /** What part of the event an item cites, in reader terms. */
@@ -77,4 +116,51 @@ export function scopeLabel(item: ResolvedBundleItem): string {
 		default:
 			return 'Text block';
 	}
+}
+
+/**
+ * A tool call's arguments as indented JSON when they parse; otherwise the captured text.
+ * Tool output is left as the tool wrote it.
+ */
+export function excerptCode(item: ResolvedBundleItem): string {
+	const text = item.excerpt ?? '';
+	return item.block_kind === 'tool_call' ? formatArguments(text) : text;
+}
+
+/** Whether an item's excerpt is tool input or output, which reads as code rather than prose. */
+export function isCodeExcerpt(item: ResolvedBundleItem): boolean {
+	return item.block_kind === 'tool_call' || item.block_kind === 'tool_result';
+}
+
+/** Indented JSON for tool arguments when they parse; otherwise the captured text. */
+export function formatArguments(text: string): string {
+	try {
+		const parsed: unknown = JSON.parse(text);
+		return typeof parsed === 'object' && parsed !== null ? JSON.stringify(parsed, null, 2) : text;
+	} catch {
+		return text;
+	}
+}
+
+/**
+ * One line that says what a tool call did, for a collapsed list: the argument
+ * values in order, such as the command or the path, cut to fit.
+ */
+export function toolCallPreview(call: CitedToolCall, limit = 120): string {
+	if (call.arguments === null) return 'arguments not captured';
+	let line = call.arguments;
+	try {
+		const parsed: unknown = JSON.parse(call.arguments);
+		if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+			line = Object.entries(parsed)
+				.map(
+					([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`
+				)
+				.join(' · ');
+		}
+	} catch {
+		// Not JSON; show the text as captured.
+	}
+	line = line.replace(/\s+/g, ' ').trim();
+	return line.length > limit ? `${line.slice(0, limit - 1)}…` : line;
 }

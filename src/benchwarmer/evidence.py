@@ -1,8 +1,18 @@
-"""Versioned evidence references and bundle documents, version 1.
+"""Versioned evidence references and bundle documents, version 2.
 
 A reference pins one conversation revision, one event, and optionally one
 content block and a text range within it. Text ranges count Unicode code points
 and are half-open: ``text[start:end]`` in Python selects the referenced text.
+
+A bundle states three things about the work it covers. The ``summary`` is a
+sentence or two for a person scanning a list: what the bundle represents. The
+``objective`` names the kind of work in general terms ("diagnose duplicate
+records from a scheduled batch job"), so bundles can later be grouped by
+objective into categories of work. The ``goal`` is what this particular piece
+of work tried to achieve, kept as metadata ("find why the nightly
+reconciliation posted duplicate credits to 14 accounts"). Version 1 had only
+``objective`` and used it for the specific aim; version 1 documents are
+upgraded on read.
 
 This module validates shape only. Resolution against stored conversations
 lives in ``benchwarmer.services.evidence_bundles``.
@@ -10,11 +20,11 @@ lives in ``benchwarmer.services.evidence_bundles``.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-BUNDLE_SCHEMA_VERSION = 1
+BUNDLE_SCHEMA_VERSION = 2
 MAX_BUNDLE_ITEMS = 200
 
 EvidenceRole = Literal["requirement", "action", "result", "correction", "context"]
@@ -80,12 +90,33 @@ class BundleItem(_Strict):
 class BundleDocument(_Strict):
     """The reviewable content of one bundle revision."""
 
-    schema_version: Literal[1] = BUNDLE_SCHEMA_VERSION
+    schema_version: Literal[2] = BUNDLE_SCHEMA_VERSION
+    # What the bundle represents, in a sentence or two for a human reader.
+    summary: _Note = ""
+    # The kind of work, in general terms; the axis bundles are grouped on.
     objective: _Note = ""
+    # What this particular piece of work tried to achieve.
+    goal: _Note = ""
     status: BundleStatus = "draft"
     items: Annotated[list[BundleItem], Field(min_length=1, max_length=MAX_BUNDLE_ITEMS)]
     rationale: _Note | None = None
     missing_evidence: Annotated[list[_Note], Field(max_length=50)] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_version_1(cls, data: Any) -> Any:
+        """Read a version 1 document as version 2.
+
+        Version 1 kept the specific aim in ``objective``, so it becomes the
+        ``goal``. The text also stays in ``objective`` until a reviewer writes
+        the general kind of work, so a reviewed bundle stays valid.
+        """
+        if isinstance(data, dict) and data.get("schema_version") == 1:
+            upgraded = dict(data)
+            upgraded["schema_version"] = BUNDLE_SCHEMA_VERSION
+            upgraded.setdefault("goal", upgraded.get("objective", ""))
+            return upgraded
+        return data
 
     @model_validator(mode="after")
     def _reviewable(self) -> Self:

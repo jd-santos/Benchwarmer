@@ -1,4 +1,4 @@
-import { getBundles } from '$lib/api/client';
+import { getBundles, getRun } from '$lib/api/client';
 import type { BundleOrigin, BundleStatus } from '$lib/api/types';
 import type { PageLoad } from './$types';
 
@@ -42,6 +42,8 @@ export const load: PageLoad = ({ fetch, url }) => {
 		view,
 		run,
 		bundles: getBundles(_filtersFor(view, run), { fetch }),
+		// Usage for the run being shown; an unrecorded run just shows no figures.
+		runRecord: run ? getRun(run, { fetch }).catch(() => null) : null,
 		// The count is a hint beside the view link; its failure must not hide the list.
 		proposedCount:
 			view === 'proposed'

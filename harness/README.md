@@ -48,7 +48,13 @@ providers named in `EXCLUDED_PROVIDERS` (`src/providers.ts`), which can never
 be selected and whose keys are never read, so
 `--model openrouter/<id>` reads `OPENROUTER_API_KEY`, `--model google/<id>`
 reads `GEMINI_API_KEY`, and so on; `npm run list-models` prints which common
-providers have keys present. Nothing in the Benchwarmer
+providers have keys present. A provider can be routed through a pass-through
+gateway that accepts the vendor's native request format and swaps in real
+credentials: set its base URL variable (`ANTHROPIC_BASE_URL`,
+`OPENAI_BASE_URL`, `OPENROUTER_BASE_URL`, `GEMINI_BASE_URL`,
+`MISTRAL_BASE_URL`) and keep the gateway's virtual key in the usual key
+variable. The provider id, catalog, and cost estimates are unchanged, and the
+run report records the override under `model.base_url_override`. Nothing in the Benchwarmer
 application starts a harness run, and generated bundles land as
 `origin=generated`, `status=draft` revisions that a human reviews in the app.
 This is the pilot exception recorded in
@@ -76,7 +82,11 @@ gitignored), `--reports <dir>` (default `reports/harness`, gitignored).
 
 Each run writes `reports/harness/propose-bundles-<timestamp>.json` with the
 conversations processed, the bundles created, and per-conversation usage. Cost
-figures there are pi-ai catalog estimates, not provider charges. Every bundle
+figures there are pi-ai catalog estimates, not provider charges. When the run
+finishes, the same figures are sent to the application as a run record
+(`PUT /api/v1/runs/<run-id>`) so reviewers see what a run or one
+conversation's pass cost beside its proposals; if the API refuses the record
+the report file stands. Every bundle
 the run creates records the run id, model, and report path as provenance, and
 `propose_bundle` sends a request id derived from the run and the proposal, so
 a retry after an interruption returns the existing bundle. The durable

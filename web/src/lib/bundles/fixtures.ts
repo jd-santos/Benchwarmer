@@ -1,4 +1,4 @@
-import type { BundleDetail } from '$lib/api/types';
+import type { BundleDetail, HarnessRunRecord } from '$lib/api/types';
 
 const ref = {
 	conversation_id: 'conversation-a',
@@ -20,8 +20,10 @@ export const bundle: BundleDetail = {
 	created_at: '2026-10-19T10:00:00Z',
 	updated_at: '2026-10-19T10:00:00Z',
 	document: {
-		schema_version: 1,
+		schema_version: 2,
+		summary: '',
 		objective: '',
+		goal: '',
 		status: 'draft',
 		rationale: null,
 		missing_evidence: [],
@@ -44,7 +46,8 @@ export const bundle: BundleDetail = {
 			occurred_at: '2026-03-01T10:42:00Z',
 			block_kind: null,
 			excerpt: 'I need a refund for the second item.',
-			omitted_before: null
+			omitted_before: null,
+			tool_calls: []
 		},
 		{
 			item: {
@@ -59,7 +62,8 @@ export const bundle: BundleDetail = {
 			occurred_at: null,
 			block_kind: 'text',
 			excerpt: 'I can offer',
-			omitted_before: 2
+			omitted_before: 2,
+			tool_calls: []
 		}
 	],
 	revisions: [
@@ -96,7 +100,9 @@ export const proposedBundle: BundleDetail = {
 	request_id: `${proposedProvenance.run_id}:conversation-a:abc123`,
 	document: {
 		...bundle.document,
-		objective: 'Refund request and the offered resolution',
+		summary: 'Refund request and the offered resolution',
+		objective: 'Resolve a customer refund request',
+		goal: 'Get the second item refunded',
 		rationale: 'The user asked for a refund and the assistant offered one.'
 	},
 	revisions: [
@@ -108,4 +114,49 @@ export const proposedBundle: BundleDetail = {
 			created_at: '2026-10-19T10:00:00Z'
 		}
 	]
+};
+
+const usage = {
+	input: 10,
+	output: 3924,
+	cache_read: 28395,
+	cache_write: 23481,
+	total_tokens: 55810,
+	cost: {
+		input: 0.00002,
+		output: 0.03924,
+		cache_read: 0.0028395,
+		cache_write: 0.093924,
+		total: 0.1360235
+	}
+};
+
+/** The run that produced `proposedBundle`, with one conversation's usage. */
+export const proposedRun: HarnessRunRecord = {
+	run_id: proposedProvenance.run_id,
+	workflow: 'propose-bundles',
+	harness_version: '0.0.1',
+	started_at: '2026-10-19T10:00:00Z',
+	finished_at: '2026-10-19T10:00:29Z',
+	api_base_url: 'http://127.0.0.1:8000',
+	model: {
+		provider: 'anthropic',
+		model_id: 'claude-sonnet-5-5',
+		thinking_level: null,
+		base_url_override: null
+	},
+	producer: proposedProducer,
+	inputs: [
+		{
+			id: 'conversation-a',
+			kind: 'conversation',
+			status: 'done',
+			reason: null,
+			bundle_ids: ['bundle-2', 'bundle-3'],
+			usage: { models: { 'anthropic/claude-sonnet-5-5': usage }, tools: {} }
+		}
+	],
+	usage_total: { models: { 'anthropic/claude-sonnet-5-5': usage }, tools: {} },
+	pricing_source: 'pi-ai model catalog estimate',
+	report_path: 'reports/harness/propose-bundles-2026-10-19T10-00-00-000Z.json'
 };

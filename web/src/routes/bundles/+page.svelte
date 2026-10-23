@@ -2,8 +2,16 @@
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 	import type { BundleSummary } from '$lib/api/types';
-	import { bundleLabel, describeProducer, originLabel, statusLabel } from '$lib/bundles/format';
-	import { formatTimestamp, plural } from '$lib/conversations/format';
+	import {
+		bundleLabel,
+		describeProducer,
+		formatEstimate,
+		originLabel,
+		shortModel,
+		statusLabel,
+		usageTotals
+	} from '$lib/bundles/format';
+	import { formatDate, formatTimestamp, plural } from '$lib/conversations/format';
 	import { _views, type BundleView } from './+page';
 	import type { PageProps } from './$types';
 
@@ -20,11 +28,18 @@
 		return `${listHref}${search ? `?${search}` : ''}` as ResolvedPathname;
 	}
 
+	/** A bundle's page, carrying the view so its arrows step through this same list. */
+	function bundleHref(id: string): ResolvedPathname {
+		const search = viewHref(data.view).split('?')[1];
+		const base = resolve('/bundles/[id]', { id });
+		return `${base}${search ? `?${search}` : ''}` as ResolvedPathname;
+	}
+
 	/** The model for a proposal, or the workflow when no model was recorded. */
 	function producerNote(bundle: BundleSummary): string | null {
 		if (bundle.origin !== 'generated') return null;
 		const { workflow, model } = describeProducer(bundle.producer);
-		return model ?? workflow;
+		return model ? shortModel(model) : workflow;
 	}
 
 	const emptyHeading: Record<BundleView, string> = {
@@ -66,6 +81,23 @@
 			Showing bundles whose latest revision came from harness run
 			<code>{data.run}</code>. <a href={viewHref(data.view, null)}>Show every run</a>
 		</p>
+		{#if data.runRecord}
+			{#await data.runRecord then run}
+				{#if run}
+					{@const totals = usageTotals(run.usage_total)}
+					<p class="muted view-note" data-run-usage>
+						{run.model.provider}/{run.model.model_id}{run.model.thinking_level
+							? `, thinking ${run.model.thinking_level}`
+							: ''}
+						· {plural(run.inputs.length, 'conversation')} · {totals.tokens.toLocaleString()} tokens ·
+						about {formatEstimate(totals.estimate)} ({run.pricing_source})
+						{#if run.model.base_url_override}
+							· via {new URL(run.model.base_url_override).host}
+						{/if}
+					</p>
+				{/if}
+			{/await}
+		{/if}
 	{/if}
 
 	{#if data.view === 'proposed'}
@@ -104,13 +136,22 @@
 			</section>
 		{:else}
 			<table class="data-table bundle-table">
+				<colgroup>
+					<col class="bundle-table__col-summary" />
+					<col class="bundle-table__col-objective" />
+					<col />
+					<col />
+					<col />
+					<col />
+				</colgroup>
 				<thead>
 					<tr>
-						<th scope="col">Objective</th>
-						<th scope="col" class="wide-only">Status</th>
-						<th scope="col" class="wide-only">Origin</th>
+						<th scope="col">Bundle</th>
+						<th scope="col" class="wide-only">Objective</th>
+						<th scope="col" class="wide-only nowrap">Status</th>
+						<th scope="col" class="wide-only nowrap">Origin</th>
 						<th scope="col" class="numeric">Items</th>
-						<th scope="col">Updated</th>
+						<th scope="col" class="wide-only nowrap">Updated</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -119,34 +160,45 @@
 						<tr>
 							<th scope="row">
 								<a
-									class:untitled={!bundle.objective.trim()}
-									href={resolve('/bundles/[id]', { id: bundle.id })}
+									class:untitled={!bundle.summary.trim() && !bundle.objective.trim()}
+									href={bundleHref(bundle.id)}
 								>
-									{bundleLabel(bundle.objective)}
+									{bundleLabel(bundle)}
 								</a>
 								{#if bundle.conversation_ids.length > 1}
 									<span class="bundle-table__note">
 										{plural(bundle.conversation_ids.length, 'conversation')}
 									</span>
 								{/if}
+								{#if bundle.objective.trim()}
+									<span class="bundle-table__note bundle-table__meta">{bundle.objective}</span>
+								{/if}
 								<span class="bundle-table__note bundle-table__meta" title={bundle.producer}>
 									<span class="bundle-status bundle-status--{bundle.status}"
 										>{statusLabel(bundle.status)}</span
 									>
 									· {originLabel(bundle.origin)}{note ? `, ${note}` : ''}
+									· <time datetime={bundle.updated_at}>{formatTimestamp(bundle.updated_at)}</time>
 								</span>
 							</th>
-							<td class="wide-only"
+							<td class="wide-only muted">
+								{#if bundle.objective.trim()}{bundle.objective}{:else}Not set{/if}
+							</td>
+							<td class="wide-only nowrap"
 								><span class="bundle-status bundle-status--{bundle.status}"
 									>{statusLabel(bundle.status)}</span
 								></td
 							>
-							<td class="wide-only" title={bundle.producer}>
+							<td class="wide-only nowrap" title={bundle.producer}>
 								{originLabel(bundle.origin)}
 								{#if note}<span class="bundle-table__note">{note}</span>{/if}
 							</td>
 							<td class="numeric">{bundle.item_count}</td>
-							<td class="muted">{formatTimestamp(bundle.updated_at)}</td>
+							<td class="wide-only muted nowrap">
+								<time datetime={bundle.updated_at} title={formatTimestamp(bundle.updated_at)}
+									>{formatDate(bundle.updated_at)}</time
+								>
+							</td>
 						</tr>
 					{/each}
 				</tbody>

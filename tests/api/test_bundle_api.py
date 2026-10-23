@@ -187,6 +187,28 @@ def test_accepts_evidence_across_a_captured_continuation(client: TestClient) -> 
     assert gap.json()["items"][0]["excerpt"] is None
 
 
+def test_whole_event_excerpt_falls_back_to_tool_content(client: TestClient) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    document = {
+        "items": [
+            {"ref": _ref(detail, "a0"), "role": "action"},
+            {"ref": _ref(detail, "t0"), "role": "result"},
+        ]
+    }
+    response = client.post("/api/v1/bundles", json={"document": document})
+    assert response.status_code == 201, response.text
+    prose, output = response.json()["items"]
+    # An assistant turn keeps its prose as the excerpt and lists the calls it made.
+    assert prose["block_kind"] is None
+    assert prose["excerpt"].startswith("I'll compare the session IDs")
+    assert [call["tool_call_id"] for call in prose["tool_calls"]] == ["call-0"]
+    assert prose["tool_calls"][0]["arguments"].startswith('{"command": "sqlite3')
+    # A tool turn has no prose, so the citation shows the tool output as such.
+    assert output["block_kind"] == "tool_result"
+    assert output["excerpt"].startswith("batch-0-00 | succeeded")
+    assert output["tool_calls"] == []
+
+
 def test_rejects_unresolvable_references(client: TestClient) -> None:
     detail = _conversation(client, "demo-import-duplicates")
     older = detail["revisions"][1]["revision"]
@@ -396,3 +418,66 @@ def test_generated_bundles_carry_run_provenance_and_idempotent_creation(
         json=dict(request, request_id="other", provenance={"run_id": "x"}),
     )
     assert malformed.status_code == 422
+
+
+def test_goal_and_objective_are_separate_and_version_1_upgrades(
+    client: TestClient,
+) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    items = [{"ref": _ref(detail, "u0"), "role": "requirement"}]
+    created = client.post(
+        "/api/v1/bundles",
+        json={
+            "document": {
+                "summary": "The nightly import created duplicate sessions; the "
+                "agent traced them to an overlapping window.",
+                "objective": "Diagnose duplicate records from a scheduled import",
+                "goal": "Find why duplicate sessions appear after the nightly import",
+                "items": items,
+            }
+        },
+    )
+    assert created.status_code == 201, created.text
+    document = created.json()["document"]
+    assert document["schema_version"] == 2
+    assert document["goal"].startswith("Find why")
+    listed = client.get("/api/v1/bundles").json()["items"]
+    assert listed[0]["summary"] == document["summary"]
+    assert listed[0]["goal"] == document["goal"]
+    assert listed[0]["objective"] == document["objective"]
+
+    # A reviewed bundle needs the general objective; a goal alone is not enough.
+    goal_only = client.put(
+        f"/api/v1/bundles/{created.json()['id']}",
+        json={
+            "document": {"goal": "Specific aim", "status": "reviewed", "items": items},
+            "base_revision": 1,
+        },
+    )
+    assert goal_only.status_code == 422
+
+    # Version 1 documents kept the specific aim in objective; it becomes the goal
+    # and stays in objective until a reviewer generalizes it.
+    legacy = client.post(
+        "/api/v1/bundles",
+        json={
+            "document": {
+                "schema_version": 1,
+                "objective": "Find why duplicate sessions appear",
+                "items": items,
+            }
+        },
+    )
+    assert legacy.status_code == 201, legacy.text
+    assert legacy.json()["document"] | {} == legacy.json()["document"] | {
+        "schema_version": 2,
+        "goal": "Find why duplicate sessions appear",
+        "objective": "Find why duplicate sessions appear",
+    }
+    assert (
+        client.post(
+            "/api/v1/bundles",
+            json={"document": {"schema_version": 3, "items": items}},
+        ).status_code
+        == 422
+    )

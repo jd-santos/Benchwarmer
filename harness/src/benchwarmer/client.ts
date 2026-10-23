@@ -178,8 +178,13 @@ export interface BundleItem {
 }
 
 export interface BundleDocument {
-	schema_version?: 1;
+	schema_version?: 2;
+	/** What the bundle represents, in a sentence or two for a human reader. */
+	summary?: string;
+	/** The kind of work in general terms; bundles are grouped on it. */
 	objective?: string;
+	/** What this particular piece of work tried to achieve. */
+	goal?: string;
 	status?: BundleStatus;
 	items: BundleItem[];
 	rationale?: string | null;
@@ -206,7 +211,9 @@ export interface RunProvenance {
 export interface BundleSummary {
 	id: string;
 	revision: number;
+	summary: string;
 	objective: string;
+	goal: string;
 	status: BundleStatus;
 	origin: BundleOrigin;
 	producer: string;
@@ -230,6 +237,46 @@ export interface BundleDetail {
 export type CreateBundleResult =
 	| { ok: true; bundle: BundleDetail; existing: boolean }
 	| { ok: false; issues: BundleIssue[] };
+
+/** Mirrors `benchwarmer.runs`: raw usage and the catalog estimate for one model or tool. */
+export interface RunModelUsage {
+	input: number;
+	output: number;
+	cache_read: number;
+	cache_write: number;
+	total_tokens: number;
+	cost: { input: number; output: number; cache_read: number; cache_write: number; total: number };
+}
+
+export interface RunUsageTotal {
+	models: Record<string, RunModelUsage>;
+	tools: Record<string, RunModelUsage>;
+}
+
+export interface RunInput {
+	id: string;
+	kind: 'conversation' | 'session';
+	status: 'done' | 'unanswered' | 'error';
+	reason?: string | null;
+	bundle_ids?: string[];
+	usage: RunUsageTotal;
+}
+
+/** The record a workflow sends the application when it finishes; mirrors `HarnessRunRecord`. */
+export interface HarnessRunRecord {
+	run_id: string;
+	workflow: string;
+	harness_version: string;
+	started_at: string;
+	finished_at: string;
+	api_base_url: string;
+	model: { provider: string; model_id: string; thinking_level: string | null; base_url_override: string | null };
+	producer: string;
+	inputs: RunInput[];
+	usage_total: RunUsageTotal;
+	pricing_source: string;
+	report_path: string | null;
+}
 
 /** Mirrors `benchwarmer.anonymize`: fixture-file shapes and check results. */
 export interface FixtureBlock {
@@ -405,6 +452,11 @@ export class BenchwarmerClient {
 			throw new BenchwarmerApiError(response.status, 'POST', '/bundles', await response.text());
 		}
 		return { ok: true, existing: response.status === 200, bundle: (await response.json()) as BundleDetail };
+	}
+
+	/** Record a finished run; sending the same run id again replaces the earlier record. */
+	async recordRun(record: HarnessRunRecord): Promise<HarnessRunRecord> {
+		return this.json<HarnessRunRecord>('PUT', `/runs/${encodeURIComponent(record.run_id)}`, record);
 	}
 
 	/** Scrub raw Pi session content in memory; the API stores nothing. */

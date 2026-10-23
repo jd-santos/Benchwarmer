@@ -11,7 +11,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { DISCLOSURE_RULE, DisclosureError } from './fixture.ts';
-import { createHarnessModels, providersWithKeys } from './providers.ts';
+import { createHarnessModels, providerBaseUrlOverride, providersWithKeys } from './providers.ts';
 import { anonymizeFixture, type AnonymizeFixtureOptions } from './workflows/anonymize-fixture.ts';
 import { proposeBundles, type ProposeBundlesOptions } from './workflows/propose-bundles.ts';
 
@@ -52,6 +52,10 @@ async function listModels(provider?: string): Promise<void> {
 	}
 	const ready = providersWithKeys();
 	process.stderr.write(`providers with keys in this environment: ${ready.join(', ') || 'none'}\n`);
+	for (const id of ready) {
+		const override = providerBaseUrlOverride(id);
+		if (override) process.stderr.write(`${id} requests go to ${override}\n`);
+	}
 }
 
 async function main(argv: string[]): Promise<void> {
