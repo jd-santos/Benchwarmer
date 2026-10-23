@@ -2532,3 +2532,161 @@ input:focus-visible {
 	font-size: 0.875rem;
 	color: #526272;
 }
+
+/* Propose bundles with a model: pick conversations, preview the frozen plan, approve it. */
+.propose-run {
+	max-width: 56rem;
+	margin: 0 0 1.25rem;
+	padding: 0.5rem 0;
+	border-top: 1px solid #e0e5ea;
+	border-bottom: 1px solid #e0e5ea;
+}
+
+.propose-run > summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.propose-run__pick {
+	margin-block-start: 0.75rem;
+}
+
+.propose-run__search {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 0.6rem;
+}
+
+.propose-run__search .field {
+	flex: 1 1 16rem;
+}
+
+.propose-run__count {
+	margin: 0.5rem 0 0.25rem;
+	font-size: 0.85rem;
+}
+
+.propose-run__list {
+	max-block-size: 18rem;
+	margin: 0;
+	padding: 0;
+	overflow-y: auto;
+	list-style: none;
+	border: 1px solid #e0e5ea;
+}
+
+.propose-run__row {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 0 0.6rem;
+	padding: 0.45rem 0.6rem;
+	border-bottom: 1px solid #eef1f4;
+	cursor: pointer;
+}
+
+.propose-run__row input {
+	grid-row: span 2;
+	align-self: start;
+	margin-block-start: 0.2rem;
+}
+
+.propose-run__title {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.propose-run__meta {
+	font-size: 0.8rem;
+}
+
+.propose-run__model {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+	gap: 0.75rem 1rem;
+	align-items: end;
+	margin-block-start: 1rem;
+}
+
+.propose-run__instructions {
+	grid-column: 1 / -1;
+}
+
+@media (max-width: 47.999rem) {
+	.propose-run__model {
+		grid-template-columns: 1fr;
+	}
+}
+
+.plan {
+	margin-block-start: 0.75rem;
+}
+
+.plan h3,
+.plan-history h3 {
+	margin: 0 0 0.5rem;
+	font-size: 1rem;
+}
+
+.plan__facts {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 0.4rem 1rem;
+	margin: 0;
+}
+
+.plan__facts dt {
+	color: #526272;
+	font-size: 0.875rem;
+}
+
+.plan__facts dd {
+	min-width: 0;
+	margin: 0;
+}
+
+.plan__inputs {
+	margin: 0.25rem 0 0;
+	padding-inline-start: 1.1rem;
+	font-size: 0.9rem;
+}
+
+.plan__digest {
+	font-size: 0.75rem;
+	overflow-wrap: anywhere;
+}
+
+.plan__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+	margin-block-start: 0.75rem;
+}
+
+.plan__status--running,
+.plan__status--approved {
+	color: #8a5a00;
+	font-weight: 600;
+}
+
+.plan__status--finished {
+	color: #1f6b3a;
+	font-weight: 600;
+}
+
+.plan__status--failed,
+.plan__status--interrupted {
+	color: #a12d2d;
+	font-weight: 600;
+}
+
+.plan-history {
+	margin-block-start: 1rem;
+	font-size: 0.85rem;
+}
+
+.plan-history ul {
+	margin: 0;
+	padding-inline-start: 1.1rem;
+}

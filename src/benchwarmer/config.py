@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 _DATA_ROOT_VARIABLE = "BENCHWARMER_DATA_ROOT"
 _IMPORT_ROOTS_VARIABLE = "BENCHWARMER_IMPORT_ROOTS"
+_HARNESS_DIR_VARIABLE = "BENCHWARMER_HARNESS_DIR"
 _XDG_DATA_HOME_VARIABLE = "XDG_DATA_HOME"
 
 
@@ -30,6 +31,9 @@ class BenchwarmerSettings(BaseModel):
     # Directories on this host that the web app may import conversation files
     # from. Empty means no host-local import; collectors push everything else.
     import_roots: tuple[Path, ...] = ()
+    # The checkout's harness/ package, when the app may start approved harness
+    # runs itself. None means plans can be previewed but not executed here.
+    harness_dir: Path | None = None
 
     @field_validator("data_root")
     @classmethod
@@ -45,6 +49,13 @@ class BenchwarmerSettings(BaseModel):
     ) -> tuple[Path, ...]:
         if any(not root.is_absolute() for root in value):
             raise ValueError("import_roots must be absolute paths")
+        return value
+
+    @field_validator("harness_dir")
+    @classmethod
+    def _require_absolute_harness_dir(cls, value: Path | None) -> Path | None:
+        if value is not None and not value.is_absolute():
+            raise ValueError("harness_dir must be an absolute path")
         return value
 
     @classmethod
@@ -72,7 +83,8 @@ class BenchwarmerSettings(BaseModel):
         import_roots = _import_roots(
             environment.get(_IMPORT_ROOTS_VARIABLE), current_home
         )
-        return cls(data_root=root, import_roots=import_roots)
+        harness_dir = _harness_dir(environment.get(_HARNESS_DIR_VARIABLE), current_home)
+        return cls(data_root=root, import_roots=import_roots, harness_dir=harness_dir)
 
     @property
     def database_dir(self) -> Path:
@@ -175,6 +187,21 @@ def _import_roots(raw_value: str | None, home: Path) -> tuple[Path, ...]:
             )
         roots.append(root)
     return tuple(roots)
+
+
+def _harness_dir(raw_value: str | None, home: Path) -> Path | None:
+    """Parse the harness directory variable: one absolute path, ``~`` allowed."""
+    if raw_value is None or not raw_value.strip():
+        return None
+    if raw_value == "~":
+        path = home
+    elif raw_value.startswith("~/"):
+        path = home / raw_value[2:]
+    else:
+        path = Path(raw_value)
+    if not path.is_absolute():
+        raise ConfigurationError(f"{_HARNESS_DIR_VARIABLE} must be an absolute path")
+    return path
 
 
 def _non_macos_data_root(environment: Mapping[str, str], home: Path) -> Path:

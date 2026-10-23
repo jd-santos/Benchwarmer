@@ -53,6 +53,10 @@ Commands or target-host checks that validate the proposal.
 - [First import adapter](0004-first-import-adapter.md)
 - [Cross-machine collection](0005-cross-machine-collection.md)
 
+## Proposed records
+
+- [Approved model work started from the application](0006-app-started-model-work.md)
+
 When a decision is superseded, preserve its rationale and link the replacement.
 Keep private paths, credentials, prompts, sessions, and raw provider responses
 out of decision records.

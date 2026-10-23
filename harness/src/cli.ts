@@ -31,7 +31,7 @@ function usage(): never {
 			'  propose-bundles --conversation <id> [--conversation <id>...] --model <provider>/<model-id>',
 			'      [--api http://127.0.0.1:8000] [--thinking off|minimal|low|medium|high|xhigh|max]',
 			'      [--storage .benchwarmer/harness/propose-bundles.sqlite] [--reports reports/harness]',
-			'      [--instructions "extra operator notes"]',
+			'      [--instructions "extra operator notes"] [--run-id <id>]',
 			'  anonymize-fixture --session <path> [--session <path>...] --model <provider>/<model-id>',
 			'      --disclose-to <provider> [--term <sensitive term>...] [--terms-file <path>]',
 			'      [--api http://127.0.0.1:8000] [--thinking <level>] [--storage <sqlite>] [--reports <dir>]',
@@ -79,7 +79,8 @@ async function main(argv: string[]): Promise<void> {
 			thinking: { type: 'string' },
 			storage: { type: 'string', default: path.join(REPO_ROOT, '.benchwarmer', 'harness', 'propose-bundles.sqlite') },
 			reports: { type: 'string', default: path.join(REPO_ROOT, 'reports', 'harness') },
-			instructions: { type: 'string' }
+			instructions: { type: 'string' },
+			'run-id': { type: 'string' }
 		},
 		strict: true
 	});
@@ -101,6 +102,7 @@ async function main(argv: string[]): Promise<void> {
 	};
 	if (values.thinking !== undefined) options.thinkingLevel = values.thinking as (typeof THINKING)[number];
 	if (values.instructions !== undefined) options.extraInstructions = values.instructions;
+	if (values['run-id'] !== undefined) options.runId = values['run-id'];
 
 	const report = await proposeBundles(options);
 	const bundles = report.conversations.reduce((n, c) => n + c.bundles_created.length, 0);

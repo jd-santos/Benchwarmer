@@ -1,6 +1,6 @@
 # Run approved model work with durable limits and recovery
 
-Status: Planned. Implementation and delivery are pending unless a supporting record explicitly says otherwise.
+Status: In progress. The first slice (plan preview, digest-bound approval, one subprocess per plan, cancellation, interrupted-not-rerun) is implemented for `propose-bundles` per [ADR 0006](../../../docs/decisions/0006-app-started-model-work.md); reservation, retries, and outcome-unknown recovery remain pending.
 
 ## Purpose
 
@@ -17,6 +17,12 @@ No request starts without valid disclosure permission and exact bounded approval
 ## Work
 
 - [ ] Run approved model work with durable limits and recovery
+  - [x] Preview a frozen plan and approve it by digest from the Bundles page;
+    run the proposer as one subprocess per plan; cancel; mark plans left
+    running at startup as interrupted (`model_work_plans`, migration 0007)
+  - [ ] Durable budget reservation once a pricing source exists for the plan
+  - [ ] Bounded retries and outcome-unknown recovery
+  - [ ] Offer other workflows (judges, anonymizer) once their limits are defined
   - Dependencies: [Add bounded model-work plans and exact approval validation](../conversation-contracts/README.md) (already recorded), [Browse conversations and search their text and metadata](../conversation-library/README.md)
   - Scope: preview/approval UI, disclosure checks, durable request/cost reservations,
     cancellation, bounded retries and outcome-unknown recovery
