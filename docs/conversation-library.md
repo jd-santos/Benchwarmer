@@ -48,6 +48,10 @@ must appear through approved read-only host mounts.
 Each source location is explicitly configured. Manual device enrollment,
 tailnet policy, a device-scoped application credential, and source-kind/scope
 allowlists protect ingestion. Tailscale reachability alone is insufficient.
+Files already on the central host (a Pi session directory, a ChatGPT export)
+may be imported from the private interface, but only from directories the
+operator listed in `BENCHWARMER_IMPORT_ROOTS`; the server never browses
+outside them, and an import never starts model work.
 Collectors retain private chunks in an owner-only local spool until the central
 service durably commits native evidence, normalized records, and a receipt.
 Retries are idempotent; source deletion never instructs central deletion.

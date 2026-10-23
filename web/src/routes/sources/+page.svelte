@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { CoverageValue, SourceCoverage } from '$lib/api/types';
+	import SourceImportPanel from '$lib/components/SourceImportPanel.svelte';
 	import { formatTimestamp, plural } from '$lib/conversations/format';
 	import type { PageProps } from './$types';
 
@@ -96,4 +97,5 @@
 			</p>
 		</section>
 	{/await}
+	<SourceImportPanel />
 </div>

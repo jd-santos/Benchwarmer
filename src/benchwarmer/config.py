@@ -13,6 +13,7 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, field_validator
 
 _DATA_ROOT_VARIABLE = "BENCHWARMER_DATA_ROOT"
+_IMPORT_ROOTS_VARIABLE = "BENCHWARMER_IMPORT_ROOTS"
 _XDG_DATA_HOME_VARIABLE = "XDG_DATA_HOME"
 
 
@@ -26,12 +27,24 @@ class BenchwarmerSettings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     data_root: Path
+    # Directories on this host that the web app may import conversation files
+    # from. Empty means no host-local import; collectors push everything else.
+    import_roots: tuple[Path, ...] = ()
 
     @field_validator("data_root")
     @classmethod
     def _require_absolute_data_root(cls, value: Path) -> Path:
         if not value.is_absolute():
             raise ValueError("data_root must be an absolute path")
+        return value
+
+    @field_validator("import_roots")
+    @classmethod
+    def _require_absolute_import_roots(
+        cls, value: tuple[Path, ...]
+    ) -> tuple[Path, ...]:
+        if any(not root.is_absolute() for root in value):
+            raise ValueError("import_roots must be absolute paths")
         return value
 
     @classmethod
@@ -56,7 +69,10 @@ class BenchwarmerSettings(BaseModel):
         else:
             root = _non_macos_data_root(environment, current_home)
 
-        return cls(data_root=root)
+        import_roots = _import_roots(
+            environment.get(_IMPORT_ROOTS_VARIABLE), current_home
+        )
+        return cls(data_root=root, import_roots=import_roots)
 
     @property
     def database_dir(self) -> Path:
@@ -137,6 +153,28 @@ def _explicit_data_root(raw_value: str, home: Path) -> Path:
     if not root.is_absolute():
         raise ConfigurationError(f"{_DATA_ROOT_VARIABLE} must be an absolute path")
     return root
+
+
+def _import_roots(raw_value: str | None, home: Path) -> tuple[Path, ...]:
+    """Parse the import roots variable: absolute paths separated by the OS path separator."""
+    if raw_value is None or not raw_value.strip():
+        return ()
+    roots: list[Path] = []
+    for part in raw_value.split(os.pathsep):
+        if not part.strip():
+            continue
+        if part == "~":
+            root = home
+        elif part.startswith("~/"):
+            root = home / part[2:]
+        else:
+            root = Path(part)
+        if not root.is_absolute():
+            raise ConfigurationError(
+                f"{_IMPORT_ROOTS_VARIABLE} entries must be absolute paths"
+            )
+        roots.append(root)
+    return tuple(roots)
 
 
 def _non_macos_data_root(environment: Mapping[str, str], home: Path) -> Path:
