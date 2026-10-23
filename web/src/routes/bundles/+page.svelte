@@ -7,6 +7,7 @@
 		describeProducer,
 		originLabel,
 		shortModel,
+		shortRunId,
 		statusLabel
 	} from '$lib/bundles/format';
 	import { formatDate, formatTimestamp, plural } from '$lib/conversations/format';
@@ -40,12 +41,72 @@
 		return model ? shortModel(model) : workflow;
 	}
 
+	/** Drafts by the run that proposed them, in list order (newest run first). */
+	function byRun(items: BundleSummary[]): { runId: string | null; items: BundleSummary[] }[] {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built per call, never stored
+		const groups = new Map<string | null, BundleSummary[]>();
+		for (const bundle of items) {
+			const group = groups.get(bundle.run_id) ?? [];
+			group.push(bundle);
+			groups.set(bundle.run_id, group);
+		}
+		return [...groups.entries()].map(([runId, group]) => ({ runId, items: group }));
+	}
+
+	const grouped = $derived(data.view === 'proposed' && data.run === null && data.runs !== null);
+
 	const emptyHeading: Record<BundleView, string> = {
 		all: 'No bundles yet',
 		proposed: 'No proposed drafts to review',
 		rejected: 'No rejected bundles'
 	};
 </script>
+
+{#snippet row(bundle: BundleSummary)}
+	{@const note = producerNote(bundle)}
+	<tr>
+		<th scope="row">
+			<a
+				class:untitled={!bundle.summary.trim() && !bundle.objective.trim()}
+				href={bundleHref(bundle.id)}
+			>
+				{bundleLabel(bundle)}
+			</a>
+			{#if bundle.conversation_ids.length > 1}
+				<span class="bundle-table__note">
+					{plural(bundle.conversation_ids.length, 'conversation')}
+				</span>
+			{/if}
+			{#if bundle.objective.trim()}
+				<span class="bundle-table__note bundle-table__meta">{bundle.objective}</span>
+			{/if}
+			<span class="bundle-table__note bundle-table__meta" title={bundle.producer}>
+				<span class="bundle-status bundle-status--{bundle.status}"
+					>{statusLabel(bundle.status)}</span
+				>
+				· {originLabel(bundle.origin)}{note ? `, ${note}` : ''}
+				· <time datetime={bundle.updated_at}>{formatTimestamp(bundle.updated_at)}</time>
+			</span>
+		</th>
+		<td class="wide-only muted">
+			{#if bundle.objective.trim()}{bundle.objective}{:else}Not set{/if}
+		</td>
+		<td class="wide-only nowrap"
+			><span class="bundle-status bundle-status--{bundle.status}">{statusLabel(bundle.status)}</span
+			></td
+		>
+		<td class="wide-only nowrap" title={bundle.producer}>
+			{originLabel(bundle.origin)}
+			{#if note}<span class="bundle-table__note">{note}</span>{/if}
+		</td>
+		<td class="numeric">{bundle.item_count}</td>
+		<td class="wide-only muted nowrap">
+			<time datetime={bundle.updated_at} title={formatTimestamp(bundle.updated_at)}
+				>{formatDate(bundle.updated_at)}</time
+			>
+		</td>
+	</tr>
+{/snippet}
 
 <svelte:head>
 	<title>Evidence bundles · Benchwarmer</title>
@@ -135,54 +196,46 @@
 						<th scope="col" class="wide-only nowrap">Updated</th>
 					</tr>
 				</thead>
-				<tbody>
-					{#each response.items as bundle (bundle.id)}
-						{@const note = producerNote(bundle)}
-						<tr>
-							<th scope="row">
-								<a
-									class:untitled={!bundle.summary.trim() && !bundle.objective.trim()}
-									href={bundleHref(bundle.id)}
-								>
-									{bundleLabel(bundle)}
-								</a>
-								{#if bundle.conversation_ids.length > 1}
-									<span class="bundle-table__note">
-										{plural(bundle.conversation_ids.length, 'conversation')}
-									</span>
-								{/if}
-								{#if bundle.objective.trim()}
-									<span class="bundle-table__note bundle-table__meta">{bundle.objective}</span>
-								{/if}
-								<span class="bundle-table__note bundle-table__meta" title={bundle.producer}>
-									<span class="bundle-status bundle-status--{bundle.status}"
-										>{statusLabel(bundle.status)}</span
-									>
-									· {originLabel(bundle.origin)}{note ? `, ${note}` : ''}
-									· <time datetime={bundle.updated_at}>{formatTimestamp(bundle.updated_at)}</time>
-								</span>
-							</th>
-							<td class="wide-only muted">
-								{#if bundle.objective.trim()}{bundle.objective}{:else}Not set{/if}
-							</td>
-							<td class="wide-only nowrap"
-								><span class="bundle-status bundle-status--{bundle.status}"
-									>{statusLabel(bundle.status)}</span
-								></td
-							>
-							<td class="wide-only nowrap" title={bundle.producer}>
-								{originLabel(bundle.origin)}
-								{#if note}<span class="bundle-table__note">{note}</span>{/if}
-							</td>
-							<td class="numeric">{bundle.item_count}</td>
-							<td class="wide-only muted nowrap">
-								<time datetime={bundle.updated_at} title={formatTimestamp(bundle.updated_at)}
-									>{formatDate(bundle.updated_at)}</time
-								>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
+				{#if grouped && data.runs}
+					{#await data.runs then runs}
+						{#each byRun(response.items) as group (group.runId ?? 'none')}
+							{@const record = runs.find((run) => run.run_id === group.runId) ?? null}
+							<tbody class="bundle-table__group">
+								<tr>
+									<th scope="colgroup" colspan="6" class="bundle-table__group-heading">
+										{#if group.runId}
+											<a href={resolve('/runs/[id]', { id: group.runId })}
+												>Run {shortRunId(group.runId)}</a
+											>
+											{#if record}
+												· <span title="{record.provider}/{record.model}"
+													>{shortModel(record.model)}</span
+												>
+												·
+												<time datetime={record.started_at}
+													>{formatTimestamp(record.started_at)}</time
+												>
+											{/if}
+											· {plural(group.items.length, 'draft')}
+											· <a href={viewHref('proposed', group.runId)}>Only this run</a>
+										{:else}
+											Not from a recorded run · {plural(group.items.length, 'draft')}
+										{/if}
+									</th>
+								</tr>
+								{#each group.items as bundle (bundle.id)}
+									{@render row(bundle)}
+								{/each}
+							</tbody>
+						{/each}
+					{/await}
+				{:else}
+					<tbody>
+						{#each response.items as bundle (bundle.id)}
+							{@render row(bundle)}
+						{/each}
+					</tbody>
+				{/if}
 			</table>
 		{/if}
 	{:catch}
