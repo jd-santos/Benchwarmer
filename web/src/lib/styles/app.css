@@ -2173,6 +2173,37 @@ input:focus-visible {
 	font-size: 0.8rem;
 }
 
+.evidence-card__speaker {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	color: #2b3947;
+	font-weight: 600;
+}
+
+/* The glyph says who spoke at a glance; the text beside it carries the meaning. */
+.role-glyph {
+	flex: none;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.role-glyph--user {
+	color: #2f6fb3;
+}
+
+.role-glyph--assistant {
+	color: #7a4ea8;
+	fill: currentColor;
+}
+
+.role-glyph--tool {
+	color: #5a6b7c;
+}
+
 .evidence-card__note {
 	display: flex;
 	align-items: center;

@@ -1,4 +1,4 @@
-import { getBundle, getBundles, getRun } from '$lib/api/client';
+import { getBundle, getBundles } from '$lib/api/client';
 import type { BundleSummary } from '$lib/api/types';
 import { _filtersFor, _viewFrom, type BundleView } from '../+page';
 import type { PageLoad } from './$types';
@@ -40,12 +40,6 @@ export const load: PageLoad = ({ fetch, params, url }) => {
 	return {
 		revision,
 		bundle,
-		// The run's usage is context beside a proposal; a missing record must not hide the bundle.
-		run: bundle.then(
-			(detail) =>
-				detail.provenance ? getRun(detail.provenance.run_id, { fetch }).catch(() => null) : null,
-			() => null
-		),
 		// The list the bundle was opened from, in the list's order, so a reviewer can step through it.
 		navigation: getBundles(_filtersFor(view, run), { fetch }).then(
 			(response) => _navigationFor(response.items, params.id, view, run),

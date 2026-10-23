@@ -8,35 +8,36 @@
 		BundleDocument,
 		BundleStatus,
 		EvidenceRole,
-		HarnessRunRecord,
 		ResolvedBundleItem
 	} from '$lib/api/types';
 	import {
 		bundleLabel,
 		excerptCode,
 		formatArguments,
-		formatEstimate,
 		isCodeExcerpt,
 		producerLabel,
 		roleOptions,
-		runInputFor,
 		scopeLabel,
 		statusLabel,
 		statusOptions,
-		toolCallPreview,
-		usageTotals
+		toolCallPreview
 	} from '$lib/bundles/format';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { refKey } from '$lib/bundles/selection';
-	import { formatTime, formatTimestamp, plural, roleLabel } from '$lib/conversations/format';
+	import {
+		eventRole,
+		formatTime,
+		formatTimestamp,
+		plural,
+		roleLabel
+	} from '$lib/conversations/format';
+	import RoleGlyph from './RoleGlyph.svelte';
 
 	let {
 		detail,
-		run = Promise.resolve(null),
 		nextHref = null
 	}: {
 		detail: BundleDetail;
-		run?: Promise<HarnessRunRecord | null>;
 		/** The next bundle in the list the reviewer is working through, offered after a save. */
 		nextHref?: ResolvedPathname | null;
 	} = $props();
@@ -128,13 +129,6 @@
 		);
 	}
 
-	function move(index: number, step: number): void {
-		const next = [...entries];
-		const [entry] = next.splice(index, 1);
-		next.splice(index + step, 0, entry);
-		entries = next;
-	}
-
 	function remove(index: number): void {
 		entries = entries.filter((_, position) => position !== index);
 	}
@@ -219,23 +213,6 @@
 				<span>Revision {current.revision}</span>
 			{/if}
 		</p>
-		{#if current.provenance}
-			{#await run then record}
-				{@const input = record ? runInputFor(record, current.id) : null}
-				{#if record && input}
-					{@const totals = usageTotals(input.usage)}
-					<p class="meta-line" data-run-usage>
-						<span>
-							The pass that proposed this bundle{input.bundle_ids.length > 1
-								? ` and ${input.bundle_ids.length - 1} other${input.bundle_ids.length > 2 ? 's' : ''}`
-								: ''}
-							used {totals.tokens.toLocaleString()} tokens, about {formatEstimate(totals.estimate)}
-							({record.pricing_source})
-						</span>
-					</p>
-				{/if}
-			{/await}
-		{/if}
 		{#if readOnly}
 			<p class="notice" role="status">
 				Viewing an earlier revision. <a href={revisionHref(null)}>View latest</a>
@@ -343,22 +320,6 @@
 							{#if !readOnly}
 								<div class="evidence-card__tools">
 									<button
-										class="tool-button"
-										type="button"
-										disabled={index === 0}
-										aria-label="Move item {index + 1} up"
-										title="Move up"
-										onclick={() => move(index, -1)}>↑</button
-									>
-									<button
-										class="tool-button"
-										type="button"
-										disabled={index === entries.length - 1}
-										aria-label="Move item {index + 1} down"
-										title="Move down"
-										onclick={() => move(index, 1)}>↓</button
-									>
-									<button
 										class="tool-button tool-button--danger"
 										type="button"
 										aria-label="Remove item {index + 1}"
@@ -370,9 +331,12 @@
 						</div>
 
 						<p class="meta-line evidence-card__source">
-							<span>{roleLabel(item.event_role as never)}</span>
+							<span class="evidence-card__speaker">
+								<RoleGlyph role={eventRole(item.event_role)} />
+								{roleLabel(eventRole(item.event_role))}
+							</span>
 							{#if item.occurred_at}<span>{formatTime(item.occurred_at)}</span>{/if}
-							<span>{scopeLabel(item)}</span>
+							{#if scopeLabel(item)}<span>{scopeLabel(item)}</span>{/if}
 							<span>
 								<a href={sourceHref(item)}
 									>{conversations.length > 1

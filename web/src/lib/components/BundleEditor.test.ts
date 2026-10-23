@@ -3,7 +3,7 @@
 import { cleanup, render } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bundle, proposedBundle, proposedRun } from '$lib/bundles/fixtures';
+import { bundle, proposedBundle } from '$lib/bundles/fixtures';
 import BundleEditor from './BundleEditor.svelte';
 
 vi.mock('$app/navigation', () => ({ invalidateAll: vi.fn() }));
@@ -21,13 +21,21 @@ function respond(status: number, body: unknown): Response {
 }
 
 describe('bundle editor', () => {
-	it('shows each cited excerpt, its scope, and the gap before it', () => {
-		const { getByText, getByRole } = render(BundleEditor, { props: { detail: bundle } });
+	it('shows each cited excerpt, who said it, its scope, and the gap before it', () => {
+		const { getByText, getByRole, queryByText, container } = render(BundleEditor, {
+			props: { detail: bundle }
+		});
 
 		expect(getByRole('heading', { name: 'Untitled bundle', level: 1 })).toBeTruthy();
 		expect(getByText('I need a refund for the second item.')).toBeTruthy();
-		expect(getByText('Whole message')).toBeTruthy();
+		// A glyph marks the speaker, with the role name as the readable label beside it.
+		expect(container.querySelector('.role-glyph[data-role="user"]')).toBeTruthy();
+		expect(getByText(/^\s*User\s*$/)).toBeTruthy();
+		// Citing a whole turn needs no scope label; only a narrower scope is named.
+		expect(queryByText(/Whole/)).toBeNull();
 		expect(getByText('Selected text')).toBeTruthy();
+		// Items keep conversation order; there is nothing to reorder.
+		expect(container.querySelector('[aria-label^="Move item"]')).toBeNull();
 		expect(getByText('2 events not included')).toBeTruthy();
 		expect(getByRole('button', { name: 'Save revision' }).hasAttribute('disabled')).toBe(true);
 	});
@@ -184,17 +192,13 @@ describe('reviewing a proposed bundle', () => {
 		expect(getByRole('button', { name: 'Save revision' }).hasAttribute('disabled')).toBe(false);
 	});
 
-	it('titles a proposal by its summary and shows what its pass cost', async () => {
-		const { getByRole, findByText } = render(BundleEditor, {
-			props: { detail: proposedBundle, run: Promise.resolve(proposedRun) }
-		});
+	it('titles a proposal by its summary and leaves its cost to the runs page', () => {
+		const { getByRole, queryByText } = render(BundleEditor, { props: { detail: proposedBundle } });
 
 		expect(
 			getByRole('heading', { name: 'Refund request and the offered resolution', level: 1 })
 		).toBeTruthy();
-		const usage = await findByText(/55,810 tokens/);
-		expect(usage.textContent).toContain('and 1 other');
-		expect(usage.textContent).toContain('about $0.136');
+		expect(queryByText(/tokens/)).toBeNull();
 	});
 
 	it('does not flag a human bundle as awaiting review', () => {

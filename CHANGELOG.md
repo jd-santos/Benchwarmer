@@ -82,6 +82,10 @@ This project does not currently declare a Semantic Versioning policy.
 
 ### Changed
 
+- Mark each evidence item's speaker with a small user, assistant, or tool glyph
+  beside the role name, drop the "Whole message" scope label (a narrower scope
+  is still named), and remove the item reorder arrows. Token and cost figures
+  leave the bundle pages for a dedicated runs page.
 - Prioritize the conversation library and expand the roadmap and design records
   for recovery, enrolled cross-machine push collection, and reviewed evidence
   bundles.

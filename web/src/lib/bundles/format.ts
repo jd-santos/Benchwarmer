@@ -101,12 +101,15 @@ export function runInputFor(run: HarnessRunRecord, bundleId: string) {
 	return run.inputs.find((input) => input.bundle_ids.includes(bundleId)) ?? null;
 }
 
-/** What part of the event an item cites, in reader terms. */
-export function scopeLabel(item: ResolvedBundleItem): string {
+/**
+ * What part of the event an item cites, in reader terms. Citing the whole turn is
+ * the common case and says nothing beyond the role, so it gets no label.
+ */
+export function scopeLabel(item: ResolvedBundleItem): string | null {
 	if (item.item.ref.text_start != null) return 'Selected text';
 	switch (item.block_kind) {
 		case null:
-			return item.event_kind === 'message' ? 'Whole message' : 'Whole event';
+			return null;
 		case 'tool_result':
 			return 'Tool output';
 		case 'tool_call':
