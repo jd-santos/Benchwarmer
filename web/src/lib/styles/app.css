@@ -2101,6 +2101,73 @@ input:focus-visible {
 	background: #f5f6f8;
 }
 
+.evidence-card__calls {
+	display: grid;
+	min-width: 0;
+	max-width: 100%;
+	margin: 0;
+	padding: 0;
+	gap: 0.25rem;
+	list-style: none;
+	font-size: 0.8rem;
+}
+
+.evidence-card__calls > li {
+	min-width: 0;
+}
+
+.evidence-card__call {
+	display: block;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.evidence-card__call > summary {
+	display: flex;
+	min-width: 0;
+	align-items: baseline;
+	gap: 0.5rem;
+	color: #3f4d5b;
+	cursor: pointer;
+}
+
+.evidence-card__call > summary::-webkit-details-marker {
+	display: none;
+}
+
+.evidence-card__call > summary::before {
+	content: '▸';
+	flex: none;
+	color: #667382;
+	font-size: 0.7rem;
+}
+
+.evidence-card__call[open] > summary::before {
+	content: '▾';
+}
+
+.evidence-card__call-id {
+	flex: none;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 0.75rem;
+	color: #17324d;
+}
+
+.evidence-card__call-preview {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 0.75rem;
+}
+
+.evidence-card__call > pre {
+	margin: 0.35rem 0 0 1rem;
+	max-block-size: 14rem;
+	overflow: auto;
+}
+
 .evidence-card__source {
 	margin: 0;
 	font-size: 0.8rem;

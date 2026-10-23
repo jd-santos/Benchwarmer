@@ -150,8 +150,9 @@ informs the extraction schema and later in-app review of suggested groups.
       objectives stayed general enough to group: two sibling-branch drafts
       again shared one objective. Review surfaced two gaps fixed the same
       day: whole-event citations of tool turns resolved to no excerpt (now
-      the tool output or call, shown as code), and reviewers had no way to
-      step through drafts (now previous/next in the editor).
+      the tool output, shown as code, and every cited turn lists its tool
+      calls), and reviewers had no way to step through drafts (now
+      previous/next in the editor).
     - [ ] Remaining two synthetic fixtures (compaction, no headings), then a
       private import once anonymized.
   - [ ] Decide whether the model should receive shortened event ids. Current

@@ -458,7 +458,14 @@ function isBundleDetail(value: unknown): value is BundleDetail {
 				isNullableString(item.occurred_at) &&
 				isNullableString(item.block_kind) &&
 				isNullableString(item.excerpt) &&
-				(item.omitted_before === null || isCount(item.omitted_before))
+				(item.omitted_before === null || isCount(item.omitted_before)) &&
+				Array.isArray(item.tool_calls) &&
+				item.tool_calls.every(
+					(call) =>
+						isRecord(call) &&
+						typeof call.tool_call_id === 'string' &&
+						isNullableString(call.arguments)
+				)
 		) &&
 		Array.isArray(value.revisions) &&
 		value.revisions.every(

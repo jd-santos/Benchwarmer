@@ -14,6 +14,7 @@
 	import {
 		bundleLabel,
 		excerptCode,
+		formatArguments,
 		formatEstimate,
 		isCodeExcerpt,
 		producerLabel,
@@ -22,6 +23,7 @@
 		scopeLabel,
 		statusLabel,
 		statusOptions,
+		toolCallPreview,
 		usageTotals
 	} from '$lib/bundles/format';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -367,17 +369,6 @@
 							{/if}
 						</div>
 
-						{#if item.excerpt === null}
-							<p class="block-gap">{isCodeExcerpt(item) ? 'Content' : 'Text'} not captured</p>
-						{:else if isCodeExcerpt(item)}
-							<pre
-								class="evidence-card__excerpt evidence-card__code evidence-card__code--{item.block_kind}"><code
-									>{excerptCode(item)}</code
-								></pre>
-						{:else}
-							<blockquote class="evidence-card__excerpt">{item.excerpt}</blockquote>
-						{/if}
-
 						<p class="meta-line evidence-card__source">
 							<span>{roleLabel(item.event_role as never)}</span>
 							{#if item.occurred_at}<span>{formatTime(item.occurred_at)}</span>{/if}
@@ -390,10 +381,6 @@
 								>
 							</span>
 						</p>
-
-						{#if itemIssues[index]}
-							<p class="field__error">{itemIssues[index]}</p>
-						{/if}
 
 						{#if entry.note || openNotes.has(key)}
 							<label class="evidence-card__note">
@@ -414,6 +401,48 @@
 							>
 								Add note
 							</button>
+						{/if}
+
+						{#if item.excerpt === null}
+							{#if item.tool_calls.length === 0}
+								<p class="block-gap">{isCodeExcerpt(item) ? 'Content' : 'Text'} not captured</p>
+							{/if}
+						{:else if isCodeExcerpt(item)}
+							<pre
+								class="evidence-card__excerpt evidence-card__code evidence-card__code--{item.block_kind}"><code
+									>{excerptCode(item)}</code
+								></pre>
+						{:else}
+							<blockquote class="evidence-card__excerpt">{item.excerpt}</blockquote>
+						{/if}
+
+						{#if item.tool_calls.length > 0}
+							<ul class="evidence-card__calls" aria-label="Tool calls in this turn">
+								{#each item.tool_calls as call (call.tool_call_id)}
+									<li>
+										{#if call.arguments === null}
+											<span class="evidence-card__call">
+												<span class="evidence-card__call-id">{call.tool_call_id}</span>
+												<span class="block-gap">arguments not captured</span>
+											</span>
+										{:else}
+											<details class="evidence-card__call">
+												<summary>
+													<span class="evidence-card__call-id">{call.tool_call_id}</span>
+													<span class="evidence-card__call-preview">{toolCallPreview(call)}</span>
+												</summary>
+												<pre class="evidence-card__code evidence-card__code--tool_call"><code
+														>{formatArguments(call.arguments)}</code
+													></pre>
+											</details>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{/if}
+
+						{#if itemIssues[index]}
+							<p class="field__error">{itemIssues[index]}</p>
 						{/if}
 					</li>
 				{/each}

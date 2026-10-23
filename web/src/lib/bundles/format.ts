@@ -1,6 +1,7 @@
 import type {
 	BundleOrigin,
 	BundleStatus,
+	CitedToolCall,
 	EvidenceRole,
 	HarnessRunRecord,
 	ResolvedBundleItem,
@@ -123,7 +124,16 @@ export function scopeLabel(item: ResolvedBundleItem): string {
  */
 export function excerptCode(item: ResolvedBundleItem): string {
 	const text = item.excerpt ?? '';
-	if (item.block_kind !== 'tool_call') return text;
+	return item.block_kind === 'tool_call' ? formatArguments(text) : text;
+}
+
+/** Whether an item's excerpt is tool input or output, which reads as code rather than prose. */
+export function isCodeExcerpt(item: ResolvedBundleItem): boolean {
+	return item.block_kind === 'tool_call' || item.block_kind === 'tool_result';
+}
+
+/** Indented JSON for tool arguments when they parse; otherwise the captured text. */
+export function formatArguments(text: string): string {
 	try {
 		const parsed: unknown = JSON.parse(text);
 		return typeof parsed === 'object' && parsed !== null ? JSON.stringify(parsed, null, 2) : text;
@@ -132,7 +142,25 @@ export function excerptCode(item: ResolvedBundleItem): string {
 	}
 }
 
-/** Whether an item's excerpt is tool input or output, which reads as code rather than prose. */
-export function isCodeExcerpt(item: ResolvedBundleItem): boolean {
-	return item.block_kind === 'tool_call' || item.block_kind === 'tool_result';
+/**
+ * One line that says what a tool call did, for a collapsed list: the argument
+ * values in order, such as the command or the path, cut to fit.
+ */
+export function toolCallPreview(call: CitedToolCall, limit = 120): string {
+	if (call.arguments === null) return 'arguments not captured';
+	let line = call.arguments;
+	try {
+		const parsed: unknown = JSON.parse(call.arguments);
+		if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+			line = Object.entries(parsed)
+				.map(
+					([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`
+				)
+				.join(' · ');
+		}
+	} catch {
+		// Not JSON; show the text as captured.
+	}
+	line = line.replace(/\s+/g, ' ').trim();
+	return line.length > limit ? `${line.slice(0, limit - 1)}…` : line;
 }

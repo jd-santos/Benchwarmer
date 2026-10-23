@@ -198,12 +198,15 @@ def test_whole_event_excerpt_falls_back_to_tool_content(client: TestClient) -> N
     response = client.post("/api/v1/bundles", json={"document": document})
     assert response.status_code == 201, response.text
     prose, output = response.json()["items"]
-    # An assistant turn with prose keeps the prose; its tool call is a block citation.
+    # An assistant turn keeps its prose as the excerpt and lists the calls it made.
     assert prose["block_kind"] is None
     assert prose["excerpt"].startswith("I'll compare the session IDs")
+    assert [call["tool_call_id"] for call in prose["tool_calls"]] == ["call-0"]
+    assert prose["tool_calls"][0]["arguments"].startswith('{"command": "sqlite3')
     # A tool turn has no prose, so the citation shows the tool output as such.
     assert output["block_kind"] == "tool_result"
     assert output["excerpt"].startswith("batch-0-00 | succeeded")
+    assert output["tool_calls"] == []
 
 
 def test_rejects_unresolvable_references(client: TestClient) -> None:

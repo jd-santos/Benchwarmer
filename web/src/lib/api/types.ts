@@ -180,6 +180,12 @@ export interface BundleDocument {
 	missing_evidence: string[];
 }
 
+/** A tool call inside a cited event; arguments are the captured text, if any. */
+export interface CitedToolCall {
+	tool_call_id: string;
+	arguments: string | null;
+}
+
 export interface ResolvedBundleItem {
 	item: BundleItem;
 	conversation_title: string | null;
@@ -190,6 +196,8 @@ export interface ResolvedBundleItem {
 	block_kind: string | null;
 	excerpt: string | null;
 	omitted_before: number | null;
+	/** The calls a whole-event citation covers; a block citation lists none. */
+	tool_calls: CitedToolCall[];
 }
 
 /** Which harness run and model produced a generated revision. */

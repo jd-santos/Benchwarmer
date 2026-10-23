@@ -46,7 +46,8 @@ export const bundle: BundleDetail = {
 			occurred_at: '2026-03-01T10:42:00Z',
 			block_kind: null,
 			excerpt: 'I need a refund for the second item.',
-			omitted_before: null
+			omitted_before: null,
+			tool_calls: []
 		},
 		{
 			item: {
@@ -61,7 +62,8 @@ export const bundle: BundleDetail = {
 			occurred_at: null,
 			block_kind: 'text',
 			excerpt: 'I can offer',
-			omitted_before: 2
+			omitted_before: 2,
+			tool_calls: []
 		}
 	],
 	revisions: [

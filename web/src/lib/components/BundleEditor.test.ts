@@ -57,6 +57,30 @@ describe('bundle editor', () => {
 		expect(container.textContent).not.toContain('not captured');
 	});
 
+	it('lists the tool calls of a cited turn under its prose, expandable to the arguments', () => {
+		const turn = {
+			...bundle.items[0],
+			excerpt: "I'll check the file.",
+			tool_calls: [
+				{ tool_call_id: 'call-7', arguments: '{"command": "grep -n health api.py"}' },
+				{ tool_call_id: 'call-8', arguments: null }
+			]
+		};
+		const { getByRole, getByText, container } = render(BundleEditor, {
+			props: { detail: { ...bundle, items: [turn, bundle.items[1]] } }
+		});
+
+		expect(getByText("I'll check the file.")).toBeTruthy();
+		const list = getByRole('list', { name: 'Tool calls in this turn' });
+		expect(list.querySelectorAll('li').length).toBe(2);
+		expect(getByText('command: grep -n health api.py')).toBeTruthy();
+		expect(list.querySelector('details pre')?.textContent).toBe(
+			'{\n  "command": "grep -n health api.py"\n}'
+		);
+		expect(getByText('arguments not captured')).toBeTruthy();
+		expect(container.textContent).not.toContain('Text not captured');
+	});
+
 	it('requires a general objective before review; a goal alone is not enough', async () => {
 		const user = userEvent.setup();
 		const { getByRole, getByText, getByLabelText } = render(BundleEditor, {

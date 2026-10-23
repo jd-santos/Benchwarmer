@@ -63,6 +63,16 @@ class ResolvedItem:
     block_kind: str | None
     excerpt: str | None
     omitted_before: int | None
+    # The tool calls a whole-event citation covers; a block citation has none.
+    tool_calls: tuple[ToolCallSummary, ...] = ()
+
+
+@dataclass(frozen=True)
+class ToolCallSummary:
+    """One tool call in a cited event, with its captured arguments."""
+
+    tool_call_id: str
+    arguments: str | None
 
 
 @dataclass(frozen=True)
@@ -308,10 +318,10 @@ def _validate(
 
 def _excerpt(event: dict[str, Any], ref: EvidenceRef) -> tuple[str | None, str | None]:
     if ref.block_id is None:
-        # A whole-event citation shows the event's prose. An event with none, such
-        # as a tool turn or an assistant turn that only called a tool, shows the
-        # calls or their output instead, and the kind tells the reader which.
-        for kind in ("text", "tool_call", "tool_result"):
+        # A whole-event citation shows the event's prose. A tool turn has none,
+        # so it shows the tool output, and the kind tells the reader which. The
+        # event's tool calls travel separately; see `_tool_calls`.
+        for kind in ("text", "tool_result"):
             texts = [
                 part["text"]
                 for part in event["content"]
@@ -329,6 +339,19 @@ def _excerpt(event: dict[str, Any], ref: EvidenceRef) -> tuple[str | None, str |
     if ref.text_start is not None:
         text = text[ref.text_start : ref.text_end]
     return text, block["kind"]
+
+
+def _tool_calls(event: dict[str, Any], ref: EvidenceRef) -> tuple[ToolCallSummary, ...]:
+    if ref.block_id is not None:
+        return ()
+    return tuple(
+        ToolCallSummary(
+            tool_call_id=str(part["tool_call_id"]),
+            arguments=part["text"] if isinstance(part["text"], str) else None,
+        )
+        for part in event["content"]
+        if part["kind"] == "tool_call" and part["tool_call_id"] is not None
+    )
 
 
 def _resolve(
@@ -364,6 +387,7 @@ def _resolve(
                 block_kind=block_kind,
                 excerpt=excerpt,
                 omitted_before=omitted,
+                tool_calls=_tool_calls(event, ref),
             )
         )
     return tuple(resolved)

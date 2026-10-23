@@ -58,10 +58,11 @@ This project does not currently declare a Semantic Versioning policy.
   the goal. The proposer, list, and editor use all three.
 - Show tool calls and tool output cited as evidence as code in the bundle
   editor instead of "Text not captured": a whole-event citation of a turn with
-  no prose resolves to its tool calls or output, call arguments are indented
-  JSON, and the item's scope names the kind. Step through bundles from the
-  editor with previous/next links in the order of the list the bundle was
-  opened from, with the way back to that view.
+  no prose resolves to its tool output, and every whole-event citation lists
+  the turn's tool calls under its prose, one line each and expandable to the
+  indented arguments. Each item's source line and note sit above its excerpt.
+  Step through bundles from the editor with previous/next links in the order
+  of the list the bundle was opened from, with the way back to that view.
 - Record each hand-run harness workflow in the application
   (`PUT /api/v1/runs/{run_id}`, `GET /api/v1/runs`) with raw usage and the
   catalog cost estimate; the bundle list and editor show what a run or a
