@@ -15,6 +15,7 @@ from benchwarmer.models.source import (
     SourceImportState,
     SourcePresence,
 )
+from benchwarmer.models.task_version import Task, TaskVersion
 
 __all__ = [
     "Base",
@@ -31,4 +32,6 @@ __all__ = [
     "Source",
     "SourceImportState",
     "SourcePresence",
+    "Task",
+    "TaskVersion",
 ]

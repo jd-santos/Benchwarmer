@@ -469,3 +469,168 @@ export interface EvidenceIssue {
 	code: string;
 	message: string;
 }
+
+/* Task versions: a reviewed bundle prepared as a test. Mirrors `benchwarmer.tasks`. */
+
+export type TaskKind = 'chat' | 'agent' | 'coding';
+export type TaskStatus = 'draft' | 'approved' | 'retired';
+export type CriterionMethod = 'deterministic' | 'llm_judge' | 'human';
+export type JudgeEvidence = 'judge.historical' | 'judge.feedback' | 'judge.reviewer_notes';
+export type ReconstructionLevel = 'prompt_only' | 'fixture_backed' | 'fixed_multi_turn';
+export type Partition = 'development' | 'calibration' | 'holdout';
+export type ReviewerLabel = 'pass' | 'fail' | 'unsure';
+
+/** The last event the candidate sees, on the bundle's path in one conversation. */
+export interface CutPoint {
+	conversation_id: string;
+	revision: string;
+	event_id: string;
+}
+
+export interface Criterion {
+	id: string;
+	statement: string;
+	method: CriterionMethod;
+	rubric_version: number;
+	judge_evidence: JudgeEvidence[];
+	reviewer_label: ReviewerLabel | null;
+	note: string | null;
+}
+
+export interface Reconstruction {
+	level: ReconstructionLevel;
+	gaps: string[];
+}
+
+export interface ExpectedScope {
+	in_scope_paths: string[];
+	approval_paths: string[];
+	excluded_paths: string[];
+}
+
+export interface LeakageReview {
+	by: string;
+	at: string;
+	/** Ids of automatic flags the reviewer looked at and judged not to be leaks. */
+	accepted_flags: string[];
+	notes: string | null;
+}
+
+export interface TaskDocument {
+	schema_version?: 1;
+	bundle_id: string;
+	bundle_revision: number;
+	kind: TaskKind;
+	summary: string;
+	objective: string;
+	objective_type: ObjectiveType;
+	family: string;
+	cut_point: CutPoint;
+	reconstruction: Reconstruction;
+	criteria: Criterion[];
+	expected_scope: ExpectedScope | null;
+	leakage_review: LeakageReview | null;
+	partition: Partition | null;
+	status: TaskStatus;
+	reviewer_notes: string;
+}
+
+/** One automatic sign that the candidate section may reveal the answer. */
+export interface LeakageFlag {
+	id: string;
+	code: string;
+	message: string;
+	event_id: string | null;
+	criterion_id: string | null;
+	item_index: number | null;
+}
+
+/** One event on the task's conversation path, placed on one side of the cut. */
+export interface SplitEvent {
+	event_id: string;
+	role: string;
+	kind: string;
+	occurred_at: string | null;
+	preview: string | null;
+	/** Bundle item roles citing this event, in item order. */
+	cited_as: EvidenceRole[];
+}
+
+export interface TaskSplit {
+	conversation_id: string;
+	revision: string;
+	conversation_title: string | null;
+	candidate: SplitEvent[];
+	judge: SplitEvent[];
+	/** Events the bundle cites in other conversations; always judge-only. */
+	other_judge: SplitEvent[];
+}
+
+export interface TaskVersionRef {
+	number: number;
+	status: TaskStatus;
+	producer: string;
+	created_at: string;
+}
+
+export interface TaskDetail {
+	id: string;
+	version: number;
+	latest_version: number;
+	producer: string;
+	created_at: string;
+	updated_at: string;
+	document: TaskDocument;
+	bundle: BundleDocument;
+	bundle_latest_revision: number;
+	split: TaskSplit;
+	flags: LeakageFlag[];
+	versions: TaskVersionRef[];
+}
+
+/** A proposed starting document for a bundle; nothing is saved. */
+export interface TaskDraft {
+	document: TaskDocument;
+	bundle: BundleDocument;
+	split: TaskSplit;
+	flags: LeakageFlag[];
+}
+
+export interface TaskSummary {
+	id: string;
+	version: number;
+	status: TaskStatus;
+	kind: TaskKind;
+	summary: string;
+	objective: string;
+	objective_type: ObjectiveType;
+	family: string;
+	partition: Partition | null;
+	bundle_id: string;
+	bundle_revision: number;
+	criterion_count: number;
+	updated_at: string;
+}
+
+export interface TasksResponse {
+	items: TaskSummary[];
+}
+
+export interface TaskIssue {
+	code: string;
+	message: string;
+	criterion_id: string | null;
+}
+
+/** The exported case record; the two sections are stored together and served apart. */
+export interface CaseRecord {
+	schema_version: 1;
+	case: Record<string, unknown> & {
+		id: string;
+		version: number;
+		redaction: { scrub_version: string; term_count: number; manifest: Record<string, number> };
+	};
+	candidate: Record<string, unknown>;
+	judge: Record<string, unknown>;
+	digest: string;
+}

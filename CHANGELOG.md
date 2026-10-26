@@ -9,6 +9,20 @@ This project does not currently declare a Semantic Versioning policy.
 
 ### Added
 
+- Prepare a reviewed bundle as a versioned task (`/api/v1/tasks`, Tasks page):
+  a cut point that ends the candidate's view, criteria of acceptable behavior
+  with a method (human, model judge, deterministic) and rubric version, the
+  reconstruction level with its gaps, a family and partition, and a leakage
+  review. Deterministic leakage flags (an answer cited before the cut, a
+  criterion quoting the historical answer, a cut on an assistant turn, judge
+  text already in the candidate section) must each be accepted before
+  approval; approved versions are immutable in content and retired is final.
+- Export an approved task version as a case record (`POST
+  /api/v1/tasks/{id}/export`): case metadata, a candidate section cut at the
+  cut point with reasoning dropped, and a judge section with the historical
+  turns and cited items. One scrub pass covers both sections with the given
+  terms plus the built-in kinds; the record carries a manifest of counts and a
+  digest, never the original values.
 - Add Pi session and run-log import plus ChatGPT account-export import, with
   private native snapshots, normalized branch structure, and explicit coverage
   for fields the source does not expose.

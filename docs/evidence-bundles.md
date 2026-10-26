@@ -138,13 +138,31 @@ silently change an existing run or start new model analysis.
 
 ## Turning evidence into a test
 
-Promoting a bundle creates a task draft for review. The draft separates what
-the candidate agent is allowed to see from historical evidence reserved for
-judging it. Before approval, check for missing starting context, incompatible
-branches, and **answer leakage**: accidentally giving the candidate the
-original solution or a later correction. Describe what a good result must do
-instead of requiring the exact wording of the historical response. Set the
-criteria before running candidates.
+Preparing a reviewed bundle as a **task version** turns it into a test. The
+task pins the bundle revision and adds a **cut point**, the last turn the
+candidate sees; everything after it on the same path, and everything cited
+from other conversations, is judge-only evidence. The split is computed from
+the stored conversation, never trusted from the document. **Criteria** describe
+acceptable behavior, each with a method (human, model judge, or deterministic)
+and a rubric version; a reviewer's verdict on a human criterion becomes the
+calibration label later. The **reconstruction** level records what a run can
+establish and lists its gaps. Before approval, deterministic checks flag
+**answer leakage**: an answer cited before the cut, a criterion that quotes
+the historical answer, a cut on an assistant turn, or judge-side text already
+present in the candidate section. A reviewer accepts each flag by id in the
+leakage review; approval needs a reviewed bundle and every flag accepted.
+Approved versions are immutable in content, so an edit starts a new draft
+version, and retired is final.
+
+An approved version exports as a **case record**: one JSON document whose
+`candidate` section is the transcript to the cut point with reasoning
+dropped, and whose `judge` section holds the historical turns, the cited
+items, and reviewer notes. Both sections pass through the deterministic
+scrubber with one placeholder table, and the redaction manifest records counts
+by kind, never original values. The export is deterministic per version and
+term list, so it can be repeated and compared by digest. Benchwarmer writes
+the file; where it is uploaded and how it is run belong to the consuming
+evaluation program.
 
 Test proposed evaluators against failures, successes, and ambiguous or
 inapplicable cases. An evaluator that catches only the original failure is not

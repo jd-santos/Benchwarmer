@@ -43,6 +43,7 @@ describe('AppNavigation', () => {
 			{ name: 'Overview', href: '/' },
 			{ name: 'Conversations', href: '/conversations' },
 			{ name: 'Bundles', href: '/bundles' },
+			{ name: 'Tasks', href: '/tasks' },
 			{ name: 'Runs', href: '/runs' },
 			{ name: 'Sources', href: '/sources' }
 		]);

@@ -131,7 +131,7 @@ class BundleMembership:
 
 
 @dataclass(frozen=True)
-class _Conversation:
+class LoadedConversation:
     row: ConversationRevision
     is_latest: bool
     events: dict[str, dict[str, Any]]
@@ -161,16 +161,16 @@ def _title(document: dict[str, Any]) -> str | None:
     return None
 
 
-def _load_conversations(
+def load_conversations(
     session: Session, refs: list[EvidenceRef]
-) -> dict[tuple[str, str], _Conversation]:
+) -> dict[tuple[str, str], LoadedConversation]:
     wanted = {(ref.conversation_id, ref.revision) for ref in refs}
     rows = session.execute(
         select(ConversationRevision).where(
             ConversationRevision.revision.in_({revision for _, revision in wanted})
         )
     ).scalars()
-    loaded: dict[tuple[str, str], _Conversation] = {}
+    loaded: dict[tuple[str, str], LoadedConversation] = {}
     for row in rows:
         key = (row.document["id"], row.revision)
         if key not in wanted:
@@ -188,7 +188,7 @@ def _load_conversations(
             )
             .limit(1)
         ).scalar_one()
-        loaded[key] = _Conversation(
+        loaded[key] = LoadedConversation(
             row=row,
             is_latest=latest == row.id,
             events={event["id"]: event for event in row.document["events"]},
@@ -203,7 +203,7 @@ def _source_key(document: dict[str, Any]) -> tuple[str, str, str]:
 
 
 def _validate(
-    document: BundleDocument, conversations: dict[tuple[str, str], _Conversation]
+    document: BundleDocument, conversations: dict[tuple[str, str], LoadedConversation]
 ) -> tuple[EvidenceIssue, ...]:
     issues: list[EvidenceIssue] = []
     revisions: dict[str, str] = {}
@@ -369,7 +369,7 @@ def _tool_calls(event: dict[str, Any], ref: EvidenceRef) -> tuple[ToolCallSummar
 
 
 def _resolve(
-    document: BundleDocument, conversations: dict[tuple[str, str], _Conversation]
+    document: BundleDocument, conversations: dict[tuple[str, str], LoadedConversation]
 ) -> tuple[ResolvedItem, ...]:
     paths: dict[str, list[str]] = {}
     for item in document.items:
@@ -409,8 +409,8 @@ def _resolve(
 
 def _checked(
     session: Session, document: BundleDocument
-) -> dict[tuple[str, str], _Conversation]:
-    conversations = _load_conversations(session, [item.ref for item in document.items])
+) -> dict[tuple[str, str], LoadedConversation]:
+    conversations = load_conversations(session, [item.ref for item in document.items])
     issues = _validate(document, conversations)
     if issues:
         raise BundleInvalid(issues)
@@ -434,7 +434,7 @@ def _detail(
     if selected is None:
         raise BundleNotFound(bundle.id)
     document = BundleDocument.model_validate(selected.document)
-    conversations = _load_conversations(session, [item.ref for item in document.items])
+    conversations = load_conversations(session, [item.ref for item in document.items])
     return BundleDetail(
         id=bundle.id,
         revision=selected.number,
