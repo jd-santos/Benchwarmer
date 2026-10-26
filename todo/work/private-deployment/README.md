@@ -8,7 +8,7 @@ Serve the central application privately on the target host with verified supervi
 
 ## Dependencies and order
 
-Blocked on [the application foundation](../application-foundation/README.md). This is required for operational rollout, but does not block fixture development or local importer implementation.
+Blocked on [the application foundation](../application-foundation/README.md). The image this record deploys is built by [one-command start and packaging](../one-command-start/README.md), which also decides whether the image carries Node for app-started harness runs. This is required for operational rollout, but does not block fixture development or local importer implementation.
 
 ## Acceptance criteria
 
