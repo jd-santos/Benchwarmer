@@ -28,6 +28,7 @@ No current tasks at this priority.
 
 ## P3: Essential
 
+- [ ] [Start and package the application with one command](work/one-command-start/README.md)
 - [ ] [Deploy and verify the private application](work/private-deployment/README.md)
 - [ ] [Implement coordinated backups and prove recovery](work/backup-and-recovery/README.md)
 - [ ] [Collect conversations from other machines](work/cross-machine-collection/README.md)

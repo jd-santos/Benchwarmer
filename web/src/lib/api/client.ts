@@ -7,6 +7,14 @@ import type {
 	BundlesResponse,
 	BundleStatus,
 	BundleSummary,
+	CaseRecord,
+	TaskDetail,
+	TaskDocument,
+	TaskDraft,
+	TaskIssue,
+	TaskStatus,
+	TaskSummary,
+	TasksResponse,
 	ContentBlock,
 	ConversationDetail,
 	ConversationEvent,
@@ -63,6 +71,18 @@ export class ApiClientError extends Error {
 				(item.item_index === null || isCount(item.item_index)) &&
 				typeof item.code === 'string' &&
 				typeof item.message === 'string'
+		);
+	}
+
+	/** Problems reported by a rejected task save, if any. */
+	get taskIssues(): TaskIssue[] {
+		if (!isRecord(this.body) || !Array.isArray(this.body.issues)) return [];
+		return this.body.issues.filter(
+			(item): item is TaskIssue =>
+				isRecord(item) &&
+				typeof item.code === 'string' &&
+				typeof item.message === 'string' &&
+				isNullableString(item.criterion_id)
 		);
 	}
 }
@@ -993,4 +1013,268 @@ export async function getRun(
 		});
 	}
 	return value;
+}
+
+/* Task versions */
+
+const taskStatuses: ReadonlySet<string> = new Set(['draft', 'approved', 'retired']);
+const taskKinds: ReadonlySet<string> = new Set(['chat', 'agent', 'coding']);
+
+function isTaskDocument(value: unknown): value is TaskDocument {
+	return (
+		isRecord(value) &&
+		typeof value.bundle_id === 'string' &&
+		isCount(value.bundle_revision) &&
+		typeof value.kind === 'string' &&
+		taskKinds.has(value.kind) &&
+		typeof value.summary === 'string' &&
+		typeof value.objective === 'string' &&
+		typeof value.objective_type === 'string' &&
+		objectiveTypes.has(value.objective_type) &&
+		typeof value.family === 'string' &&
+		isRecord(value.cut_point) &&
+		typeof value.cut_point.conversation_id === 'string' &&
+		typeof value.cut_point.revision === 'string' &&
+		typeof value.cut_point.event_id === 'string' &&
+		isRecord(value.reconstruction) &&
+		typeof value.reconstruction.level === 'string' &&
+		Array.isArray(value.reconstruction.gaps) &&
+		Array.isArray(value.criteria) &&
+		value.criteria.every(
+			(item) =>
+				isRecord(item) &&
+				typeof item.id === 'string' &&
+				typeof item.statement === 'string' &&
+				typeof item.method === 'string' &&
+				isCount(item.rubric_version) &&
+				Array.isArray(item.judge_evidence)
+		) &&
+		(value.leakage_review === null ||
+			(isRecord(value.leakage_review) &&
+				typeof value.leakage_review.by === 'string' &&
+				typeof value.leakage_review.at === 'string' &&
+				Array.isArray(value.leakage_review.accepted_flags))) &&
+		typeof value.status === 'string' &&
+		taskStatuses.has(value.status) &&
+		typeof value.reviewer_notes === 'string'
+	);
+}
+
+function isSplitEvents(value: unknown): value is TaskDetail['split']['candidate'] {
+	return (
+		Array.isArray(value) &&
+		value.every(
+			(item) =>
+				isRecord(item) &&
+				typeof item.event_id === 'string' &&
+				typeof item.role === 'string' &&
+				typeof item.kind === 'string' &&
+				isNullableString(item.occurred_at) &&
+				isNullableString(item.preview) &&
+				Array.isArray(item.cited_as)
+		)
+	);
+}
+
+function isTaskSplit(value: unknown): value is TaskDetail['split'] {
+	return (
+		isRecord(value) &&
+		typeof value.conversation_id === 'string' &&
+		typeof value.revision === 'string' &&
+		isNullableString(value.conversation_title) &&
+		isSplitEvents(value.candidate) &&
+		isSplitEvents(value.judge) &&
+		isSplitEvents(value.other_judge)
+	);
+}
+
+function isLeakageFlags(value: unknown): value is TaskDetail['flags'] {
+	return (
+		Array.isArray(value) &&
+		value.every(
+			(item) =>
+				isRecord(item) &&
+				typeof item.id === 'string' &&
+				typeof item.code === 'string' &&
+				typeof item.message === 'string'
+		)
+	);
+}
+
+function isTaskDetail(value: unknown): value is TaskDetail {
+	return (
+		isRecord(value) &&
+		typeof value.id === 'string' &&
+		isCount(value.version) &&
+		isCount(value.latest_version) &&
+		typeof value.producer === 'string' &&
+		typeof value.updated_at === 'string' &&
+		isTaskDocument(value.document) &&
+		isBundleDocument(value.bundle) &&
+		isCount(value.bundle_latest_revision) &&
+		isTaskSplit(value.split) &&
+		isLeakageFlags(value.flags) &&
+		Array.isArray(value.versions) &&
+		value.versions.every(
+			(item) =>
+				isRecord(item) &&
+				isCount(item.number) &&
+				typeof item.status === 'string' &&
+				typeof item.created_at === 'string'
+		)
+	);
+}
+
+function isTaskDraft(value: unknown): value is TaskDraft {
+	return (
+		isRecord(value) &&
+		isTaskDocument(value.document) &&
+		isBundleDocument(value.bundle) &&
+		isTaskSplit(value.split) &&
+		isLeakageFlags(value.flags)
+	);
+}
+
+function isTaskSummary(value: unknown): value is TaskSummary {
+	return (
+		isRecord(value) &&
+		typeof value.id === 'string' &&
+		isCount(value.version) &&
+		typeof value.status === 'string' &&
+		taskStatuses.has(value.status) &&
+		typeof value.kind === 'string' &&
+		taskKinds.has(value.kind) &&
+		typeof value.summary === 'string' &&
+		typeof value.objective === 'string' &&
+		typeof value.objective_type === 'string' &&
+		typeof value.family === 'string' &&
+		isNullableString(value.partition) &&
+		typeof value.bundle_id === 'string' &&
+		isCount(value.bundle_revision) &&
+		isCount(value.criterion_count) &&
+		typeof value.updated_at === 'string'
+	);
+}
+
+function taskDetail(value: unknown): TaskDetail {
+	if (!isTaskDetail(value)) {
+		throw new ApiClientError('The API task response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
+}
+
+export interface TaskFilters {
+	status?: TaskStatus;
+	bundleId?: string;
+	family?: string;
+}
+
+export async function getTasks(
+	filters: TaskFilters = {},
+	options: ApiRequestOptions = {}
+): Promise<TasksResponse> {
+	const params = new URLSearchParams();
+	if (filters.status) params.set('status', filters.status);
+	if (filters.bundleId) params.set('bundle_id', filters.bundleId);
+	if (filters.family) params.set('family', filters.family);
+	const search = params.toString() ? `?${params}` : '';
+	const value = await getJson(`/api/v1/tasks${search}`, options.signal, options.fetch);
+	if (!isRecord(value) || !Array.isArray(value.items) || !value.items.every(isTaskSummary)) {
+		throw new ApiClientError('The API tasks response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return { items: value.items };
+}
+
+export async function getTask(
+	id: string,
+	version: number | null = null,
+	options: ApiRequestOptions = {}
+): Promise<TaskDetail> {
+	const search = version === null ? '' : `?${new URLSearchParams({ version: String(version) })}`;
+	return taskDetail(
+		await getJson(`/api/v1/tasks/${encodeURIComponent(id)}${search}`, options.signal, options.fetch)
+	);
+}
+
+/** A proposed starting task for a bundle, with its split and flags; nothing is saved. */
+export async function getTaskDraft(
+	bundleId: string,
+	revision: number | null = null,
+	options: ApiRequestOptions = {}
+): Promise<TaskDraft> {
+	const search = revision === null ? '' : `?${new URLSearchParams({ revision: String(revision) })}`;
+	const value = await getJson(
+		`/api/v1/bundles/${encodeURIComponent(bundleId)}/task-draft${search}`,
+		options.signal,
+		options.fetch
+	);
+	if (!isTaskDraft(value)) {
+		throw new ApiClientError('The API task draft response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
+}
+
+export async function createTask(
+	document: TaskDocument,
+	options: ApiRequestOptions = {}
+): Promise<TaskDetail> {
+	return taskDetail(
+		await requestJson(
+			'/api/v1/tasks',
+			{ method: 'POST', body: { document } },
+			options.signal,
+			options.fetch
+		)
+	);
+}
+
+/** Save a new version; rejects with HTTP 409 if `baseVersion` is stale. */
+export async function updateTask(
+	id: string,
+	document: TaskDocument,
+	baseVersion: number,
+	options: ApiRequestOptions = {}
+): Promise<TaskDetail> {
+	return taskDetail(
+		await requestJson(
+			`/api/v1/tasks/${encodeURIComponent(id)}`,
+			{ method: 'PUT', body: { document, base_version: baseVersion } },
+			options.signal,
+			options.fetch
+		)
+	);
+}
+
+/** Export an approved version as a case record; HTTP 409 for a draft or retired one. */
+export async function exportTask(
+	id: string,
+	version: number,
+	terms: string[],
+	options: ApiRequestOptions = {}
+): Promise<CaseRecord> {
+	const value = await requestJson(
+		`/api/v1/tasks/${encodeURIComponent(id)}/export`,
+		{ method: 'POST', body: { version, terms } },
+		options.signal,
+		options.fetch
+	);
+	if (
+		!isRecord(value) ||
+		value.schema_version !== 1 ||
+		!isRecord(value.case) ||
+		!isRecord(value.candidate) ||
+		!isRecord(value.judge) ||
+		typeof value.digest !== 'string'
+	) {
+		throw new ApiClientError('The API case export did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value as unknown as CaseRecord;
 }

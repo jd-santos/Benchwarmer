@@ -151,6 +151,14 @@
 		return `${base}${search}#${encodeURIComponent(ref.event_id)}` as ResolvedPathname;
 	}
 
+	function prepareTaskHref(): ResolvedPathname {
+		return `${resolve('/tasks/new')}?${new URLSearchParams({ bundle: current.id })}` as ResolvedPathname;
+	}
+
+	function tasksHref(): ResolvedPathname {
+		return `${resolve('/tasks')}?${new URLSearchParams({ bundle: current.id })}` as ResolvedPathname;
+	}
+
 	function runHref(runId: string): ResolvedPathname {
 		return resolve('/runs/[id]', { id: runId });
 	}
@@ -230,6 +238,11 @@
 		{#if readOnly}
 			<p class="notice" role="status">
 				Viewing an earlier revision. <a href={revisionHref(null)}>View latest</a>
+			</p>
+		{:else if current.document.status === 'reviewed'}
+			<p class="notice" role="status" data-prepare-task>
+				Reviewed. <a href={prepareTaskHref()}>Prepare as task</a> to set a cut point and criteria,
+				or see <a href={tasksHref()}>tasks from this bundle</a>.
 			</p>
 		{:else if awaitingReview}
 			<p class="notice" role="status">

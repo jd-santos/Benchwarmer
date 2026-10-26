@@ -18,6 +18,7 @@ from benchwarmer.api.routes.fixtures import create_fixtures_router
 from benchwarmer.api.routes.model_work import create_model_work_router
 from benchwarmer.api.routes.runs import create_runs_router
 from benchwarmer.api.routes.sources import create_sources_router
+from benchwarmer.api.routes.tasks import create_tasks_router
 from benchwarmer.config import BenchwarmerSettings, ConfigurationError
 from benchwarmer.db import create_engine, create_session_factory, current_revision
 from benchwarmer.services.model_catalog import ModelCatalogService
@@ -78,6 +79,7 @@ def create_app(
     router.include_router(create_sources_router(resolved_settings))
     router.include_router(create_conversations_router(resolved_settings))
     router.include_router(create_bundles_router(resolved_settings))
+    router.include_router(create_tasks_router(resolved_settings))
     router.include_router(create_fixtures_router())
     router.include_router(create_runs_router(resolved_settings))
     router.include_router(create_model_work_router(resolved_settings, runner, catalog))
