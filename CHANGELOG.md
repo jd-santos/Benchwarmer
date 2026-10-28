@@ -9,6 +9,24 @@ This project does not currently declare a Semantic Versioning policy.
 
 ### Added
 
+- Define the Benchwarmer conversation file (format v1), one JSON document per
+  conversation that any system can write for import, with a reference doc, a
+  JSON Schema, a `benchwarmer-validate` CLI that needs no database, a Python
+  builder, and a reference converter from a synthetic agent product log. The
+  file carries system prompts, tool definitions, per-turn model provenance,
+  attached context, feedback, and rewinds as branches; these survive import as
+  typed extension keys on the unchanged normalized conversation v1.
+- Import conversation files as kind `conversation_file` from a host path or
+  by `POST /api/v1/imports/conversation-files`, which stages the file under
+  the data root and returns the batch, conversation id, and revision. Imports
+  are idempotent by content; a changed file adds a revision.
+- Add `benchwarmer.registry`, one place naming import kinds, export sinks
+  (`file`), and scrub detector kinds; `/api/v1/imports/config` lists what it
+  registers.
+- Pull approved task versions without the web app: `GET /api/v1/task-versions`
+  lists them with digest-relevant fields, and
+  `GET /api/v1/tasks/{id}/export/{version}?terms=...` returns the same case
+  record as the POST export.
 - Prepare a reviewed bundle as a versioned task (`/api/v1/tasks`, Tasks page):
   a cut point that ends the candidate's view, criteria of acceptable behavior
   with a method (human, model judge, deterministic) and rubric version, the

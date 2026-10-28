@@ -97,6 +97,118 @@ def _strict_object(value: object, path: str, required: set[str]) -> dict[str, ob
     return result
 
 
+def _subset_object(
+    value: object, path: str, allowed: set[str], required: set[str] = frozenset()
+) -> dict[str, object]:
+    result = _object(value, path)
+    if not set(result) <= allowed or not required <= set(result):
+        _invalid(path)
+    return result
+
+
+def _nullable_string(value: object, path: str) -> None:
+    if value is not None and not isinstance(value, str):
+        _invalid(path)
+
+
+_SHA256 = frozenset("0123456789abcdef")
+
+
+def _nullable_sha256(value: object, path: str) -> None:
+    if value is None:
+        return
+    if not isinstance(value, str) or len(value) != 64 or not set(value) <= _SHA256:
+        _invalid(path)
+
+
+# Well-known extension keys. Extensions stay free-form JSON for anything else;
+# these names carry typed structure that the conversation-file importer writes
+# and later reconstruction reads, so their shape is checked when present.
+WELL_KNOWN_DOCUMENT_EXTENSIONS = frozenset({"tool_definitions"})
+WELL_KNOWN_EVENT_EXTENSIONS = frozenset({"provenance", "supersedes_native_id"})
+WELL_KNOWN_BLOCK_EXTENSIONS = frozenset({"tool_call", "tool_result"})
+WELL_KNOWN_ARTIFACT_EXTENSIONS = frozenset({"context_item"})
+ANNOTATION_METADATA_NAME = "annotation"
+
+
+def _tool_definitions(value: object, path: str) -> None:
+    names: set[str] = set()
+    for index, item in enumerate(_list(value, path)):
+        item_path = f"{path}[{index}]"
+        definition = _strict_object(
+            item, item_path, {"name", "description", "input_schema"}
+        )
+        name = _nonempty_string(definition["name"], f"{item_path}.name")
+        if name in names:
+            _invalid(f"{item_path}.name")
+        names.add(name)
+        _nullable_string(definition["description"], f"{item_path}.description")
+        if definition["input_schema"] is not None:
+            _object(definition["input_schema"], f"{item_path}.input_schema")
+
+
+def _provenance(value: object, path: str) -> None:
+    provenance = _subset_object(
+        value,
+        path,
+        {"model", "provider", "params", "system_prompt_sha256", "usage"},
+        {"model"},
+    )
+    _nonempty_string(provenance["model"], f"{path}.model")
+    if "provider" in provenance:
+        _nullable_nonempty_string(provenance["provider"], f"{path}.provider")
+    if "params" in provenance:
+        _object(provenance["params"], f"{path}.params")
+    if "system_prompt_sha256" in provenance:
+        _nullable_sha256(
+            provenance["system_prompt_sha256"], f"{path}.system_prompt_sha256"
+        )
+    if "usage" in provenance:
+        _object(provenance["usage"], f"{path}.usage")
+
+
+def _tool_call_extension(value: object, path: str) -> None:
+    call = _subset_object(value, path, {"name", "input"}, {"name"})
+    _nonempty_string(call["name"], f"{path}.name")
+
+
+def _tool_result_extension(value: object, path: str) -> None:
+    result = _subset_object(value, path, {"output", "is_error"})
+    if "is_error" in result and not isinstance(result["is_error"], bool):
+        _invalid(f"{path}.is_error")
+
+
+def _context_item(value: object, path: str) -> None:
+    item = _subset_object(value, path, {"name", "text"})
+    if "name" in item:
+        _nullable_string(item["name"], f"{path}.name")
+    if "text" in item:
+        _nullable_string(item["text"], f"{path}.text")
+
+
+def _annotation(value: object, path: str, native_ids: set[str]) -> None:
+    annotation = _subset_object(
+        value,
+        path,
+        {"kind", "event_native_id", "rating", "text", "by", "at"},
+        {"kind"},
+    )
+    _nonempty_string(annotation["kind"], f"{path}.kind")
+    target = annotation.get("event_native_id")
+    if target is not None and (not isinstance(target, str) or target not in native_ids):
+        _invalid(f"{path}.event_native_id")
+    rating = annotation.get("rating")
+    if rating is not None and (
+        isinstance(rating, bool) or not isinstance(rating, (str, int))
+    ):
+        _invalid(f"{path}.rating")
+    for key in ("text", "by"):
+        if key in annotation:
+            _nullable_string(annotation[key], f"{path}.{key}")
+    if annotation.get("at") is not None:
+        _timestamp(annotation["at"], f"{path}.at")
+
+
 def _timestamp(value: object, path: str) -> None:
     if not isinstance(value, str) or "T" not in value:
         _invalid(path)
@@ -169,6 +281,11 @@ def _validate_artifacts(value: object) -> set[str]:
         if availability == "available" and artifact["locator"] is None:
             _invalid(f"{path}.locator")
         _extensions(artifact["extensions"], f"{path}.extensions")
+        artifact_extensions = cast(dict[str, object], artifact["extensions"])
+        if "context_item" in artifact_extensions:
+            _context_item(
+                artifact_extensions["context_item"], f"{path}.extensions.context_item"
+            )
     return identifiers
 
 
@@ -195,7 +312,7 @@ def _validate_relationships(value: object) -> None:
         _extensions(relationship["extensions"], f"{path}.extensions")
 
 
-def _validate_metadata(value: object) -> None:
+def _validate_metadata(value: object, native_ids: set[str]) -> None:
     metadata = _list(value, "metadata")
     required = {
         "name",
@@ -218,11 +335,13 @@ def _validate_metadata(value: object) -> None:
         _nullable_nonempty_string(entry["producer_version"], f"{path}.producer_version")
         _nonempty_string(entry["input_revision"], f"{path}.input_revision")
         _extensions(entry["extensions"], f"{path}.extensions")
+        if entry["name"] == ANNOTATION_METADATA_NAME:
+            _annotation(entry["value"], f"{path}.value", native_ids)
 
 
 def _validate_events(
     value: object, artifact_ids: set[str], coverage: dict[str, object]
-) -> None:
+) -> set[str]:
     events = _list(value, "events")
     required = {
         "id",
@@ -274,7 +393,21 @@ def _validate_events(
         if event["occurred_at"] is not None:
             _timestamp(event["occurred_at"], f"{path}.occurred_at")
         _extensions(event["extensions"], f"{path}.extensions")
+        event_extensions = cast(dict[str, object], event["extensions"])
+        if "provenance" in event_extensions:
+            _provenance(event_extensions["provenance"], f"{path}.extensions.provenance")
         parsed.append((event, path))
+
+    for event, path in parsed:
+        event_extensions = cast(dict[str, object], event["extensions"])
+        if "supersedes_native_id" in event_extensions:
+            superseded = event_extensions["supersedes_native_id"]
+            if (
+                not isinstance(superseded, str)
+                or superseded not in native_ids
+                or superseded == event["native_id"]
+            ):
+                _invalid(f"{path}.extensions.supersedes_native_id")
 
     by_id = {cast(str, event["id"]): event for event, _ in parsed}
     for event, path in parsed:
@@ -337,6 +470,15 @@ def _validate_events(
             )
             _nullable_nonempty_string(block["artifact_id"], f"{block_path}.artifact_id")
             _extensions(block["extensions"], f"{block_path}.extensions")
+            block_extensions = cast(dict[str, object], block["extensions"])
+            for name, check in (
+                ("tool_call", _tool_call_extension),
+                ("tool_result", _tool_result_extension),
+            ):
+                if name in block_extensions:
+                    if block["kind"] != name:
+                        _invalid(f"{block_path}.extensions.{name}")
+                    check(block_extensions[name], f"{block_path}.extensions.{name}")
             if (
                 block["kind"] in {"tool_call", "tool_result"}
                 and block["tool_call_id"] is None
@@ -363,6 +505,7 @@ def _validate_events(
                     _invalid(f"{block_path}.tool_call_id")
                 calls.add(call_id)
         calls_by_event[cast(str, event["id"])] = calls
+    return native_ids
 
 
 def validate_conversation(document: object) -> None:
@@ -391,10 +534,15 @@ def validate_conversation(document: object) -> None:
     _validate_source(envelope["source"])
     coverage = _coverage(envelope["coverage"], "coverage")
     artifact_ids = _validate_artifacts(envelope["artifacts"])
-    _validate_events(envelope["events"], artifact_ids, coverage)
+    native_ids = _validate_events(envelope["events"], artifact_ids, coverage)
     _validate_relationships(envelope["relationships"])
-    _validate_metadata(envelope["metadata"])
+    _validate_metadata(envelope["metadata"], native_ids)
     _extensions(envelope["extensions"], "extensions")
+    document_extensions = cast(dict[str, object], envelope["extensions"])
+    if "tool_definitions" in document_extensions:
+        _tool_definitions(
+            document_extensions["tool_definitions"], "extensions.tool_definitions"
+        )
 
 
 def _reject_constant(_: str) -> NoReturn:

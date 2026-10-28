@@ -1,0 +1,54 @@
+{
+  "format": "benchwarmer-conversation-file",
+  "format_version": 1,
+  "scope_id": "synthetic-tenant-b",
+  "native_id": "synthetic-gaps-1",
+  "source_version": "partial-capture-7",
+  "title": "Partial capture with a branch",
+  "coverage": {
+    "messages": "partial",
+    "branches": "available",
+    "usage": "unknown",
+    "prompts": "unavailable",
+    "tool_calls": "partial"
+  },
+  "events": [
+    {
+      "native_id": "u1",
+      "parent_native_id": null,
+      "kind": "message",
+      "role": "user",
+      "occurred_at": "2026-02-10T18:00:00+00:00",
+      "content": [{"kind": "text", "text": "Summarize the attached report."}]
+    },
+    {
+      "native_id": "r1",
+      "parent_native_id": "u1",
+      "role": "tool",
+      "content": [
+        {"kind": "tool_result", "tool_call_id": "call-not-captured", "output": {"lines": 40}}
+      ],
+      "extensions": {"writer_note": "the call that produced this result was not logged"}
+    },
+    {
+      "native_id": "a1",
+      "parent_native_id": "r1",
+      "role": "assistant",
+      "content": [{"kind": "text", "text": "The report covers forty lines of synthetic numbers."}],
+      "provenance": {"model": "example-model-small"}
+    },
+    {
+      "native_id": "a2",
+      "parent_native_id": "r1",
+      "role": "assistant",
+      "supersedes_native_id": "a1",
+      "content": [{"kind": "text", "text": "Forty lines; nothing stands out."}],
+      "provenance": {"model": "example-model-small", "params": {"temperature": 0}}
+    }
+  ],
+  "relationships": [
+    {"kind": "continuation", "target_scope_id": "synthetic-tenant-b", "target_native_id": "synthetic-gaps-0"}
+  ],
+  "metadata": [{"name": "channel", "value": "web"}],
+  "extensions": {"writer": {"name": "synthetic-exporter", "version": "0.1"}}
+}

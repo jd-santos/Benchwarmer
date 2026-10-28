@@ -115,7 +115,7 @@ and the interface principles in [docs/architecture.md](docs/architecture.md).
 > Read the file below before changing architecture, scope, or evaluation
 > semantics.
 
-design: {architecture.md,conversation-library.md,evidence-bundles.md,experiments.md,decisions.md}
+design: {architecture.md,conversation-library.md,conversation-interchange.md,evidence-bundles.md,experiments.md,decisions.md}
 delivery: {roadmap.md,../todo/work/}
 evidence: {sources/,source-coverage.md}
 decisions: {decisions.md,decisions/}
@@ -128,6 +128,10 @@ tasks: {../todo/README.md,../todo/TODO.md}
   alternatives, acceptance criteria, and open questions.
 - **`docs/conversation-library.md`**: Defines the approved workflow, collection
   topology, enrichment approvals, search, datasets, and applied judges.
+- **`docs/conversation-interchange.md`**: The conversation file format (v1)
+  other systems write for import, its JSON Schema, the agent-log mapping,
+  import semantics, and the case-record pull routes. Import kinds, export
+  sinks, and scrub detectors register in `benchwarmer.registry`.
 - **`docs/experiments.md`**: Defines task units, simulation, harness, prompt, and
   judge semantics.
 - **`docs/decisions.md`**: Records unresolved choices and proposed defaults.

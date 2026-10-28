@@ -298,6 +298,27 @@ def import_pi_session(
     )
 
 
+def import_pi_path(
+    settings: BenchwarmerSettings,
+    session: Session,
+    *,
+    source_id: str,
+    path: Path,
+    batch_id: str,
+    idempotency_key: str,
+) -> FileImportResult:
+    """Import a Pi session file or a directory of sessions from a host path."""
+    importer = import_pi_directory if path.is_dir() else import_pi_session
+    return importer(
+        settings,
+        session,
+        source_id=source_id,
+        path=path,
+        batch_id=batch_id,
+        idempotency_key=idempotency_key,
+    )
+
+
 def read_pi_directory(path: Path) -> tuple[FileConversation, ...]:
     """Read all persisted sessions below one explicitly configured Pi directory."""
     if not path.is_absolute() or path.is_symlink() or not path.is_dir():

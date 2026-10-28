@@ -120,8 +120,8 @@
 		<p class="muted import-panel__roots">
 			Paths must sit under {config.roots.length === 1 ? 'the import root' : 'an import root'}:
 			{#each config.roots as root, index (root)}{index > 0 ? ', ' : ''}<code>{root}</code>{/each}. A
-			Pi path may be a session file or a directory of sessions; a ChatGPT path is the export file.
-			Importing never starts model work.
+			Pi path may be a session file or a directory of sessions; a ChatGPT path is the export file; a
+			conversation-file path is one file or a directory of them. Importing never starts model work.
 		</p>
 		<ul class="import-panel__sources">
 			{#each importable as source (source.id)}

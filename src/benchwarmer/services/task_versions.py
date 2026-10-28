@@ -157,6 +157,34 @@ class TaskSummary:
 
 
 @dataclass(frozen=True)
+class TaskVersionSummary:
+    """One stored version with the fields that fix its case-record digest.
+
+    The export digest depends on the task id and version, the pinned bundle
+    revision, the cut point's conversation revision, the criteria, and the
+    reviewer's text; everything below except the texts is listed so a puller
+    can tell which approved versions it has not fetched yet.
+    """
+
+    task_id: str
+    version: int
+    latest_version: int
+    status: str
+    kind: str
+    family: str
+    partition: str | None
+    bundle_id: str
+    bundle_revision: int
+    conversation_id: str
+    revision: str
+    cut_event_id: str
+    criterion_count: int
+    reconstruction_level: str
+    producer: str
+    created_at: dt.datetime
+
+
+@dataclass(frozen=True)
 class TaskDraft:
     """A starting document and its split, not yet saved."""
 
@@ -742,6 +770,53 @@ def list_tasks(
                 bundle_revision=document["bundle_revision"],
                 criterion_count=len(document["criteria"]),
                 updated_at=task.updated_at,
+            )
+        )
+    return tuple(summaries)
+
+
+def list_task_versions(
+    session: Session,
+    *,
+    status: str | None = None,
+    task_id: str | None = None,
+) -> tuple[TaskVersionSummary, ...]:
+    """Every stored version matching the filters, newest first.
+
+    Unlike ``list_tasks`` this lists superseded versions too, so an approved
+    version stays visible to a puller after a later draft is saved.
+    """
+    query = (
+        select(Task, TaskVersion)
+        .join(TaskVersion, TaskVersion.task_id == Task.id)
+        .order_by(TaskVersion.created_at.desc(), Task.id, TaskVersion.number.desc())
+    )
+    if status is not None:
+        query = query.where(TaskVersion.status == status)
+    if task_id is not None:
+        query = query.where(Task.id == task_id)
+    summaries: list[TaskVersionSummary] = []
+    for task, version in session.execute(query):
+        document = version.document
+        cut = document["cut_point"]
+        summaries.append(
+            TaskVersionSummary(
+                task_id=task.id,
+                version=version.number,
+                latest_version=task.latest_version,
+                status=version.status,
+                kind=document["kind"],
+                family=version.family,
+                partition=document.get("partition"),
+                bundle_id=task.bundle_id,
+                bundle_revision=document["bundle_revision"],
+                conversation_id=cut["conversation_id"],
+                revision=cut["revision"],
+                cut_event_id=cut["event_id"],
+                criterion_count=len(document["criteria"]),
+                reconstruction_level=document["reconstruction"]["level"],
+                producer=version.producer,
+                created_at=version.created_at,
             )
         )
     return tuple(summaries)

@@ -7,11 +7,12 @@ from contextlib import contextmanager
 import datetime as dt
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from benchwarmer import registry
 from benchwarmer.config import BenchwarmerSettings
 from benchwarmer.db import create_engine, create_session_factory
 from benchwarmer.evidence import BundleDocument, ObjectiveType
@@ -30,6 +31,7 @@ from benchwarmer.services.task_versions import (
     create_task,
     draft_task,
     get_task,
+    list_task_versions,
     list_tasks,
     update_task,
 )
@@ -120,6 +122,37 @@ class TasksResponse(_Strict):
     items: list[TaskSummaryResponse]
 
 
+class TaskVersionSummaryResponse(_Strict):
+    """One stored version with the fields that fix its case-record digest."""
+
+    task_id: str
+    version: int
+    latest_version: int
+    status: TaskStatus
+    kind: TaskKind
+    family: str
+    partition: Partition | None
+    bundle_id: str
+    bundle_revision: int
+    conversation_id: str
+    revision: str
+    cut_event_id: str
+    criterion_count: int
+    reconstruction_level: str
+    producer: str
+    created_at: dt.datetime
+    export_url: str
+
+
+class TaskVersionsResponse(_Strict):
+    items: list[TaskVersionSummaryResponse]
+
+
+_Terms = Annotated[
+    list[Annotated[str, Field(min_length=1, max_length=200)]], Field(max_length=200)
+]
+
+
 _Producer = Annotated[str, Field(min_length=1, max_length=255)]
 
 
@@ -138,9 +171,7 @@ class CaseExportRequest(_Strict):
     """Export one approved version, scrubbing these terms besides the built-in kinds."""
 
     version: Annotated[int, Field(ge=1)] | None = None
-    terms: Annotated[
-        list[Annotated[str, Field(min_length=1, max_length=200)]], Field(max_length=200)
-    ] = []
+    terms: _Terms = []
 
 
 def _split_response(split: TaskSplit) -> TaskSplitResponse:
@@ -276,6 +307,42 @@ def create_tasks_router(settings: BenchwarmerSettings) -> APIRouter:
                 ]
             )
 
+    @router.get("/task-versions", response_model=TaskVersionsResponse)
+    def get_task_versions(
+        status: TaskStatus | None = None,
+        task_id: Annotated[str | None, Query(max_length=255)] = None,
+    ) -> TaskVersionsResponse:
+        """Every stored version, including superseded ones; filter by status to pull."""
+        with session_scope() as session:
+            return TaskVersionsResponse(
+                items=[
+                    TaskVersionSummaryResponse(
+                        task_id=item.task_id,
+                        version=item.version,
+                        latest_version=item.latest_version,
+                        status=item.status,  # type: ignore[arg-type]
+                        kind=item.kind,  # type: ignore[arg-type]
+                        family=item.family,
+                        partition=item.partition,  # type: ignore[arg-type]
+                        bundle_id=item.bundle_id,
+                        bundle_revision=item.bundle_revision,
+                        conversation_id=item.conversation_id,
+                        revision=item.revision,
+                        cut_event_id=item.cut_event_id,
+                        criterion_count=item.criterion_count,
+                        reconstruction_level=item.reconstruction_level,
+                        producer=item.producer,
+                        created_at=item.created_at,
+                        export_url=(
+                            f"/api/v1/tasks/{item.task_id}/export/{item.version}"
+                        ),
+                    )
+                    for item in list_task_versions(
+                        session, status=status, task_id=task_id
+                    )
+                ]
+            )
+
     @router.get(
         "/bundles/{bundle_id}/task-draft",
         response_model=TaskDraftResponse,
@@ -367,11 +434,41 @@ def create_tasks_router(settings: BenchwarmerSettings) -> APIRouter:
     def post_task_export(
         task_id: str, request: CaseExportRequest
     ) -> CaseRecord | JSONResponse:
+        return _export(task_id, request.version, request.terms)
+
+    @router.get(
+        "/tasks/{task_id}/export/{version}",
+        response_model=CaseRecord,
+        responses={
+            409: {"description": "Only an approved version exports"},
+            422: {"description": "Task is invalid"},
+        },
+    )
+    def get_task_export(
+        task_id: str,
+        version: Annotated[int, Field(ge=1)],
+        response: Response,
+        terms: Annotated[_Terms, Query()] = [],
+    ) -> CaseRecord | JSONResponse:
+        """Pull one approved version's case record; same record as the POST export.
+
+        ``terms`` repeats once per term to scrub. The response carries the
+        ``file`` sink's filename so a puller can store it as the download would.
+        """
+        record = _export(task_id, version, list(terms))
+        if isinstance(record, CaseRecord):
+            sink = registry.export_sink("file")
+            response.headers["Content-Disposition"] = (
+                f'inline; filename="{sink.filename(record)}"'
+            )
+        return record
+
+    def _export(
+        task_id: str, version: int | None, terms: list[str]
+    ) -> CaseRecord | JSONResponse:
         with session_scope() as session:
             try:
-                return export_case(
-                    session, task_id, version=request.version, terms=request.terms
-                )
+                return export_case(session, task_id, version=version, terms=terms)
             except TaskNotFound:
                 raise HTTPException(status_code=404, detail="Task not found") from None
             except CaseExportNotApproved as error:

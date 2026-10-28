@@ -62,7 +62,10 @@ afterEach(() => {
 
 describe('source import panel', () => {
 	it('says how to turn host import on when no roots are configured', async () => {
-		vi.mocked(getImportConfig).mockResolvedValue({ roots: [], kinds: ['pi', 'chatgpt'] });
+		vi.mocked(getImportConfig).mockResolvedValue({
+			roots: [],
+			kinds: ['pi', 'chatgpt', 'conversation_file']
+		});
 		const { findByText, queryByRole } = render(SourceImportPanel);
 
 		expect(await findByText(/Host-local import is off/)).toBeTruthy();
@@ -72,7 +75,7 @@ describe('source import panel', () => {
 	it('offers a form only for importable sources and reports what an import did', async () => {
 		vi.mocked(getImportConfig).mockResolvedValue({
 			roots: ['/srv/inbox'],
-			kinds: ['pi', 'chatgpt']
+			kinds: ['pi', 'chatgpt', 'conversation_file']
 		});
 		vi.mocked(getSourceImports).mockResolvedValue([
 			{

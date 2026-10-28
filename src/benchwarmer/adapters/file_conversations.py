@@ -41,6 +41,26 @@ class FileConversation:
     coverage: dict[str, str] | None = None
     source_version: str | None = None
     schema_version: int = 1
+    # Normalized artifacts (attached context items and the like) that blocks of
+    # kind ``attachment`` reference by id.
+    artifacts: tuple[dict[str, object], ...] = ()
+    # Document-level extensions; well-known keys are typed in
+    # ``benchwarmer.conversations``.
+    extensions: tuple[tuple[str, object], ...] = ()
+    # Human-origin metadata entries named ``annotation`` (feedback and the like),
+    # kept apart from imported metadata so their origin is preserved.
+    annotations: tuple[dict[str, object], ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ImportedConversation:
+    """Where one imported conversation landed in the library."""
+
+    native_id: str
+    conversation_id: str
+    revision: str
+    snapshot_id: str
+    new_revision: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +69,15 @@ class FileImportResult:
     conversations: int
     revisions: int
     snapshots: int
+    items: tuple[ImportedConversation, ...] = ()
+
+
+def conversation_id_for(source_id: str, native_id: str) -> str:
+    """The library id Benchwarmer assigns to a source-native conversation."""
+    return (
+        "conversation-"
+        + hashlib.sha256(f"{source_id}\0{native_id}".encode()).hexdigest()[:32]
+    )
 
 
 def canonical(value: object) -> bytes:
@@ -114,10 +143,7 @@ def document_for(
     source_version: str | None,
 ) -> tuple[str, dict[str, object]]:
     source_version = item.source_version or source_version
-    conversation_id = (
-        "conversation-"
-        + hashlib.sha256(f"{source.id}\0{item.native_id}".encode()).hexdigest()[:32]
-    )
+    conversation_id = conversation_id_for(source.id, item.native_id)
     event_ids = {
         str(entry["native_id"]): f"{conversation_id}:event:{entry['native_id']}"
         for entry in item.events
@@ -145,6 +171,18 @@ def document_for(
         }
         for name, value in item.metadata
     ]
+    metadata.extend(
+        {
+            "name": "annotation",
+            "value": annotation,
+            "origin": "human",
+            "producer": source.kind,
+            "producer_version": source_version,
+            "input_revision": "revision-input",
+            "extensions": {},
+        }
+        for annotation in item.annotations
+    )
     doc: dict[str, object] = {
         "schema_version": 1,
         "id": conversation_id,
@@ -160,7 +198,7 @@ def document_for(
             "extensions": {},
         },
         "events": events,
-        "artifacts": [],
+        "artifacts": [dict(artifact) for artifact in item.artifacts],
         "relationships": list(item.relationships),
         "metadata": metadata,
         "coverage": item.coverage
@@ -170,7 +208,7 @@ def document_for(
             "prompts": "unknown",
             "tool_calls": "partial",
         },
-        "extensions": {},
+        "extensions": dict(item.extensions),
     }
     validate_conversation(doc)
     basis = json.loads(dump_conversation_json(doc))
@@ -285,6 +323,7 @@ def import_file_conversations(
         )
         session.flush()
         revisions = snapshots = 0
+        imported: list[ImportedConversation] = []
         for snapshot_id, relative_path, payload, item in prepared:
             if session.get(NativeSnapshot, snapshot_id) is None:
                 session.add(
@@ -422,6 +461,15 @@ def import_file_conversations(
                     )
                 )
                 revisions += 1
+            imported.append(
+                ImportedConversation(
+                    native_id=item.native_id,
+                    conversation_id=str(doc["id"]),
+                    revision=revision,
+                    snapshot_id=snapshot_id,
+                    new_revision=existing is None,
+                )
+            )
         if current is None:
             session.add(
                 SourceImportState(
@@ -437,4 +485,4 @@ def import_file_conversations(
             current.schema_version = state_schema_version
             current.cursor = cursor_after.to_storage()
             current.updated_at = now
-    return FileImportResult(batch_id, len(items), revisions, snapshots)
+    return FileImportResult(batch_id, len(items), revisions, snapshots, tuple(imported))
