@@ -2,7 +2,13 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
-	import { ApiClientError, createTask, exportTask, updateTask } from '$lib/api/client';
+	import {
+		ApiClientError,
+		createTask,
+		exportTask,
+		getTermLists,
+		updateTask
+	} from '$lib/api/client';
 	import type {
 		CaseRecord,
 		Criterion,
@@ -18,7 +24,8 @@
 		TaskDocument,
 		TaskDraft,
 		TaskKind,
-		TaskStatus
+		TaskStatus,
+		TermListSummary
 	} from '$lib/api/types';
 	import { objectiveTypeLabel, objectiveTypeOptions } from '$lib/bundles/format';
 	import {
@@ -302,6 +309,29 @@
 	const exportable = $derived(current !== null && current.document.status === 'approved' && !dirty);
 	const exportText = $derived(exported === null ? '' : JSON.stringify(exported, null, 2));
 
+	// Stored term lists: loaded once the version on screen is approved. The
+	// summaries carry counts, never terms; the export pins the version shown.
+	let termLists = $state<TermListSummary[] | null>(null);
+	let termListsUnavailable = $state(false);
+	let termListName = $state('');
+	const termList = $derived(termLists?.find((item) => item.name === termListName) ?? null);
+	const termListsHref = resolve('/scrub-terms');
+	let termListsRequested = false;
+
+	$effect(() => {
+		if (current === null || current.document.status !== 'approved' || termListsRequested) return;
+		termListsRequested = true;
+		getTermLists().then(
+			(response) => {
+				termLists = response.items;
+			},
+			() => {
+				termLists = [];
+				termListsUnavailable = true;
+			}
+		);
+	});
+
 	async function runExport(): Promise<void> {
 		if (current === null || exporting) return;
 		exporting = true;
@@ -314,7 +344,8 @@
 				terms
 					.split('\n')
 					.map((line) => line.trim())
-					.filter(Boolean)
+					.filter(Boolean),
+				termList === null ? null : { name: termList.name, version: termList.version }
 			);
 		} catch {
 			exportError = 'The export failed. Check that the version is approved and try again.';
@@ -750,9 +781,42 @@
 			<h2 id="task-export-heading">Export case record</h2>
 			<p class="field__hint">
 				Writes version {current.version} as one JSON document with a candidate section cut at the cut
-				point and a judge section with the historical turns. Both are scrubbed with the terms below plus
-				the built-in kinds; the record carries counts, never the originals.
+				point and a judge section with the historical turns. Both are scrubbed with the stored list and
+				the terms below plus the built-in kinds; the record carries counts and the list's name and version,
+				never the terms.
 			</p>
+			<div class="field">
+				<label for="task-export-list">Stored term list</label>
+				<select
+					id="task-export-list"
+					bind:value={termListName}
+					disabled={termLists === null || termLists.length === 0}
+					aria-describedby="task-export-list-facts"
+				>
+					<option value="">None</option>
+					{#if termLists}
+						{#each termLists as item (item.name)}
+							<option value={item.name}>{item.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<p id="task-export-list-facts" class="field__hint">
+					{#if termLists === null}
+						Loading stored lists…
+					{:else if termListsUnavailable}
+						Stored lists could not be read from the API; inline terms still apply.
+					{:else if termList}
+						Version {termList.version} · {plural(termList.term_count, 'term')}{termList.notes
+							? ` · ${termList.notes}`
+							: ''}
+					{:else if termLists.length === 0}
+						No stored lists yet. <a href={termListsHref}>Manage term lists</a>
+					{:else}
+						A stored list combines with the terms below.
+						<a href={termListsHref}>Manage term lists</a>
+					{/if}
+				</p>
+			</div>
 			<div class="field">
 				<label for="task-export-terms">Terms to scrub</label>
 				<textarea
@@ -777,6 +841,12 @@
 				<div class="task-export__result" data-export-result>
 					<p class="meta-line">
 						<span>Digest <code>{exported.digest.slice(0, 12)}</code></span>
+						{#if exported.case.redaction.term_list}
+							<span>
+								List {exported.case.redaction.term_list.name} version {exported.case.redaction
+									.term_list.version}
+							</span>
+						{/if}
 						<span>
 							{#if Object.keys(exported.case.redaction.manifest).length === 0}
 								Nothing scrubbed

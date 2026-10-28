@@ -45,7 +45,8 @@ describe('AppNavigation', () => {
 			{ name: 'Bundles', href: '/bundles' },
 			{ name: 'Tasks', href: '/tasks' },
 			{ name: 'Runs', href: '/runs' },
-			{ name: 'Sources', href: '/sources' }
+			{ name: 'Sources', href: '/sources' },
+			{ name: 'Scrub terms', href: '/scrub-terms' }
 		]);
 	});
 
