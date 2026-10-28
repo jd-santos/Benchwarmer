@@ -109,6 +109,11 @@ and the interface principles in [docs/architecture.md](docs/architecture.md).
 - **Lint**: `uv run ruff check .`; `uv run ruff format --check .`
 - **Harness**: `npm --prefix harness ci`; `npm --prefix harness run check`;
   `npm --prefix harness test`
+- **Settings file**: `uv run benchwarmer init` writes a commented
+  `benchwarmer.toml` to the data root; see `docs/configuration.md`
+- **Start**: `uv run benchwarmer serve` (loads settings, checks the data root
+  is migrated, serves the built UI and API); `--check` prints the resolved
+  settings without serving. Migrate first with `uv run alembic upgrade head`.
 
 ## Documentation Index
 
@@ -119,7 +124,7 @@ design: {architecture.md,conversation-library.md,evidence-bundles.md,experiments
 delivery: {roadmap.md,../todo/work/}
 evidence: {sources/,source-coverage.md}
 decisions: {decisions.md,decisions/}
-operations: {runtime-recovery.md}
+operations: {configuration.md,runtime-recovery.md}
 tasks: {../todo/README.md,../todo/TODO.md}
 
 ## File-Specific Notes
@@ -154,6 +159,9 @@ tasks: {../todo/README.md,../todo/TODO.md}
 - **`docs/evidence-bundles.md`**: Planned evidence-reference, bundle, selective
   inspection, pattern, and task-promotion semantics. Native evidence remains
   distinct from interpretations; analysis-only bundles need not be runnable.
+- **`docs/configuration.md`**: The reference for every setting: `benchwarmer.toml`
+  key, environment override, default, and what it controls. Provider allow and
+  deny lists are operator settings with no values shipped in the repository.
 - **`docs/runtime-recovery.md`**: Fail-closed operator recovery for interrupted
   runtime provisioning. Use exact paths and ownership checks; never improvise
   deletion or replacement commands.

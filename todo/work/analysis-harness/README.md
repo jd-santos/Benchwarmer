@@ -34,11 +34,10 @@ Decided with the user on 2026-10-19:
 
 Decided with the user on 2026-10-21:
 
-- The harness is provider-neutral within an explicit exclusion list
-  (`EXCLUDED_PROVIDERS` in `harness/src/providers.ts`; the user has ruled out
-  xAI and Groq). Every other pi-ai provider is registered and the
-  operator supplies the key for the one named on the command line; nothing
-  looks for an Anthropic key specifically.
+- The harness is provider-neutral. Every pi-ai provider the operator's
+  provider lists permit is registered and the operator supplies the key for
+  the one named on the command line; nothing looks for an Anthropic key
+  specifically.
 - Generated revisions carry run provenance, and non-replay-safe writes carry
   a request id derived from the run so retries cannot duplicate records.
 
@@ -73,8 +72,8 @@ capability, which then lands as a typed route first.
   deliberate interruption.
 - [ ] Shared conventions for later workflows: where instructions live, how a
   workflow names its producer, and how reports are versioned.
-  - [x] Providers: `src/providers.ts` registers the pi-ai catalog minus the
-    exclusion list; a
+  - [x] Providers: `src/providers.ts` registers the pi-ai catalog within the
+    operator's provider lists; a
     workflow fails fast with a provider-neutral hint when the chosen
     provider's key is absent.
   - [x] Provenance: a workflow passes a `RunProvenance` record to its write

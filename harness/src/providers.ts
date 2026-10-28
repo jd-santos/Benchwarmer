@@ -1,11 +1,19 @@
 /**
  * Model providers for harness workflows.
  *
- * The pi-ai catalog is registered except for an explicit exclusion list, and
+ * The pi-ai catalog is registered within the operator's provider lists, and
  * each provider resolves its own credentials from the environment (for example
  * `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`).
  * The harness never hardcodes one vendor; the operator picks `provider/model-id`
  * on the command line and supplies that provider's key.
+ *
+ * The provider lists are an application setting (`[providers]` in
+ * `benchwarmer.toml`, see docs/configuration.md). They reach this process as
+ * `BENCHWARMER_PROVIDER_ALLOW` and `BENCHWARMER_PROVIDER_DENY`, comma-separated
+ * provider ids: the application sets both for every harness it starts, and an
+ * operator running the harness by hand sets them the same way. An empty or
+ * absent allow list means every provider pi-ai knows; deny removes ids from
+ * whatever allow leaves.
  *
  * A provider's endpoint can be redirected through a pass-through gateway (one
  * that accepts the vendor's own request format and swaps credentials) by
@@ -17,11 +25,33 @@
 import { builtinProviders } from '@earendil-works/pi-ai/providers/all';
 import { createModels, type MutableModels, type Provider } from '@earendil-works/pi-ai/models';
 
-/**
- * Providers the operator has ruled out. They are never registered, so no model
- * from them can be selected and no key for them is ever read.
- */
-export const EXCLUDED_PROVIDERS: ReadonlySet<string> = new Set(['xai', 'groq']);
+export const PROVIDER_ALLOW_ENV = 'BENCHWARMER_PROVIDER_ALLOW';
+export const PROVIDER_DENY_ENV = 'BENCHWARMER_PROVIDER_DENY';
+
+/** The operator's provider lists as read from `env`; both empty when unset. */
+export interface ProviderLists {
+	allow: ReadonlySet<string>;
+	deny: ReadonlySet<string>;
+}
+
+function parseIdList(value: string | undefined): ReadonlySet<string> {
+	return new Set(
+		(value ?? '')
+			.split(',')
+			.map((id) => id.trim())
+			.filter((id) => id.length > 0)
+	);
+}
+
+export function providerLists(env: NodeJS.ProcessEnv = process.env): ProviderLists {
+	return { allow: parseIdList(env[PROVIDER_ALLOW_ENV]), deny: parseIdList(env[PROVIDER_DENY_ENV]) };
+}
+
+/** Whether `provider` may be registered under `lists`. */
+export function providerAllowed(provider: string, lists: ProviderLists): boolean {
+	if (lists.deny.has(provider)) return false;
+	return lists.allow.size === 0 || lists.allow.has(provider);
+}
 
 /** Environment variables pi-ai reads for the most common providers, for diagnostics only. */
 export const COMMON_PROVIDER_KEYS: Readonly<Record<string, readonly string[]>> = {
@@ -70,19 +100,20 @@ function withBaseUrl(provider: Provider, baseUrl: string): Provider {
 	return wrapped;
 }
 
-/** A models collection with every allowed pi-ai provider registered, honoring base URL overrides. */
+/** A models collection with every pi-ai provider the lists in `env` permit, honoring base URL overrides. */
 export function createHarnessModels(env: NodeJS.ProcessEnv = process.env): MutableModels {
 	const models = createModels();
+	const lists = providerLists(env);
 	for (const provider of builtinProviders()) {
-		if (EXCLUDED_PROVIDERS.has(provider.id)) continue;
+		if (!providerAllowed(provider.id, lists)) continue;
 		const override = providerBaseUrlOverride(provider.id, env);
 		models.setProvider(override ? withBaseUrl(provider, override) : provider);
 	}
 	return models;
 }
 
-export function providerIds(): string[] {
-	return createHarnessModels()
+export function providerIds(env: NodeJS.ProcessEnv = process.env): string[] {
+	return createHarnessModels(env)
 		.getProviders()
 		.map((provider) => provider.id)
 		.sort();

@@ -36,15 +36,22 @@ def _fake_harness(path: Path, *, exit_code: int = 0, sleep: float = 0.0) -> Path
             }
         )
     )
+    record_env = (
+        "fs.writeFileSync('env.json', JSON.stringify({"
+        "allow: process.env.BENCHWARMER_PROVIDER_ALLOW, "
+        "deny: process.env.BENCHWARMER_PROVIDER_DENY}));\n"
+    )
     (path / "fake.js").write_text(
         "const fs = require('node:fs');\n"
         "fs.writeFileSync('args.json', JSON.stringify(process.argv.slice(2)));\n"
-        f"setTimeout(() => process.exit({exit_code}), {int(sleep * 1000)});\n"
+        + record_env
+        + f"setTimeout(() => process.exit({exit_code}), {int(sleep * 1000)});\n"
     )
     (path / "list.js").write_text(
         "const fs = require('node:fs');\n"
         "fs.writeFileSync('list-args.json', JSON.stringify(process.argv.slice(2)));\n"
-        "process.stderr.write('models.dev unavailable: offline\\n');\n"
+        + record_env
+        + "process.stderr.write('models.dev unavailable: offline\\n');\n"
         f"process.stdout.write(JSON.stringify({json.dumps(_CATALOG)}) + '\\n');\n"
     )
     return path
@@ -108,7 +115,12 @@ def _client(tmp_path: Path, harness: Path | None) -> tuple[TestClient, PlanRunne
         text=True,
     )
     assert result.returncode == 0, result.stderr
-    settings = BenchwarmerSettings(data_root=root, harness_dir=harness)
+    settings = BenchwarmerSettings(
+        data_root=root,
+        harness_dir=harness,
+        provider_allow=("anthropic", "openrouter"),
+        provider_deny=("openrouter",),
+    )
     load_fixture(settings, _REPOSITORY_ROOT / "tests" / "fixtures" / "sources.json")
     load_demo_conversations(settings, _FIXTURE)
     runner = PlanRunner(settings)
@@ -204,6 +216,11 @@ def test_plan_freezes_inputs_and_only_its_digest_approves_it(tmp_path: Path) -> 
     assert args[args.index("--run-id") + 1] == run_id
     assert args[args.index("--thinking") + 1] == "low"
     assert [args[i + 1] for i, a in enumerate(args) if a == "--conversation"] == ids
+    # The provider lists reach the harness through its environment.
+    assert json.loads((harness / "env.json").read_text()) == {
+        "allow": "anthropic,openrouter",
+        "deny": "openrouter",
+    }
     log = Path(
         finished["id"]
         and (tmp_path / "private" / "logs" / "model-work" / f"{plan['id']}.log")
@@ -332,6 +349,10 @@ def test_lists_models_through_the_harness_without_revealing_keys(
     assert catalog["fetched_at"]
     assert catalog["models"][1]["cost"]["input"] == 3.0
     assert json.loads((harness / "list-args.json").read_text()) == ["--json"]
+    assert json.loads((harness / "env.json").read_text()) == {
+        "allow": "anthropic,openrouter",
+        "deny": "openrouter",
+    }
 
     (harness / "list-args.json").unlink()
     assert client.get("/api/v1/model-work/models").status_code == 200

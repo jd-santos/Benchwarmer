@@ -1,27 +1,62 @@
 import { describe, expect, it } from 'vitest';
+import { builtinProviders } from '@earendil-works/pi-ai/providers/all';
+
 import {
-	EXCLUDED_PROVIDERS,
 	createHarnessModels,
 	missingKeyHint,
+	providerAllowed,
 	providerBaseUrlOverride,
 	providerIds,
+	providerLists,
 	providersWithKeys
 } from './providers.ts';
 
 describe('providers', () => {
-	it('registers the pi-ai catalog minus the excluded providers', () => {
-		const ids = providerIds();
+	it('registers the whole pi-ai catalog when no provider lists are set', () => {
+		const ids = providerIds({});
+		expect(ids).toEqual(
+			builtinProviders()
+				.map((provider) => provider.id)
+				.sort()
+		);
 		for (const expected of ['anthropic', 'openai', 'openrouter', 'google', 'mistral']) {
 			expect(ids).toContain(expected);
 		}
-		const models = createHarnessModels();
+		const models = createHarnessModels({});
 		expect(models.getProvider('openrouter')).toBeDefined();
 		expect(models.getModels('openrouter').length).toBeGreaterThan(0);
-		for (const excluded of EXCLUDED_PROVIDERS) {
-			expect(ids).not.toContain(excluded);
-			expect(models.getProvider(excluded)).toBeUndefined();
-			expect(models.getModels(excluded)).toEqual([]);
-		}
+	});
+
+	it('reads the allow and deny lists from the environment', () => {
+		expect(providerLists({})).toEqual({ allow: new Set(), deny: new Set() });
+		expect(providerLists({ BENCHWARMER_PROVIDER_ALLOW: '', BENCHWARMER_PROVIDER_DENY: '' })).toEqual({
+			allow: new Set(),
+			deny: new Set()
+		});
+		const lists = providerLists({
+			BENCHWARMER_PROVIDER_ALLOW: ' anthropic, openai ,',
+			BENCHWARMER_PROVIDER_DENY: 'openai'
+		});
+		expect([...lists.allow]).toEqual(['anthropic', 'openai']);
+		expect([...lists.deny]).toEqual(['openai']);
+		expect(providerAllowed('anthropic', lists)).toBe(true);
+		expect(providerAllowed('openai', lists)).toBe(false);
+		expect(providerAllowed('mistral', lists)).toBe(false);
+	});
+
+	it('registers only the providers the lists permit', () => {
+		const allowed = createHarnessModels({ BENCHWARMER_PROVIDER_ALLOW: 'anthropic,openrouter' });
+		expect(allowed.getProviders().map((provider) => provider.id).sort()).toEqual(['anthropic', 'openrouter']);
+		expect(allowed.getProvider('openai')).toBeUndefined();
+		expect(allowed.getModels('openai')).toEqual([]);
+
+		const denied = createHarnessModels({ BENCHWARMER_PROVIDER_DENY: 'mistral' });
+		expect(denied.getProvider('mistral')).toBeUndefined();
+		expect(denied.getProvider('anthropic')).toBeDefined();
+		expect(providerIds({ BENCHWARMER_PROVIDER_DENY: 'mistral' })).toEqual(providerIds({}).filter((id) => id !== 'mistral'));
+
+		const both = createHarnessModels({ BENCHWARMER_PROVIDER_ALLOW: 'anthropic,openai', BENCHWARMER_PROVIDER_DENY: 'openai' });
+		expect(both.getProviders().map((provider) => provider.id)).toEqual(['anthropic']);
 	});
 
 	it('reports which common providers have keys and hints at the missing one', () => {

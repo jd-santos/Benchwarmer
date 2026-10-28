@@ -58,11 +58,13 @@ runs. Each demo invocation replaces its contents with a fresh build.
 ## Run the product-shaped application manually
 
 Choose a new, explicit development data root outside the checkout. The example
-below creates one and prints its location so cleanup remains deliberate:
+below creates one and prints its location so cleanup remains deliberate. The
+data root, import roots, harness directory, UI root, and listen address can
+all live in a `benchwarmer.toml` in that data root instead of the shell; see
+[configuration](configuration.md). Environment variables override the file.
 
 ```bash
 export BENCHWARMER_DATA_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/benchwarmer-development.XXXXXX")"
-export BENCHWARMER_UI_ROOT="$(pwd)/web/build"
 printf 'Development data root: %s\n' "$BENCHWARMER_DATA_ROOT"
 # Optional: directories the web app may import conversation files from.
 # export BENCHWARMER_IMPORT_ROOTS="$HOME/benchwarmer-inbox"
@@ -77,6 +79,18 @@ uv run python -m benchwarmer.services.demo_conversations \
   --load tests/fixtures/demo-conversations.json
 uv run python -m benchwarmer.services.demo_conversations \
   --load tests/fixtures/demo-long-conversations.json
+uv run benchwarmer serve
+```
+
+`benchwarmer serve` reads the settings, uses the checkout's `web/build` when
+no `ui_root` is configured, refuses an unmigrated or outdated data root with
+the command that fixes it, prints the resolved settings, and runs Uvicorn in
+the foreground on the configured host and port (`--host`, `--port`, and
+`--check` override or inspect). The bare factory remains available for tests
+and the Compose service, and needs the UI root set explicitly:
+
+```bash
+export BENCHWARMER_UI_ROOT="$(pwd)/web/build"
 uv run uvicorn benchwarmer.api.app:create_app \
   --factory \
   --host 127.0.0.1 \

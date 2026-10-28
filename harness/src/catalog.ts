@@ -23,7 +23,6 @@ import type { MutableModels, Provider } from '@earendil-works/pi-ai/models';
 
 import {
 	COMMON_PROVIDER_KEYS,
-	EXCLUDED_PROVIDERS,
 	createHarnessModels,
 	providerBaseUrlOverride,
 	providersWithKeys
@@ -365,7 +364,7 @@ export async function buildCatalog(options: CatalogFetchOptions = {}): Promise<M
 	const models = createHarnessModels(env);
 	const notes: string[] = [];
 
-	let providerIds = providersWithKeys(env).filter((id) => !EXCLUDED_PROVIDERS.has(id) && models.getProvider(id));
+	let providerIds = providersWithKeys(env).filter((id) => models.getProvider(id));
 	if (options.provider) providerIds = providerIds.filter((id) => id === options.provider);
 
 	let modelsDev: ModelsDevCatalog | null = null;

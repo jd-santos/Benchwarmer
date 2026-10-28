@@ -69,14 +69,16 @@ class _Runner:
 
     def __init__(self, stdout: str = "", returncode: int = 0, stderr: str = "") -> None:
         self.calls: list[list[str]] = []
+        self.environments: list[dict[str, str]] = []
         self.stdout = stdout
         self.returncode = returncode
         self.stderr = stderr
 
     def __call__(
-        self, command: list[str], **_: Any
+        self, command: list[str], **kwargs: Any
     ) -> subprocess.CompletedProcess[str]:
         self.calls.append(command)
+        self.environments.append(dict(kwargs.get("env", {})))
         return subprocess.CompletedProcess(
             command, self.returncode, stdout=self.stdout, stderr=self.stderr
         )
@@ -89,7 +91,11 @@ def test_lists_through_the_harness_and_caches_until_the_ttl_or_a_refresh(
     runner = _Runner(stdout=json.dumps(CATALOG) + "\n")
     clock = _Clock()
     service = ModelCatalogService(
-        BenchwarmerSettings(data_root=tmp_path / "data", harness_dir=harness),
+        BenchwarmerSettings(
+            data_root=tmp_path / "data",
+            harness_dir=harness,
+            provider_allow=("anthropic", "google"),
+        ),
         run=runner,
         clock=clock,
         ttl=dt.timedelta(minutes=10),
@@ -98,6 +104,10 @@ def test_lists_through_the_harness_and_caches_until_the_ttl_or_a_refresh(
     first = service.get()
     assert first.catalog["models"][0]["id"] == "claude-sonnet-5-5"
     assert first.fetched_at == clock.now
+    # The settings' provider lists travel to the harness in its environment,
+    # both always set so nothing is inherited from the shell.
+    assert runner.environments[0]["BENCHWARMER_PROVIDER_ALLOW"] == "anthropic,google"
+    assert runner.environments[0]["BENCHWARMER_PROVIDER_DENY"] == ""
     assert runner.calls == [
         [
             "npm",

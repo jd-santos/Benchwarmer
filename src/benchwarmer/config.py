@@ -1,4 +1,10 @@
-"""Resolve and initialize Benchwarmer's private runtime paths."""
+"""Resolve and initialize Benchwarmer's private runtime paths and settings.
+
+Settings come from three layers. Environment variables win, then the
+``benchwarmer.toml`` settings file, then the built-in defaults. The file lives
+at the data root unless ``BENCHWARMER_CONFIG`` names another location.
+Reading settings never creates anything on disk.
+"""
 
 from __future__ import annotations
 
@@ -8,14 +14,33 @@ from pathlib import Path
 import secrets
 import stat
 import sys
-from typing import Self
+import tomllib
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
+_CONFIG_VARIABLE = "BENCHWARMER_CONFIG"
 _DATA_ROOT_VARIABLE = "BENCHWARMER_DATA_ROOT"
 _IMPORT_ROOTS_VARIABLE = "BENCHWARMER_IMPORT_ROOTS"
 _HARNESS_DIR_VARIABLE = "BENCHWARMER_HARNESS_DIR"
+_UI_ROOT_VARIABLE = "BENCHWARMER_UI_ROOT"
+_HOST_VARIABLE = "BENCHWARMER_HOST"
+_PORT_VARIABLE = "BENCHWARMER_PORT"
+_PROVIDER_ALLOW_VARIABLE = "BENCHWARMER_PROVIDER_ALLOW"
+_PROVIDER_DENY_VARIABLE = "BENCHWARMER_PROVIDER_DENY"
 _XDG_DATA_HOME_VARIABLE = "XDG_DATA_HOME"
+
+CONFIG_FILE_NAME = "benchwarmer.toml"
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8000
+
+# Every section and key the settings file may contain. Anything else is
+# refused by name so a typo cannot silently fall back to a default.
+_FILE_SCHEMA: Mapping[str, frozenset[str]] = {
+    "paths": frozenset({"data_root", "import_roots", "harness_dir", "ui_root"}),
+    "server": frozenset({"host", "port"}),
+    "providers": frozenset({"allow", "deny"}),
+}
 
 
 class ConfigurationError(RuntimeError):
@@ -23,7 +48,7 @@ class ConfigurationError(RuntimeError):
 
 
 class BenchwarmerSettings(BaseModel):
-    """Resolved private paths with explicit, side-effect-free construction."""
+    """Resolved settings with explicit, side-effect-free construction."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -34,6 +59,17 @@ class BenchwarmerSettings(BaseModel):
     # The checkout's harness/ package, when the app may start approved harness
     # runs itself. None means plans can be previewed but not executed here.
     harness_dir: Path | None = None
+    # The built Svelte application (the directory holding 200.html). None means
+    # the API serves no UI unless a caller passes one explicitly.
+    ui_root: Path | None = None
+    host: str = DEFAULT_HOST
+    port: int = DEFAULT_PORT
+    # Provider ids the harness may register. An empty allow list means every
+    # provider the harness knows; deny removes ids from whatever allow leaves.
+    provider_allow: tuple[str, ...] = ()
+    provider_deny: tuple[str, ...] = ()
+    # The settings file these values were read from, or None when there was none.
+    config_path: Path | None = None
 
     @field_validator("data_root")
     @classmethod
@@ -58,6 +94,27 @@ class BenchwarmerSettings(BaseModel):
             raise ValueError("harness_dir must be an absolute path")
         return value
 
+    @field_validator("ui_root")
+    @classmethod
+    def _require_absolute_ui_root(cls, value: Path | None) -> Path | None:
+        if value is not None and not value.is_absolute():
+            raise ValueError("ui_root must be an absolute path")
+        return value
+
+    @field_validator("port")
+    @classmethod
+    def _require_valid_port(cls, value: int) -> int:
+        if not 1 <= value <= 65535:
+            raise ValueError("port must be an integer from 1 through 65535")
+        return value
+
+    @field_validator("host")
+    @classmethod
+    def _require_host(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("host must not be empty")
+        return value
+
     @classmethod
     def from_environment(
         cls,
@@ -66,25 +123,116 @@ class BenchwarmerSettings(BaseModel):
         platform_name: str | None = None,
         home: Path | None = None,
     ) -> Self:
-        """Resolve settings from explicit inputs or the current process."""
+        """Resolve settings from the environment, the settings file, and defaults."""
         environment = os.environ if environ is None else environ
         current_platform = sys.platform if platform_name is None else platform_name
         current_home = Path.home() if home is None else home
         if not current_home.is_absolute():
             raise ConfigurationError("the current home directory must be absolute")
 
-        if _DATA_ROOT_VARIABLE in environment:
-            root = _explicit_data_root(environment[_DATA_ROOT_VARIABLE], current_home)
-        elif current_platform == "darwin":
-            root = current_home / "Library/Application Support/Benchwarmer"
-        else:
-            root = _non_macos_data_root(environment, current_home)
-
-        import_roots = _import_roots(
-            environment.get(_IMPORT_ROOTS_VARIABLE), current_home
+        default_root = default_data_root(
+            environment, platform_name=current_platform, home=current_home
         )
-        harness_dir = _harness_dir(environment.get(_HARNESS_DIR_VARIABLE), current_home)
-        return cls(data_root=root, import_roots=import_roots, harness_dir=harness_dir)
+        file_path = settings_file_path(
+            environment, platform_name=current_platform, home=current_home
+        )
+        explicit_file = _CONFIG_VARIABLE in environment
+        if explicit_file and not file_path.is_file():
+            raise ConfigurationError(
+                f"{_CONFIG_VARIABLE} names a settings file that does not exist: "
+                f"{file_path}"
+            )
+        file = _SettingsFile.read(file_path) if file_path.is_file() else None
+
+        paths = file.section("paths") if file else {}
+        server = file.section("server") if file else {}
+        providers = file.section("providers") if file else {}
+
+        if _DATA_ROOT_VARIABLE in environment:
+            root = _path_value(
+                environment[_DATA_ROOT_VARIABLE], current_home, _DATA_ROOT_VARIABLE
+            )
+        elif file and "data_root" in paths:
+            root = file.path("paths", "data_root", current_home)
+        else:
+            root = default_root
+
+        if _IMPORT_ROOTS_VARIABLE in environment:
+            import_roots = _path_list(
+                environment[_IMPORT_ROOTS_VARIABLE].split(os.pathsep),
+                current_home,
+                _IMPORT_ROOTS_VARIABLE,
+            )
+        elif file and "import_roots" in paths:
+            import_roots = file.path_list("paths", "import_roots", current_home)
+        else:
+            import_roots = ()
+
+        harness_dir = _layered_optional_path(
+            environment, file, _HARNESS_DIR_VARIABLE, "harness_dir", current_home
+        )
+        ui_root = _layered_optional_path(
+            environment, file, _UI_ROOT_VARIABLE, "ui_root", current_home
+        )
+
+        if _HOST_VARIABLE in environment:
+            host = environment[_HOST_VARIABLE].strip()
+            if not host:
+                raise ConfigurationError(f"{_HOST_VARIABLE} must not be empty")
+        elif file and "host" in server:
+            host = file.string("server", "host")
+        else:
+            host = DEFAULT_HOST
+
+        if _PORT_VARIABLE in environment:
+            port = _port_value(environment[_PORT_VARIABLE], _PORT_VARIABLE)
+        elif file and "port" in server:
+            port = file.port("server", "port")
+        else:
+            port = DEFAULT_PORT
+
+        if _PROVIDER_ALLOW_VARIABLE in environment:
+            allow = _provider_ids(
+                environment[_PROVIDER_ALLOW_VARIABLE].split(","),
+                _PROVIDER_ALLOW_VARIABLE,
+            )
+        elif file and "allow" in providers:
+            allow = file.provider_ids("providers", "allow")
+        else:
+            allow = ()
+
+        if _PROVIDER_DENY_VARIABLE in environment:
+            deny = _provider_ids(
+                environment[_PROVIDER_DENY_VARIABLE].split(","),
+                _PROVIDER_DENY_VARIABLE,
+            )
+        elif file and "deny" in providers:
+            deny = file.provider_ids("providers", "deny")
+        else:
+            deny = ()
+
+        return cls(
+            data_root=root,
+            import_roots=import_roots,
+            harness_dir=harness_dir,
+            ui_root=ui_root,
+            host=host,
+            port=port,
+            provider_allow=allow,
+            provider_deny=deny,
+            config_path=file.path_on_disk if file else None,
+        )
+
+    def provider_environment(self) -> dict[str, str]:
+        """Variables that hand the provider lists to a harness process.
+
+        Both are always set, so a harness started by the application sees
+        exactly these settings and nothing inherited from the shell.
+        """
+        return {
+            _PROVIDER_ALLOW_VARIABLE: ",".join(self.provider_allow),
+            _PROVIDER_DENY_VARIABLE: ",".join(self.provider_deny),
+        }
 
     @property
     def database_dir(self) -> Path:
@@ -146,33 +294,160 @@ class BenchwarmerSettings(BaseModel):
         return self
 
 
-def _explicit_data_root(raw_value: str, home: Path) -> Path:
+def default_data_root(
+    environ: Mapping[str, str],
+    *,
+    platform_name: str,
+    home: Path,
+) -> Path:
+    """The data root before the settings file is consulted.
+
+    ``BENCHWARMER_DATA_ROOT`` when set, otherwise the platform's per-user
+    application data directory.
+    """
+    if _DATA_ROOT_VARIABLE in environ:
+        return _path_value(environ[_DATA_ROOT_VARIABLE], home, _DATA_ROOT_VARIABLE)
+    if platform_name == "darwin":
+        return home / "Library/Application Support/Benchwarmer"
+    return _non_macos_data_root(environ, home)
+
+
+def settings_file_path(
+    environ: Mapping[str, str],
+    *,
+    platform_name: str,
+    home: Path,
+) -> Path:
+    """Where the settings file is read from, whether or not it exists."""
+    if _CONFIG_VARIABLE in environ:
+        return _path_value(environ[_CONFIG_VARIABLE], home, _CONFIG_VARIABLE)
+    root = default_data_root(environ, platform_name=platform_name, home=home)
+    return root / CONFIG_FILE_NAME
+
+
+class _SettingsFile:
+    """A parsed and structurally validated ``benchwarmer.toml``."""
+
+    def __init__(self, path_on_disk: Path, data: Mapping[str, Any]) -> None:
+        self.path_on_disk = path_on_disk
+        self._data = data
+
+    @classmethod
+    def read(cls, path: Path) -> _SettingsFile:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as error:
+            raise ConfigurationError(f"could not read {path}: {error}") from error
+        try:
+            data = tomllib.loads(text)
+        except tomllib.TOMLDecodeError as error:
+            raise ConfigurationError(f"could not parse {path}: {error}") from error
+        for section, value in data.items():
+            if section not in _FILE_SCHEMA:
+                expected = ", ".join(f"[{name}]" for name in _FILE_SCHEMA)
+                raise ConfigurationError(
+                    f"{path}: unknown section [{section}]; expected one of {expected}"
+                )
+            if not isinstance(value, dict):
+                raise ConfigurationError(f"{path}: [{section}] must be a table")
+            for key in value:
+                if key not in _FILE_SCHEMA[section]:
+                    expected = ", ".join(sorted(_FILE_SCHEMA[section]))
+                    raise ConfigurationError(
+                        f"{path}: unknown key [{section}] {key}; "
+                        f"expected one of {expected}"
+                    )
+        return cls(path, data)
+
+    def section(self, name: str) -> Mapping[str, Any]:
+        value = self._data.get(name, {})
+        return value if isinstance(value, dict) else {}
+
+    def _label(self, section: str, key: str) -> str:
+        return f"{self.path_on_disk}: [{section}] {key}"
+
+    def string(self, section: str, key: str) -> str:
+        value = self.section(section)[key]
+        label = self._label(section, key)
+        if not isinstance(value, str):
+            raise ConfigurationError(f"{label} must be a string")
+        if not value.strip():
+            raise ConfigurationError(f"{label} must not be empty")
+        return value
+
+    def path(self, section: str, key: str, home: Path) -> Path:
+        return _path_value(self.string(section, key), home, self._label(section, key))
+
+    def path_list(self, section: str, key: str, home: Path) -> tuple[Path, ...]:
+        value = self.section(section)[key]
+        label = self._label(section, key)
+        if not isinstance(value, list) or any(
+            not isinstance(item, str) for item in value
+        ):
+            raise ConfigurationError(f"{label} must be an array of strings")
+        return _path_list(value, home, label)
+
+    def port(self, section: str, key: str) -> int:
+        value = self.section(section)[key]
+        label = self._label(section, key)
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ConfigurationError(f"{label} must be an integer from 1 through 65535")
+        return _port_value(str(value), label)
+
+    def provider_ids(self, section: str, key: str) -> tuple[str, ...]:
+        value = self.section(section)[key]
+        label = self._label(section, key)
+        if not isinstance(value, list) or any(
+            not isinstance(item, str) for item in value
+        ):
+            raise ConfigurationError(f"{label} must be an array of provider ids")
+        if any(not item.strip() for item in value):
+            raise ConfigurationError(f"{label} must not contain empty provider ids")
+        return _provider_ids(value, label)
+
+
+def _layered_optional_path(
+    environment: Mapping[str, str],
+    file: _SettingsFile | None,
+    variable: str,
+    key: str,
+    home: Path,
+) -> Path | None:
+    """An optional path: environment first, then ``[paths]`` in the file."""
+    if variable in environment:
+        raw = environment[variable]
+        if not raw.strip():
+            return None
+        return _path_value(raw, home, variable)
+    if file and key in file.section("paths"):
+        return file.path("paths", key, home)
+    return None
+
+
+def _path_value(raw_value: str, home: Path, label: str) -> Path:
+    """One absolute path; a leading ``~`` means the current user's home."""
     if not raw_value.strip():
-        raise ConfigurationError(f"{_DATA_ROOT_VARIABLE} must not be empty")
+        raise ConfigurationError(f"{label} must not be empty")
 
     if raw_value == "~":
-        root = home
+        path = home
     elif raw_value.startswith("~/"):
         relative = raw_value[2:]
         if relative.startswith("/"):
-            raise ConfigurationError(
-                f"{_DATA_ROOT_VARIABLE} must use a single slash after '~'"
-            )
-        root = home / relative
+            raise ConfigurationError(f"{label} must use a single slash after '~'")
+        path = home / relative
     else:
-        root = Path(raw_value)
+        path = Path(raw_value)
 
-    if not root.is_absolute():
-        raise ConfigurationError(f"{_DATA_ROOT_VARIABLE} must be an absolute path")
-    return root
+    if not path.is_absolute():
+        raise ConfigurationError(f"{label} must be an absolute path")
+    return path
 
 
-def _import_roots(raw_value: str | None, home: Path) -> tuple[Path, ...]:
-    """Parse the import roots variable: absolute paths separated by the OS path separator."""
-    if raw_value is None or not raw_value.strip():
-        return ()
+def _path_list(parts: list[str], home: Path, label: str) -> tuple[Path, ...]:
+    """Absolute paths, skipping blank entries; relative entries are refused."""
     roots: list[Path] = []
-    for part in raw_value.split(os.pathsep):
+    for part in parts:
         if not part.strip():
             continue
         if part == "~":
@@ -182,26 +457,37 @@ def _import_roots(raw_value: str | None, home: Path) -> tuple[Path, ...]:
         else:
             root = Path(part)
         if not root.is_absolute():
-            raise ConfigurationError(
-                f"{_IMPORT_ROOTS_VARIABLE} entries must be absolute paths"
-            )
+            raise ConfigurationError(f"{label} entries must be absolute paths")
         roots.append(root)
     return tuple(roots)
 
 
-def _harness_dir(raw_value: str | None, home: Path) -> Path | None:
-    """Parse the harness directory variable: one absolute path, ``~`` allowed."""
-    if raw_value is None or not raw_value.strip():
-        return None
-    if raw_value == "~":
-        path = home
-    elif raw_value.startswith("~/"):
-        path = home / raw_value[2:]
-    else:
-        path = Path(raw_value)
-    if not path.is_absolute():
-        raise ConfigurationError(f"{_HARNESS_DIR_VARIABLE} must be an absolute path")
-    return path
+def _port_value(raw_value: str, label: str) -> int:
+    try:
+        port = int(raw_value.strip())
+    except ValueError:
+        raise ConfigurationError(
+            f"{label} must be an integer from 1 through 65535"
+        ) from None
+    if not 1 <= port <= 65535:
+        raise ConfigurationError(f"{label} must be an integer from 1 through 65535")
+    return port
+
+
+def _provider_ids(parts: list[str], label: str) -> tuple[str, ...]:
+    """Trimmed, de-duplicated provider ids in the order given; blanks are skipped."""
+    ids: list[str] = []
+    for part in parts:
+        item = part.strip()
+        if not item:
+            continue
+        if any(character.isspace() for character in item) or "," in item:
+            raise ConfigurationError(
+                f"{label} entries must be single provider ids without spaces"
+            )
+        if item not in ids:
+            ids.append(item)
+    return tuple(ids)
 
 
 def _non_macos_data_root(environment: Mapping[str, str], home: Path) -> Path:

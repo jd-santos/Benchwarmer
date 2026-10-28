@@ -25,7 +25,7 @@ re-run `npm run check` and `npm test`.
 ## Layout
 
 - `src/benchwarmer/client.ts`: typed client for the API routes the harness uses
-- `src/providers.ts`: the pi-ai provider catalog minus an explicit exclusion list, plus key diagnostics
+- `src/providers.ts`: the pi-ai provider catalog within the operator's provider lists, plus key diagnostics
 - `src/catalog.ts`: the merged model list (pinned catalog, models.dev, each provider's own list) and how a model outside the pinned catalog is run
 - `src/format.ts`: compact model-facing renderings of outlines and events
 - `src/tools/library.ts`: the `benchwarmer-library` extension: `list_conversations`,
@@ -47,9 +47,11 @@ re-run `npm run check` and `npm test`.
 
 Running a workflow by hand is the approval for its model work: the operator
 names the conversations, the model, and supplies that provider's key through
-the environment. The pi-ai provider catalog is registered except for the
-providers named in `EXCLUDED_PROVIDERS` (`src/providers.ts`), which can never
-be selected and whose keys are never read, so
+the environment. The pi-ai provider catalog is registered within the
+operator's provider lists (`[providers]` in `benchwarmer.toml`, handed to the
+harness as `BENCHWARMER_PROVIDER_ALLOW` and `BENCHWARMER_PROVIDER_DENY`; see
+[docs/configuration.md](../docs/configuration.md)), and each provider reads
+its own key, so
 `--model openrouter/<id>` reads `OPENROUTER_API_KEY`, `--model google/<id>`
 reads `GEMINI_API_KEY`, and so on; `npm run list-models` prints which common
 providers have keys present, and `npm run list-models -- --json` merges, for

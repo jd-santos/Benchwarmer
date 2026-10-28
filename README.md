@@ -180,8 +180,26 @@ npm run test:unit -- --run
 npm run build
 ```
 
-The static build writes `web/build/200.html`. FastAPI serves that build only
-from an explicit absolute `BENCHWARMER_UI_ROOT`; environment-driven startup
-fails when the build or `200.html` is missing. See the
-[development workflow](docs/development.md) for the disposable synthetic demo,
-manual startup, restart behavior, and full validation commands.
+The static build writes `web/build/200.html`. FastAPI serves that build from
+the configured `ui_root`; `benchwarmer serve` uses `web/build` in the checkout
+when it is built, and startup fails when the build or `200.html` is missing.
+
+## Start the application
+
+Settings live in one `benchwarmer.toml` in the data root (or at
+`BENCHWARMER_CONFIG`), and every `BENCHWARMER_*` environment variable still
+works and overrides the file. [docs/configuration.md](docs/configuration.md)
+lists every key, variable, and default.
+
+```bash
+uv run benchwarmer init          # write a commented example settings file
+uv run alembic upgrade head      # migrate the data root (never done on its own)
+uv run benchwarmer serve         # resolve settings, check the data root, start Uvicorn
+uv run benchwarmer serve --check # print the resolved settings without serving
+```
+
+Starting the application never starts model work; approved plans still begin
+only from the Bundles page ([ADR 0006](docs/decisions/0006-app-started-model-work.md)).
+See the [development workflow](docs/development.md) for the disposable
+synthetic demo, manual startup, restart behavior, and full validation
+commands.
