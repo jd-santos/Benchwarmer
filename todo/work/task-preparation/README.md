@@ -45,7 +45,8 @@ Decided with the user on 2026-10-26, for the evaluation program this feeds
 - The export is a case record with `case`, `candidate`, and `judge` sections
   plus a digest, scrubbed in one pass so a term maps to the same placeholder in
   both sections. Reasoning blocks are dropped from the candidate section. The
-  export takes its term list from the request; Benchwarmer carries no
+  export takes its terms from the request, inline or by naming a stored
+  [term list](../scrub-terms/README.md); Benchwarmer carries no
   program-specific terms. It refuses anything but an approved version and
   re-checks flags before writing.
 - Benchwarmer writes the file. Upload, storage, and running belong to the
