@@ -7,10 +7,10 @@
 		CaseRecord,
 		Criterion,
 		CriterionMethod,
+		CriterionNeed,
 		JudgeEvidence,
 		LeakageFlag,
 		ObjectiveType,
-		Partition,
 		ReconstructionLevel,
 		ReviewerLabel,
 		SplitEvent,
@@ -34,13 +34,18 @@
 		kindLabel,
 		kindOptions,
 		methodOptions,
+		needOptions,
+		needsSentence,
+		partitionLabel,
 		partitionOptions,
+		reconstructionLabel,
 		reconstructionOptions,
 		reviewerLabelOptions,
 		slugFor,
 		statusLabel,
 		statusOptions,
-		taskLabel
+		taskLabel,
+		unmetNeeds
 	} from '$lib/tasks/format';
 	import RoleGlyph from './RoleGlyph.svelte';
 
@@ -69,8 +74,9 @@
 	let cutEventId = $derived(source.cut_point.event_id);
 	let level = $derived<ReconstructionLevel>(source.reconstruction.level);
 	let gaps = $derived(source.reconstruction.gaps.join('\n'));
-	let criteria = $derived<Criterion[]>(source.criteria.map((criterion) => ({ ...criterion })));
-	let partition = $derived<Partition | ''>(source.partition ?? '');
+	let criteria = $derived<Criterion[]>(
+		source.criteria.map((criterion) => ({ ...criterion, needs: criterion.needs ?? [] }))
+	);
 	let status = $derived<TaskStatus>(source.status);
 	let reviewerNotes = $derived(source.reviewer_notes);
 	let reviewBy = $derived(source.leakage_review?.by ?? '');
@@ -116,14 +122,23 @@
 			method: criterion.method,
 			rubric_version: criterion.rubric_version,
 			judge_evidence: criterion.method === 'deterministic' ? [] : criterion.judge_evidence,
+			needs: criterion.needs ?? [],
 			reviewer_label: criterion.method === 'human' ? criterion.reviewer_label : null,
 			note: criterion.note?.trim() || null
 		})),
 		expected_scope: kind === 'coding' ? source.expected_scope : null,
-		partition: partition || null,
+		// Legacy field, kept as saved. The partition is assigned by family at the task level.
+		partition: source.partition ?? null,
 		status,
 		reviewer_notes: reviewerNotes.trim()
 	});
+	// Needs the reconstruction level cannot meet; mirrors the API's approval guard.
+	const unmet = $derived(unmetNeeds(kind, level, document_.criteria));
+	const unmetFor = (criterionId: string) =>
+		unmet.find((item) => item.criterion_id === criterionId) ?? null;
+	const kindUnmet = $derived(unmet.find((item) => item.criterion_id === null) ?? null);
+	const analysisOnly = $derived(unmet.length > 0);
+	const assignedPartition = $derived(current?.partition ?? null);
 	const reviewTouched = $derived(
 		reviewBy.trim() !== (source.leakage_review?.by ?? '') ||
 			reviewNotes.trim() !== (source.leakage_review?.notes ?? '') ||
@@ -141,6 +156,7 @@
 	const needsReviewer = $derived(status === 'approved' && reviewBy.trim() === '');
 	const needsFlags = $derived(status === 'approved' && (unaccepted.length > 0 || cutMoved));
 	const needsBundleReview = $derived(status === 'approved' && base.bundle.status !== 'reviewed');
+	const needsReconstruction = $derived(status === 'approved' && analysisOnly);
 	const emptyCriterion = $derived(
 		document_.criteria.some((criterion) => !criterion.statement || !criterion.id)
 	);
@@ -150,6 +166,7 @@
 			needsReviewer ||
 			needsFlags ||
 			needsBundleReview ||
+			needsReconstruction ||
 			emptyCriterion ||
 			cutIndex === -1 ||
 			(latestStatus === 'retired' && current !== null)
@@ -169,7 +186,10 @@
 			family: document.family,
 			cut_point: document.cut_point,
 			reconstruction: document.reconstruction,
-			criteria: document.criteria,
+			criteria: document.criteria.map((criterion) => ({
+				...criterion,
+				needs: criterion.needs ?? []
+			})),
 			expected_scope: document.expected_scope ?? null,
 			partition: document.partition ?? null,
 			status: document.status,
@@ -207,10 +227,20 @@
 				method: 'human',
 				rubric_version: 1,
 				judge_evidence: [],
+				needs: [],
 				reviewer_label: null,
 				note: null
 			}
 		];
+	}
+
+	function toggleNeed(index: number, value: CriterionNeed, on: boolean): void {
+		const existing = criteria[index].needs ?? [];
+		editCriterion(index, {
+			needs: on
+				? [...existing.filter((item) => item !== value), value]
+				: existing.filter((item) => item !== value)
+		});
 	}
 
 	/** Derive the id from the statement until the reviewer edits the id by hand. */
@@ -329,7 +359,16 @@
 		<h1 class:untitled={!summary.trim() && !objective.trim()}>{taskLabel(document_)}</h1>
 		<p class="meta-line">
 			<span class="task-status task-status--{status}">{statusLabel(status)}</span>
+			{#if analysisOnly}
+				<span
+					class="task-analysis-only"
+					title="Its criteria need more than the reconstruction provides">Analysis only</span
+				>
+			{/if}
 			<span>{kindLabel(kind)}</span>
+			{#if assignedPartition}
+				<span>{partitionLabel(assignedPartition)} partition</span>
+			{/if}
 			{#if objectiveType !== 'unknown'}<span>{objectiveTypeLabel(objectiveType)}</span>{/if}
 			<span>
 				From <a href={bundleHref()}>bundle revision {source.bundle_revision}</a>
@@ -466,6 +505,17 @@
 				<p class="field__hint">
 					{reconstructionOptions.find((option) => option.value === level)?.hint}
 				</p>
+				{#if kindUnmet}
+					<p class="field__error" data-kind-unmet>
+						A coding task needs a workspace, which "{reconstructionLabel(level)}" does not provide.
+						It stays analysis-only evidence until a fixture backs it.
+					</p>
+				{:else if analysisOnly}
+					<p class="field__hint" data-analysis-only>
+						Analysis only at this level: {plural(unmet.length, 'criterion', 'criteria')} below
+						{unmet.length === 1 ? 'needs' : 'need'} more than it provides.
+					</p>
+				{/if}
 			</div>
 			<div class="field">
 				<label for="task-gaps">Reconstruction gaps</label>
@@ -476,18 +526,21 @@
 					bind:value={gaps}></textarea>
 			</div>
 			<div class="field">
-				<label for="task-partition">Partition</label>
-				<select id="task-partition" bind:value={partition}>
-					<option value="">Not assigned</option>
-					{#each partitionOptions as option (option.value)}
-						<option value={option.value}>{option.label}</option>
-					{/each}
-				</select>
-				{#if partition}
-					<p class="field__hint">
-						{partitionOptions.find((option) => option.value === partition)?.hint}
-					</p>
-				{/if}
+				<span class="field__label" id="task-partition-label">Partition</span>
+				<p class="field__value" aria-labelledby="task-partition-label" data-partition>
+					{#if assignedPartition}
+						{partitionLabel(assignedPartition)}
+						<span class="muted">
+							· {partitionOptions.find((option) => option.value === assignedPartition)?.hint}
+						</span>
+					{:else}
+						<span class="muted">Not assigned</span>
+					{/if}
+				</p>
+				<p class="field__hint">
+					Assigned by family from the <a href={resolve('/tasks')}>Tasks list</a>, never per task;
+					every task in a family lands on the same side.
+				</p>
 			</div>
 		</fieldset>
 
@@ -504,7 +557,13 @@
 				{#each criteria as criterion, index (index)}
 					{@const issue = criterionIssues[criterion.id]}
 					{@const flagged = flagsFor(criterion.id)}
-					<li class="criterion" class:criterion--invalid={issue || flagged.length > 0}>
+					{@const missing = unmetFor(criterion.id)}
+					<li
+						class="criterion"
+						class:criterion--invalid={issue ||
+							flagged.length > 0 ||
+							(missing && status === 'approved')}
+					>
 						<div class="field">
 							<label for="criterion-{index}-statement">Statement {index + 1}</label>
 							<textarea
@@ -589,6 +648,34 @@
 								</div>
 							</fieldset>
 						{/if}
+						<fieldset class="field criterion__needs">
+							<legend>Needs from the run</legend>
+							<div class="check-row">
+								{#each needOptions as option (option.value)}
+									<label title={option.hint}>
+										<input
+											type="checkbox"
+											disabled={readOnly}
+											checked={(criterion.needs ?? []).includes(option.value)}
+											onchange={(event) =>
+												toggleNeed(index, option.value, event.currentTarget.checked)}
+										/>
+										{option.label}
+									</label>
+								{/each}
+							</div>
+							{#if missing}
+								<p
+									class={status === 'approved' ? 'field__error' : 'field__hint'}
+									data-criterion-unmet
+								>
+									Needs {needsSentence(missing.needs)}, which "{reconstructionLabel(level)}" cannot
+									provide. {status === 'approved'
+										? 'Change the reconstruction or keep the task as analysis-only evidence.'
+										: 'Analysis-only at this reconstruction level.'}
+								</p>
+							{/if}
+						</fieldset>
 						{#if criterion.method === 'human'}
 							<fieldset class="field">
 								<legend>Your verdict on the historical answer</legend>
@@ -713,6 +800,15 @@
 				{#if needsFlags && !cutMoved}
 					<p class="field__error">
 						{plural(unaccepted.length, 'leakage flag')} still open. Check each one above or move the cut.
+					</p>
+				{/if}
+				{#if needsReconstruction}
+					<p class="field__error" data-approval-unmet>
+						Cannot approve as a runnable test: {kindUnmet
+							? 'a coding task needs a workspace'
+							: `${plural(unmet.length, 'criterion', 'criteria')} ${unmet.length === 1 ? 'needs' : 'need'} ${needsSentence([...new Set(unmet.flatMap((item) => item.needs))])}`},
+						which "{reconstructionLabel(level)}" does not provide. Keep it as a draft for
+						analysis-only evidence, or prepare a fixture and raise the reconstruction level.
 					</p>
 				{/if}
 			</fieldset>

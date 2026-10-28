@@ -193,6 +193,7 @@ def build_case_record(
                 "method": criterion.method,
                 "rubric_version": criterion.rubric_version,
                 "judge_evidence": list(criterion.judge_evidence),
+                "needs": list(criterion.needs),
                 "reviewer_label": criterion.reviewer_label,
                 "note": _scrub_text(scrubber, criterion.note),
             }
@@ -208,7 +209,9 @@ def build_case_record(
             "at": document.leakage_review.at.isoformat(),
             "accepted_flags": list(document.leakage_review.accepted_flags),
         },
-        "partition": document.partition,
+        # Assigned by family at the task level; see services.task_partitions.
+        "partition": detail.partition,
+        "partition_assignment_id": detail.partition_assignment_id,
         "redaction": {
             "scrub_version": SCRUB_VERSION,
             "term_count": scrubber.term_count,

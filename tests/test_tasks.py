@@ -89,3 +89,45 @@ def test_approval_needs_criteria_objective_and_a_leakage_review() -> None:
         )
     )
     assert approved.leakage_review == review
+
+
+def test_needs_are_unique_and_measured_against_the_reconstruction() -> None:
+    with pytest.raises(ValidationError, match="lists a requirement twice"):
+        Criterion.model_validate(_criterion(needs=["tools", "tools"]))
+
+    prompt_only = TaskDocument.model_validate(
+        _document(criteria=[_criterion(needs=["workspace", "multi_turn"])])
+    )
+    (unmet,) = prompt_only.unmet_needs()
+    assert unmet.criterion_id == "states-assumption"
+    assert unmet.needs == ["workspace", "multi_turn"]
+
+    fixture = TaskDocument.model_validate(
+        _document(
+            reconstruction={"level": "fixture_backed", "gaps": []},
+            criteria=[_criterion(needs=["workspace", "tools", "multi_turn"])],
+        )
+    )
+    assert [item.needs for item in fixture.unmet_needs()] == [["multi_turn"]]
+
+    multi_turn = TaskDocument.model_validate(
+        _document(
+            reconstruction={"level": "fixed_multi_turn", "gaps": []},
+            criteria=[_criterion(needs=["workspace", "tools", "multi_turn"])],
+        )
+    )
+    assert multi_turn.unmet_needs() == ()
+
+
+def test_a_coding_task_needs_a_workspace_whatever_its_criteria_say() -> None:
+    coding = TaskDocument.model_validate(
+        _document(kind="coding", criteria=[_criterion()])
+    )
+    (unmet,) = coding.unmet_needs()
+    assert unmet.criterion_id is None and unmet.needs == ["workspace"]
+    backed = TaskDocument.model_validate(
+        _document(kind="coding", reconstruction={"level": "fixture_backed", "gaps": []})
+    )
+    assert backed.unmet_needs() == ()
+    # Needs are additive: an old document without the field still validates.
+    assert Criterion.model_validate(_criterion()).needs == []

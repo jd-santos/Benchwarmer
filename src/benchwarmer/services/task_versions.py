@@ -29,6 +29,7 @@ from benchwarmer.tasks import (
     Reconstruction,
     TaskDocument,
     TaskKind,
+    UnmetNeed,
 )
 
 # Roles whose evidence is the historical answer or what followed it. Seeing
@@ -137,6 +138,13 @@ class TaskDetail:
     split: TaskSplit
     flags: tuple[LeakageFlag, ...]
     versions: tuple[TaskVersionRef, ...]
+    # Task-level, assigned by family; falls back to the legacy document field
+    # for a task that has never been through an assignment.
+    partition: str | None
+    partition_assignment_id: str | None
+    # Non-empty means this version is analysis-only evidence at its
+    # reconstruction level and cannot be approved as a runnable test.
+    unmet_needs: tuple[UnmetNeed, ...]
 
 
 @dataclass(frozen=True)
@@ -150,9 +158,12 @@ class TaskSummary:
     objective_type: str
     family: str
     partition: str | None
+    partition_assignment_id: str | None
     bundle_id: str
     bundle_revision: int
     criterion_count: int
+    # The criteria or kind need more than the reconstruction level provides.
+    analysis_only: bool
     updated_at: dt.datetime
 
 
@@ -452,6 +463,27 @@ def _approval_issues(
                     criterion_id=flag.criterion_id,
                 )
             )
+    # Not a leakage flag: a reviewer cannot accept it away. The task stays a
+    # draft and remains usable as analysis-only evidence.
+    for unmet in document.unmet_needs():
+        needs = ", ".join(unmet.needs)
+        if unmet.criterion_id is None:
+            message = (
+                f"A coding task needs a workspace, but a "
+                f"'{document.reconstruction.level}' reconstruction provides none. "
+                "Keep it as analysis-only evidence or prepare a fixture."
+            )
+        else:
+            message = (
+                f"Criterion '{unmet.criterion_id}' needs {needs}, which a "
+                f"'{document.reconstruction.level}' reconstruction cannot provide. "
+                "Keep the task as analysis-only evidence or prepare a fixture."
+            )
+        issues.append(
+            TaskIssue(
+                "needs_exceed_reconstruction", message, criterion_id=unmet.criterion_id
+            )
+        )
     return tuple(issues)
 
 
@@ -585,7 +617,17 @@ def _detail(session: Session, task: Task, number: int | None = None) -> TaskDeta
             )
             for row in rows
         ),
+        partition=effective_partition(task, document.partition),
+        partition_assignment_id=task.partition_assignment_id,
+        unmet_needs=document.unmet_needs(),
     )
+
+
+def effective_partition(task: Task, legacy: str | None) -> str | None:
+    """The task-level assignment when one exists, else the legacy document field."""
+    if task.partition_assignment_id is not None:
+        return task.partition
+    return legacy
 
 
 def create_task(
@@ -737,10 +779,12 @@ def list_tasks(
                 objective=document["objective"],
                 objective_type=document["objective_type"],
                 family=version.family,
-                partition=document.get("partition"),
+                partition=effective_partition(task, document.get("partition")),
+                partition_assignment_id=task.partition_assignment_id,
                 bundle_id=task.bundle_id,
                 bundle_revision=document["bundle_revision"],
                 criterion_count=len(document["criteria"]),
+                analysis_only=bool(TaskDocument.model_validate(document).unmet_needs()),
                 updated_at=task.updated_at,
             )
         )
@@ -762,6 +806,7 @@ __all__ = [
     "TaskVersionRef",
     "create_task",
     "draft_task",
+    "effective_partition",
     "get_task",
     "list_tasks",
     "update_task",

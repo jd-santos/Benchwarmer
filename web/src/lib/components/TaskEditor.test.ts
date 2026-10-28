@@ -202,4 +202,72 @@ describe('task editor', () => {
 		expect(JSON.parse(String(init?.body))).toEqual({ version: 1, terms: ['Acme'] });
 		expect(view.getByRole('button', { name: 'Download JSON' })).toBeTruthy();
 	});
+
+	it('refuses approval when a criterion needs more than the reconstruction provides', async () => {
+		const user = userEvent.setup();
+		const { getByRole, getAllByRole, getByText, queryByText, getByLabelText } = render(TaskEditor, {
+			props: { detail: task }
+		});
+
+		// As a draft the gap is informational: the task is still analysis-only evidence.
+		await user.click(getAllByRole('checkbox', { name: 'Live tools' })[0]);
+		expect(getByText(/Analysis-only at this reconstruction level/)).toBeTruthy();
+		expect(getByRole('button', { name: 'Save version' }).hasAttribute('disabled')).toBe(false);
+
+		await user.type(getByLabelText('Reviewed by'), 'jd');
+		await user.click(getByRole('radio', { name: 'Approved' }));
+
+		expect(
+			getByText(/Cannot approve as a runnable test: 1 criterion needs live tools/)
+		).toBeTruthy();
+		expect(getByText(/Needs live tools, which "Prompt and context" cannot provide/)).toBeTruthy();
+		expect(getByRole('button', { name: 'Save version' }).hasAttribute('disabled')).toBe(true);
+
+		// A fixture-backed reconstruction provides tools, so the block lifts.
+		await user.selectOptions(getByLabelText('Reconstruction'), 'fixture_backed');
+		expect(queryByText(/Cannot approve as a runnable test/)).toBeNull();
+		expect(getByRole('button', { name: 'Save version' }).hasAttribute('disabled')).toBe(false);
+	});
+
+	it('treats a coding task as needing a workspace and shows the assigned partition', async () => {
+		const user = userEvent.setup();
+		const assigned = { ...task, partition: 'holdout' as const, partition_assignment_id: 'p-1' };
+		const { getByRole, getByText, container } = render(TaskEditor, {
+			props: { detail: assigned }
+		});
+
+		expect(container.querySelector('[data-partition]')?.textContent).toContain('Holdout');
+		expect(container.querySelector('select#task-partition')).toBeNull();
+
+		await user.click(getByRole('radio', { name: 'Coding' }));
+		expect(getByText(/A coding task needs a workspace/)).toBeTruthy();
+		expect(getByText('Analysis only')).toBeTruthy();
+	});
+
+	it('places a server-side needs issue on its criterion', async () => {
+		const user = userEvent.setup();
+		vi.stubGlobal(
+			'fetch',
+			vi.fn<typeof fetch>().mockResolvedValue(
+				respond(422, {
+					issues: [
+						{
+							code: 'needs_exceed_reconstruction',
+							message: "Criterion 'offers-refund-path' needs tools.",
+							criterion_id: 'offers-refund-path'
+						}
+					]
+				})
+			)
+		);
+		const { getByRole, getByLabelText, findByText } = render(TaskEditor, {
+			props: { detail: task }
+		});
+
+		await user.type(getByLabelText('Notes for the judge'), 'x');
+		await user.click(getByRole('button', { name: 'Save version' }));
+
+		const issue = await findByText("Criterion 'offers-refund-path' needs tools.");
+		expect(issue.closest('.criterion')).not.toBeNull();
+	});
 });

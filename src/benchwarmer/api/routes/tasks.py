@@ -20,6 +20,14 @@ from benchwarmer.services.case_export import (
     CaseRecord,
     export_case,
 )
+from benchwarmer.services.task_partitions import (
+    DEFAULT_SCOPE_STATUSES,
+    DEFAULT_SPLIT,
+    PartitionAssignment,
+    PartitionSplitInvalid,
+    assign_partitions,
+    latest_assignment,
+)
 from benchwarmer.services.task_versions import (
     TaskConflict,
     TaskDetail,
@@ -33,7 +41,13 @@ from benchwarmer.services.task_versions import (
     list_tasks,
     update_task,
 )
-from benchwarmer.tasks import Partition, TaskDocument, TaskKind, TaskStatus
+from benchwarmer.tasks import (
+    Partition,
+    TaskDocument,
+    TaskKind,
+    TaskStatus,
+    UnmetNeed,
+)
 
 
 class _Strict(BaseModel):
@@ -89,6 +103,11 @@ class TaskDetailResponse(_Strict):
     split: TaskSplitResponse
     flags: list[LeakageFlagResponse]
     versions: list[TaskVersionResponse]
+    # Assigned by family at the task level; the document's field is legacy.
+    partition: Partition | None
+    partition_assignment_id: str | None
+    # Non-empty: analysis-only at this reconstruction level; approval is refused.
+    unmet_needs: list[UnmetNeed]
 
 
 class TaskDraftResponse(_Strict):
@@ -110,9 +129,11 @@ class TaskSummaryResponse(_Strict):
     objective_type: ObjectiveType
     family: str
     partition: Partition | None
+    partition_assignment_id: str | None
     bundle_id: str
     bundle_revision: int
     criterion_count: int
+    analysis_only: bool
     updated_at: dt.datetime
 
 
@@ -121,6 +142,46 @@ class TasksResponse(_Strict):
 
 
 _Producer = Annotated[str, Field(min_length=1, max_length=255)]
+_Fraction = Annotated[float, Field(ge=0, le=1, strict=False)]
+
+
+class PartitionSplitRequest(_Strict):
+    """Fractions of families per partition; they must sum to 1."""
+
+    development: _Fraction = DEFAULT_SPLIT["development"]
+    calibration: _Fraction = DEFAULT_SPLIT["calibration"]
+    holdout: _Fraction = DEFAULT_SPLIT["holdout"]
+
+
+class PartitionScopeRequest(_Strict):
+    """Which tasks take part: those whose latest version has one of these statuses."""
+
+    statuses: Annotated[list[TaskStatus], Field(min_length=1, max_length=3)] = list(
+        DEFAULT_SCOPE_STATUSES  # type: ignore[arg-type]
+    )
+
+
+class PartitionAssignRequest(_Strict):
+    seed: Annotated[str, Field(min_length=1, max_length=255)]
+    split: PartitionSplitRequest = PartitionSplitRequest()
+    scope: PartitionScopeRequest = PartitionScopeRequest()
+    producer: _Producer = "web"
+
+
+class PartitionAssignmentResponse(_Strict):
+    """One recorded run: its inputs and the resulting counts."""
+
+    id: str
+    seed: str
+    split: dict[Partition, float]
+    scope: PartitionScopeRequest
+    task_counts: dict[Partition, int]
+    family_counts: dict[Partition, int]
+    task_count: int
+    family_count: int
+    moved_families: int
+    producer: str
+    created_at: dt.datetime
 
 
 class TaskCreateRequest(_Strict):
@@ -203,6 +264,25 @@ def _detail_response(detail: TaskDetail) -> TaskDetailResponse:
             )
             for item in detail.versions
         ],
+        partition=detail.partition,  # type: ignore[arg-type]
+        partition_assignment_id=detail.partition_assignment_id,
+        unmet_needs=list(detail.unmet_needs),
+    )
+
+
+def _assignment_response(item: PartitionAssignment) -> PartitionAssignmentResponse:
+    return PartitionAssignmentResponse(
+        id=item.id,
+        seed=item.seed,
+        split=item.split,  # type: ignore[arg-type]
+        scope=PartitionScopeRequest(statuses=item.scope["statuses"]),  # type: ignore[arg-type]
+        task_counts=item.task_counts,  # type: ignore[arg-type]
+        family_counts=item.family_counts,  # type: ignore[arg-type]
+        task_count=item.task_count,
+        family_count=item.family_count,
+        moved_families=item.moved_families,
+        producer=item.producer,
+        created_at=item.created_at,
     )
 
 
@@ -265,9 +345,11 @@ def create_tasks_router(settings: BenchwarmerSettings) -> APIRouter:
                         objective_type=item.objective_type,  # type: ignore[arg-type]
                         family=item.family,
                         partition=item.partition,  # type: ignore[arg-type]
+                        partition_assignment_id=item.partition_assignment_id,
                         bundle_id=item.bundle_id,
                         bundle_revision=item.bundle_revision,
                         criterion_count=item.criterion_count,
+                        analysis_only=item.analysis_only,
                         updated_at=item.updated_at,
                     )
                     for item in list_tasks(
@@ -275,6 +357,40 @@ def create_tasks_router(settings: BenchwarmerSettings) -> APIRouter:
                     )
                 ]
             )
+
+    @router.get(
+        "/tasks/partitions",
+        response_model=PartitionAssignmentResponse | None,
+        summary="The most recent partition assignment, if any",
+    )
+    def get_task_partitions() -> PartitionAssignmentResponse | None:
+        with session_scope() as session:
+            latest = latest_assignment(session)
+            return None if latest is None else _assignment_response(latest)
+
+    @router.post(
+        "/tasks/partitions",
+        status_code=201,
+        response_model=PartitionAssignmentResponse,
+        responses={422: {"description": "The split or scope is invalid"}},
+        summary="Assign partitions by family across the tasks in scope",
+    )
+    def post_task_partitions(
+        request: PartitionAssignRequest,
+    ) -> PartitionAssignmentResponse:
+        with session_scope() as session:
+            try:
+                return _assignment_response(
+                    assign_partitions(
+                        session,
+                        seed=request.seed,
+                        split=request.split.model_dump(),
+                        statuses=request.scope.statuses,
+                        producer=request.producer,
+                    )
+                )
+            except PartitionSplitInvalid as error:
+                raise HTTPException(status_code=422, detail=str(error)) from None
 
     @router.get(
         "/bundles/{bundle_id}/task-draft",

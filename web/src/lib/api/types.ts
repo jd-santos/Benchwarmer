@@ -479,6 +479,8 @@ export type JudgeEvidence = 'judge.historical' | 'judge.feedback' | 'judge.revie
 export type ReconstructionLevel = 'prompt_only' | 'fixture_backed' | 'fixed_multi_turn';
 export type Partition = 'development' | 'calibration' | 'holdout';
 export type ReviewerLabel = 'pass' | 'fail' | 'unsure';
+/** What a criterion needs from the run; a prompt-only reconstruction provides none. */
+export type CriterionNeed = 'workspace' | 'tools' | 'multi_turn';
 
 /** The last event the candidate sees, on the bundle's path in one conversation. */
 export interface CutPoint {
@@ -493,8 +495,16 @@ export interface Criterion {
 	method: CriterionMethod;
 	rubric_version: number;
 	judge_evidence: JudgeEvidence[];
+	/** Optional; an older document without it reads as an empty list. */
+	needs?: CriterionNeed[];
 	reviewer_label: ReviewerLabel | null;
 	note: string | null;
+}
+
+/** Needs the task's reconstruction level cannot satisfy; `criterion_id` is null for the kind's own need. */
+export interface UnmetNeed {
+	criterion_id: string | null;
+	needs: CriterionNeed[];
 }
 
 export interface Reconstruction {
@@ -586,6 +596,11 @@ export interface TaskDetail {
 	split: TaskSplit;
 	flags: LeakageFlag[];
 	versions: TaskVersionRef[];
+	/** Assigned by family at the task level; `document.partition` is the legacy hand-set field. */
+	partition: Partition | null;
+	partition_assignment_id: string | null;
+	/** Non-empty: analysis-only at this reconstruction level; approval is refused. */
+	unmet_needs: UnmetNeed[];
 }
 
 /** A proposed starting document for a bundle; nothing is saved. */
@@ -606,14 +621,41 @@ export interface TaskSummary {
 	objective_type: ObjectiveType;
 	family: string;
 	partition: Partition | null;
+	partition_assignment_id: string | null;
 	bundle_id: string;
 	bundle_revision: number;
 	criterion_count: number;
+	/** The criteria or kind need more than the reconstruction level provides. */
+	analysis_only: boolean;
 	updated_at: string;
 }
 
 export interface TasksResponse {
 	items: TaskSummary[];
+}
+
+export type PartitionSplit = Record<Partition, number>;
+
+export interface PartitionAssignRequest {
+	seed: string;
+	split: PartitionSplit;
+	scope: { statuses: TaskStatus[] };
+}
+
+/** One recorded run of partition assignment by family. */
+export interface PartitionAssignment {
+	id: string;
+	seed: string;
+	split: PartitionSplit;
+	scope: { statuses: TaskStatus[] };
+	task_counts: Record<Partition, number>;
+	family_counts: Record<Partition, number>;
+	task_count: number;
+	family_count: number;
+	/** Families whose partition differs from the previous assignment they had. */
+	moved_families: number;
+	producer: string;
+	created_at: string;
 }
 
 export interface TaskIssue {

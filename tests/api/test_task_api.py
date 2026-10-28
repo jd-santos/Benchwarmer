@@ -404,3 +404,171 @@ def test_export_splits_scrubs_and_repeats_identically(client: TestClient) -> Non
     without_terms = client.post(f"/api/v1/tasks/{task_id}/export", json={"terms": []})
     assert without_terms.json()["digest"] != record["digest"]
     assert "term" not in without_terms.json()["case"]["redaction"]["manifest"]
+
+
+def _task_with_family(
+    client: TestClient, draft: dict[str, Any], family: str, **overrides: Any
+) -> str:
+    document = dict(draft, family=family) | overrides
+    response = client.post("/api/v1/tasks", json={"document": document})
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+def test_partitions_are_assigned_by_family_and_each_run_is_recorded(
+    client: TestClient,
+) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    bundle = _reviewed_bundle(client, detail)
+    draft = client.get(f"/api/v1/bundles/{bundle['id']}/task-draft").json()["document"]
+    assert client.get("/api/v1/tasks/partitions").json() is None
+
+    a1 = _task_with_family(client, draft, "family-a")
+    a2 = _task_with_family(client, draft, "family-a", partition="holdout")
+    b = _task_with_family(client, draft, "family-b")
+    retired = _task_with_family(client, draft, "family-c")
+    client.put(
+        f"/api/v1/tasks/{retired}",
+        json={
+            "document": dict(draft, family="family-c", status="retired"),
+            "base_version": 1,
+        },
+    )
+
+    response = client.post("/api/v1/tasks/partitions", json={"seed": "autumn-1"})
+    assert response.status_code == 201, response.text
+    run = response.json()
+    assert run["seed"] == "autumn-1"
+    assert run["split"] == {"development": 0.6, "calibration": 0.2, "holdout": 0.2}
+    assert run["scope"] == {"statuses": ["draft", "approved"]}
+    assert run["task_count"] == 3 and run["family_count"] == 2
+    assert sum(run["task_counts"].values()) == 3
+    assert sum(run["family_counts"].values()) == 2
+    assert run["moved_families"] == 0
+
+    listed = {item["id"]: item for item in client.get("/api/v1/tasks").json()["items"]}
+    # One family, one side: the hand-set legacy field on a2 no longer decides.
+    assert listed[a1]["partition"] == listed[a2]["partition"] is not None
+    assert listed[a1]["partition_assignment_id"] == run["id"]
+    assert listed[b]["partition"] is not None
+    assert listed[retired]["partition"] is None
+    assert listed[retired]["partition_assignment_id"] is None
+    task_detail = client.get(f"/api/v1/tasks/{a2}").json()
+    assert task_detail["partition"] == listed[a2]["partition"]
+    assert task_detail["document"]["partition"] == "holdout"
+
+    assert client.get("/api/v1/tasks/partitions").json()["id"] == run["id"]
+
+    # Deterministic: the same seed over the same families changes nothing.
+    again = client.post("/api/v1/tasks/partitions", json={"seed": "autumn-1"}).json()
+    assert again["id"] != run["id"]
+    assert again["task_counts"] == run["task_counts"] and again["moved_families"] == 0
+    relisted = {
+        item["id"]: item for item in client.get("/api/v1/tasks").json()["items"]
+    }
+    assert {k: v["partition"] for k, v in relisted.items()} == {
+        k: v["partition"] for k, v in listed.items()
+    }
+    assert relisted[a1]["partition_assignment_id"] == again["id"]
+
+    # Scope and split are honored; a split that is not a split is refused.
+    everything = client.post(
+        "/api/v1/tasks/partitions",
+        json={
+            "seed": "autumn-1",
+            "split": {"development": 0, "calibration": 0, "holdout": 1},
+            "scope": {"statuses": ["draft", "approved", "retired"]},
+        },
+    ).json()
+    assert everything["task_count"] == 4 and everything["family_count"] == 3
+    assert everything["family_counts"] == {
+        "development": 0,
+        "calibration": 0,
+        "holdout": 3,
+    }
+    assert everything["moved_families"] >= 1
+    assert all(
+        item["partition"] == "holdout"
+        for item in client.get("/api/v1/tasks").json()["items"]
+    )
+    bad = client.post(
+        "/api/v1/tasks/partitions",
+        json={
+            "seed": "x",
+            "split": {"development": 0.5, "calibration": 0.5, "holdout": 0.5},
+        },
+    )
+    assert bad.status_code == 422 and "sum to 1" in bad.json()["detail"]
+
+
+def test_export_reports_the_assigned_partition(client: TestClient) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    bundle = _reviewed_bundle(client, detail)
+    draft = client.get(f"/api/v1/bundles/{bundle['id']}/task-draft").json()["document"]
+    approved = dict(
+        draft,
+        status="approved",
+        partition="development",
+        criteria=[_criterion()],
+        leakage_review=_REVIEW,
+    )
+    task_id = client.post("/api/v1/tasks", json={"document": approved}).json()["id"]
+
+    before = client.post(f"/api/v1/tasks/{task_id}/export", json={"terms": []}).json()
+    assert before["case"]["partition"] == "development"
+    assert before["case"]["partition_assignment_id"] is None
+    assert before["case"]["criteria"][0]["needs"] == []
+
+    run = client.post(
+        "/api/v1/tasks/partitions",
+        json={"seed": "s", "split": {"development": 0, "calibration": 1, "holdout": 0}},
+    ).json()
+    after = client.post(f"/api/v1/tasks/{task_id}/export", json={"terms": []}).json()
+    assert after["case"]["partition"] == "calibration"
+    assert after["case"]["partition_assignment_id"] == run["id"]
+    assert after["digest"] != before["digest"]
+    # The approved version's content did not change; it is still version 1.
+    assert client.get(f"/api/v1/tasks/{task_id}").json()["latest_version"] == 1
+
+
+def test_approval_refuses_needs_the_reconstruction_cannot_meet(
+    client: TestClient,
+) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    bundle = _reviewed_bundle(client, detail)
+    draft = client.get(f"/api/v1/bundles/{bundle['id']}/task-draft").json()["document"]
+    needs_tools = _criterion(needs=["tools"])
+    approved = dict(
+        draft, status="approved", criteria=[needs_tools], leakage_review=_REVIEW
+    )
+
+    refused = client.post("/api/v1/tasks", json={"document": approved})
+    assert refused.status_code == 422, refused.text
+    (issue,) = refused.json()["issues"]
+    assert issue["code"] == "needs_exceed_reconstruction"
+    assert issue["criterion_id"] == "diagnose-overlap"
+    assert "prompt_only" in issue["message"]
+
+    coding = dict(approved, kind="coding", criteria=[_criterion()])
+    refused = client.post("/api/v1/tasks", json={"document": coding})
+    (issue,) = refused.json()["issues"]
+    assert issue["code"] == "needs_exceed_reconstruction"
+    assert issue["criterion_id"] is None and "workspace" in issue["message"]
+
+    # As a draft it stays usable as analysis-only evidence, and says so.
+    as_draft = client.post(
+        "/api/v1/tasks", json={"document": dict(approved, status="draft")}
+    )
+    assert as_draft.status_code == 201, as_draft.text
+    assert as_draft.json()["unmet_needs"] == [
+        {"criterion_id": "diagnose-overlap", "needs": ["tools"]}
+    ]
+    listed = client.get("/api/v1/tasks").json()["items"]
+    assert [item["analysis_only"] for item in listed] == [True]
+
+    # A fixture-backed reconstruction provides tools, so the same task approves.
+    backed = dict(approved, reconstruction={"level": "fixture_backed", "gaps": []})
+    response = client.post("/api/v1/tasks", json={"document": backed})
+    assert response.status_code == 201, response.text
+    assert response.json()["unmet_needs"] == []
+    assert response.json()["document"]["status"] == "approved"

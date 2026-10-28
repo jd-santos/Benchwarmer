@@ -154,6 +154,16 @@ leakage review; approval needs a reviewed bundle and every flag accepted.
 Approved versions are immutable in content, so an edit starts a new draft
 version, and retired is final.
 
+Each criterion may also declare what it **needs** from the run: a workspace,
+live tools, or later turns. A coding task needs a workspace whatever its
+criteria say. Approval compares those needs with the reconstruction level
+(prompt-only provides none; fixture-backed provides a workspace and tools;
+fixed multi-turn adds later turns) and refuses a version whose needs exceed
+it. That refusal is not a leakage flag and cannot be accepted away: the task
+stays a draft, marked **analysis only** in the list and the editor, and keeps
+its value as evidence about the original work without being converted into a
+runnable test. Preparing a fixture and raising the level is what unblocks it.
+
 An approved version exports as a **case record**: one JSON document whose
 `candidate` section is the transcript to the cut point with reasoning
 dropped, and whose `judge` section holds the historical turns, the cited
@@ -173,6 +183,19 @@ When dividing examples into development, judge calibration, and final holdout
 sets, keep the entire source family together. Branches, continuations, derived
 bundles and tasks, and nearly identical fixtures must not appear on both sides
 of that divide.
+
+Partitions are therefore **assigned by family, not per task**. An assignment
+run takes a seed and a split (by default 60% of families to development, 20%
+to calibration, 20% to holdout) and places each family by a hash of the family
+key and the seed, so the same seed always puts a family on the same side
+however many other families are in scope; only a new seed reshuffles. The
+partition lives on the task, not in the version document, so an approved
+version keeps its immutable content while the task gains or changes its
+partition. Every run is recorded with its seed, split, scope, time, the
+family-to-partition map, and the resulting task and family counts, and the
+exported case record carries the task's current partition and the run that
+set it. The document's own `partition` field remains only as a legacy read for
+tasks that have never been through an assignment.
 
 ## Scope and delivery
 

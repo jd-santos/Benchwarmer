@@ -1,11 +1,13 @@
 import type {
+	CriterionNeed,
 	CriterionMethod,
 	JudgeEvidence,
 	Partition,
 	ReconstructionLevel,
 	ReviewerLabel,
 	TaskKind,
-	TaskStatus
+	TaskStatus,
+	UnmetNeed
 } from '$lib/api/types';
 
 export const kindOptions: { value: TaskKind; label: string; hint: string }[] = [
@@ -81,6 +83,63 @@ export const partitionOptions: { value: Partition; label: string; hint: string }
 	{ value: 'calibration', label: 'Calibration', hint: 'May guide rubrics and judge settings' },
 	{ value: 'holdout', label: 'Holdout', hint: 'Results must not guide changes' }
 ];
+
+/** The default split the API applies; mirrors `services.task_partitions.DEFAULT_SPLIT`. */
+export const defaultSplit: Record<Partition, number> = {
+	development: 0.6,
+	calibration: 0.2,
+	holdout: 0.2
+};
+
+export const needOptions: { value: CriterionNeed; label: string; hint: string }[] = [
+	{ value: 'workspace', label: 'Workspace', hint: 'Files the candidate can read or change' },
+	{ value: 'tools', label: 'Live tools', hint: 'Tool calls that run, not transcript text' },
+	{ value: 'multi_turn', label: 'Later turns', hint: 'Replayed user messages after the cut' }
+];
+
+/** What each reconstruction level provides; mirrors `benchwarmer.tasks.SATISFIED_NEEDS`. */
+export const satisfiedNeeds: Record<ReconstructionLevel, readonly CriterionNeed[]> = {
+	prompt_only: [],
+	fixture_backed: ['workspace', 'tools'],
+	fixed_multi_turn: ['workspace', 'tools', 'multi_turn']
+};
+
+/**
+ * Needs the reconstruction level cannot satisfy, as the API computes them. A coding
+ * task needs a workspace whatever its criteria say; that entry has no criterion id.
+ */
+export function unmetNeeds(
+	kind: TaskKind,
+	level: ReconstructionLevel,
+	criteria: { id: string; needs?: CriterionNeed[] }[]
+): UnmetNeed[] {
+	const satisfied = satisfiedNeeds[level];
+	const unmet: UnmetNeed[] = [];
+	if (kind === 'coding' && !satisfied.includes('workspace')) {
+		unmet.push({ criterion_id: null, needs: ['workspace'] });
+	}
+	for (const criterion of criteria) {
+		const missing = (criterion.needs ?? []).filter((need) => !satisfied.includes(need));
+		if (missing.length > 0) unmet.push({ criterion_id: criterion.id, needs: missing });
+	}
+	return unmet;
+}
+
+export function needLabel(need: CriterionNeed): string {
+	return needOptions.find((option) => option.value === need)?.label ?? need;
+}
+
+export function needsSentence(needs: CriterionNeed[]): string {
+	return needs.map((need) => needLabel(need).toLowerCase()).join(', ');
+}
+
+export function partitionLabel(partition: Partition): string {
+	return partitionOptions.find((option) => option.value === partition)?.label ?? partition;
+}
+
+export function reconstructionLabel(level: ReconstructionLevel): string {
+	return reconstructionOptions.find((option) => option.value === level)?.label ?? level;
+}
 
 export function statusLabel(status: TaskStatus): string {
 	return statusOptions.find((option) => option.value === status)?.label ?? status;
