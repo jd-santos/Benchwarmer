@@ -23,12 +23,15 @@ No current tasks at this priority.
 - [ ] [Verify additional conversation sources](work/additional-source-research/README.md)
 - [x] [Design the evidence-to-evaluation workbench UI](work/evaluation-workbench-ui/README.md)
 - [ ] [Browse, search, and annotate conversations](work/conversation-library/README.md)
+- [ ] [Publish the conversation interchange format and import it](work/conversation-interchange/README.md)
 - [ ] [Build history, usage, and cost dashboards](work/history-and-cost-dashboards/README.md)
 - [ ] [Define evidence references and review conversation bundles](work/evidence-bundles/README.md)
 
 ## P3: Essential
 
 - [ ] [Start and package the application with one command](work/one-command-start/README.md)
+- [ ] [Publish versioned JSON schemas for the shared documents](work/schema-publication/README.md)
+- [ ] [Store named scrub term lists and document the built-in kinds](work/scrub-terms/README.md)
 - [ ] [Deploy and verify the private application](work/private-deployment/README.md)
 - [ ] [Implement coordinated backups and prove recovery](work/backup-and-recovery/README.md)
 - [ ] [Collect conversations from other machines](work/cross-machine-collection/README.md)
