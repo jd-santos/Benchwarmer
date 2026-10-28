@@ -404,3 +404,68 @@ def test_export_splits_scrubs_and_repeats_identically(client: TestClient) -> Non
     without_terms = client.post(f"/api/v1/tasks/{task_id}/export", json={"terms": []})
     assert without_terms.json()["digest"] != record["digest"]
     assert "term" not in without_terms.json()["case"]["redaction"]["manifest"]
+
+
+def test_pull_routes_list_approved_versions_and_serve_the_same_record(
+    client: TestClient,
+) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    bundle = _reviewed_bundle(client, detail)
+    draft = client.get(f"/api/v1/bundles/{bundle['id']}/task-draft").json()["document"]
+    task_id = client.post("/api/v1/tasks", json={"document": draft}).json()["id"]
+    approved = dict(
+        draft,
+        status="approved",
+        criteria=[_criterion()],
+        leakage_review=_REVIEW,
+    )
+    assert (
+        client.put(
+            f"/api/v1/tasks/{task_id}", json={"document": approved, "base_version": 1}
+        ).status_code
+        == 200
+    )
+    # A later draft supersedes the approved version in the task list but the
+    # approved version itself stays available to pull.
+    assert (
+        client.put(
+            f"/api/v1/tasks/{task_id}",
+            json={"document": dict(approved, status="draft"), "base_version": 2},
+        ).status_code
+        == 200
+    )
+    assert client.get("/api/v1/tasks", params={"status": "approved"}).json() == {
+        "items": []
+    }
+
+    listed = client.get("/api/v1/task-versions", params={"status": "approved"}).json()
+    [item] = listed["items"]
+    assert item["task_id"] == task_id and item["version"] == 2
+    assert item["latest_version"] == 3 and item["status"] == "approved"
+    assert item["bundle_id"] == bundle["id"] and item["bundle_revision"] == 1
+    assert item["conversation_id"] == detail["summary"]["id"]
+    assert item["revision"] == detail["summary"]["revision"]
+    assert item["cut_event_id"] == _event(detail, "u2")["id"]
+    assert item["criterion_count"] == 1
+    assert item["export_url"] == f"/api/v1/tasks/{task_id}/export/2"
+    everything = client.get("/api/v1/task-versions", params={"task_id": task_id})
+    assert [v["version"] for v in everything.json()["items"]] == [3, 2, 1]
+
+    pulled = client.get(item["export_url"], params={"terms": ["Hermes", "nightly"]})
+    assert pulled.status_code == 200, pulled.text
+    assert pulled.headers["content-disposition"] == (
+        f'inline; filename="case-{task_id}-v2.json"'
+    )
+    posted = client.post(
+        f"/api/v1/tasks/{task_id}/export",
+        json={"version": 2, "terms": ["Hermes", "nightly"]},
+    )
+    assert pulled.json() == posted.json()
+    assert "Hermes" not in pulled.text
+    assert pulled.json()["case"]["redaction"]["term_count"] == 2
+
+    refused = client.get(f"/api/v1/tasks/{task_id}/export/3")
+    assert refused.status_code == 409 and refused.json()["status"] == "draft"
+    assert client.get(f"/api/v1/tasks/{task_id}/export/9").status_code == 404
+    assert client.get("/api/v1/tasks/missing/export/1").status_code == 404
+    assert client.get(f"/api/v1/tasks/{task_id}/export/0").status_code == 422

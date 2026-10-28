@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 import re
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -246,6 +246,40 @@ def _looks_random(value: str) -> bool:
     )
 
 
+class ScrubDetector(NamedTuple):
+    """One built-in detector: the category it assigns and how it matches.
+
+    ``pattern`` is None for ``term``, whose pattern is built per scrubber from
+    the operator's terms. ``accept`` filters matches that need more than a
+    regular expression. The order of ``BUILTIN_DETECTORS`` is the order the
+    scrubber collects matches in; ``_PRIORITY`` breaks ties.
+    """
+
+    kind: ScrubCategory
+    description: str
+    pattern: re.Pattern[str] | None
+    accept: Callable[[str], bool] | None = None
+
+
+BUILTIN_DETECTORS: tuple[ScrubDetector, ...] = (
+    ScrubDetector("term", "operator-supplied terms, case-insensitive", None),
+    ScrubDetector("email", "email addresses", _EMAIL),
+    ScrubDetector("url", "URLs with a scheme", _URL),
+    ScrubDetector("path", "POSIX file paths with two or more segments", _PATH),
+    ScrubDetector("ipv6", "IPv6 addresses", _IPV6),
+    ScrubDetector("ipv4", "IPv4 addresses", _IPV4),
+    ScrubDetector("secret", "known API key and token prefixes", _SECRET_PREFIXED),
+    ScrubDetector("secret", "32+ hex digit runs", _SECRET_HEX),
+    ScrubDetector(
+        "secret",
+        "40+ character base64-like runs mixing cases and digits",
+        _SECRET_BASE64,
+        _looks_random,
+    ),
+    ScrubDetector("hostname", "hostnames under a known suffix list", _HOSTNAME),
+)
+
+
 def _term_pattern(terms: Sequence[str]) -> re.Pattern[str] | None:
     cleaned = sorted({t.strip() for t in terms if t.strip()}, key=len, reverse=True)
     if not cleaned:
@@ -314,16 +348,12 @@ class Scrubber:
                 if accept is None or accept(match.group(0)):
                     found.append((match.start(), match.end(), category))
 
-        collect(self._terms, "term")
-        collect(_EMAIL, "email")
-        collect(_URL, "url")
-        collect(_PATH, "path")
-        collect(_IPV6, "ipv6")
-        collect(_IPV4, "ipv4")
-        collect(_SECRET_PREFIXED, "secret")
-        collect(_SECRET_HEX, "secret")
-        collect(_SECRET_BASE64, "secret", _looks_random)
-        collect(_HOSTNAME, "hostname")
+        for detector in BUILTIN_DETECTORS:
+            collect(
+                self._terms if detector.kind == "term" else detector.pattern,
+                detector.kind,
+                detector.accept,
+            )
         found.sort(key=lambda m: (m[0], -(m[1] - m[0]), _PRIORITY[m[2]]))
         chosen: list[tuple[int, int, ScrubCategory]] = []
         cursor = 0

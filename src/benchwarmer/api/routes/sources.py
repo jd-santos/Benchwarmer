@@ -7,16 +7,21 @@ from contextlib import contextmanager
 import datetime as dt
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from benchwarmer import registry
 from benchwarmer.config import BenchwarmerSettings
 from benchwarmer.db import create_engine, create_session_factory
+from benchwarmer.interchange.format import validate_structure
 from benchwarmer.services.imports import (
-    IMPORTABLE_KINDS,
     ImportRequestError,
     SourceNotFound,
+    import_conversation_file_document,
     list_import_batches,
     run_file_import,
 )
@@ -62,6 +67,17 @@ class SourcesResponse(BaseModel):
     items: list[SourceStatusResponse]
 
 
+class ImportKindResponse(BaseModel):
+    """One registered import kind and what it accepts."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    kind: str
+    label: str
+    accepts: Literal["file", "directory", "file_or_directory"]
+    description: str
+
+
 class ImportConfigResponse(BaseModel):
     """Where this host may import files from, and which source kinds accept them."""
 
@@ -69,6 +85,26 @@ class ImportConfigResponse(BaseModel):
 
     roots: list[str]
     kinds: list[str]
+    importers: list[ImportKindResponse]
+
+
+class ConversationFileImportResponse(BaseModel):
+    """Where one uploaded conversation file landed.
+
+    ``unchanged`` means these exact bytes were imported before; ``revision`` is
+    then the latest stored revision of that conversation.
+    """
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    batch_id: str
+    outcome: Literal["succeeded", "failed", "unchanged"]
+    source_id: str
+    native_id: str
+    conversation_id: str
+    revision: str | None
+    new_revision: bool
+    staged_path: str
 
 
 class ImportBatchResponse(BaseModel):
@@ -124,8 +160,69 @@ def create_sources_router(settings: BenchwarmerSettings) -> APIRouter:
     def get_import_config() -> ImportConfigResponse:
         return ImportConfigResponse(
             roots=[str(root) for root in settings.import_roots],
-            kinds=list(IMPORTABLE_KINDS),
+            kinds=list(registry.importer_kinds()),
+            importers=[
+                ImportKindResponse(
+                    kind=spec.kind,
+                    label=spec.label,
+                    accepts=spec.accepts,
+                    description=spec.description,
+                )
+                for spec in registry.importers()
+            ],
         )
+
+    @router.post(
+        "/imports/conversation-files",
+        response_model=ConversationFileImportResponse,
+        responses={
+            404: {"description": "Unknown source"},
+            422: {"description": "The body is not a valid conversation file"},
+        },
+    )
+    def post_conversation_file(
+        document: Annotated[dict[str, Any], Body()],
+        source_id: Annotated[str | None, Query(max_length=255)] = None,
+    ) -> ConversationFileImportResponse | JSONResponse:
+        """Import one conversation file sent as the JSON body.
+
+        The file is validated first; a 422 lists every issue with its JSON
+        path. Valid files are staged under the data root and imported through
+        the same path as host files. Importing never starts model work.
+        """
+        issues = validate_structure(document)
+        if issues:
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "detail": "Conversation file is invalid",
+                    "issues": [
+                        {"path": issue.path, "message": issue.message}
+                        for issue in issues
+                    ],
+                },
+            )
+        with session_scope() as session:
+            try:
+                run = import_conversation_file_document(
+                    settings, session, document=document, source_id=source_id
+                )
+            except SourceNotFound:
+                raise HTTPException(
+                    status_code=404, detail="Source not found"
+                ) from None
+            except ImportRequestError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from None
+            return ConversationFileImportResponse(
+                batch_id=run.batch_id,
+                outcome=run.outcome,
+                source_id=run.source_id,
+                native_id=run.native_id,
+                conversation_id=run.conversation_id,
+                revision=run.revision,
+                new_revision=run.new_revision,
+                staged_path=run.staged_path,
+            )
 
     @router.get("/sources/{source_id}/imports", response_model=ImportBatchesResponse)
     def get_source_imports(source_id: str) -> ImportBatchesResponse:

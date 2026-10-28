@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchwarmer.invalid/schemas/conversation-file.v1.schema.json",
+  "title": "Benchwarmer conversation file, format version 1",
+  "description": "One conversation written by an external system for import into Benchwarmer. This schema checks shape; the Python validator (benchwarmer-validate) also checks references between parts of the file (parents before children, context ids, tool linkage on a branch). See docs/conversation-interchange.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "format_version", "scope_id", "native_id", "events"],
+  "properties": {
+    "format": {"const": "benchwarmer-conversation-file"},
+    "format_version": {"const": 1},
+    "scope_id": {"$ref": "#/$defs/identifier"},
+    "native_id": {"$ref": "#/$defs/identifier"},
+    "source_version": {"type": ["string", "null"], "minLength": 1},
+    "title": {"type": ["string", "null"]},
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/event"}
+    },
+    "tools": {"type": "array", "items": {"$ref": "#/$defs/tool"}},
+    "context": {"type": "array", "items": {"$ref": "#/$defs/contextItem"}},
+    "annotations": {"type": "array", "items": {"$ref": "#/$defs/annotation"}},
+    "relationships": {"type": "array", "items": {"$ref": "#/$defs/relationship"}},
+    "metadata": {"type": "array", "items": {"$ref": "#/$defs/metadataEntry"}},
+    "coverage": {
+      "type": "object",
+      "propertyNames": {"minLength": 1},
+      "additionalProperties": {"$ref": "#/$defs/coverageState"}
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": {"not": {"enum": ["tool_definitions"]}}
+    },
+    "native": {}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 255},
+    "nonemptyString": {"type": "string", "minLength": 1},
+    "timestamp": {
+      "type": "string",
+      "description": "RFC 3339 date-time with a UTC offset or Z.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:?\\d{2})$"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "coverageState": {"enum": ["available", "partial", "unavailable", "unknown", "redacted"]},
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["native_id", "role", "content"],
+      "properties": {
+        "native_id": {"$ref": "#/$defs/identifier"},
+        "parent_native_id": {"type": ["string", "null"], "minLength": 1},
+        "kind": {"enum": ["message", "configuration", "compaction", "unknown"]},
+        "role": {"enum": ["system", "developer", "user", "assistant", "tool", "unknown"]},
+        "occurred_at": {"oneOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "content": {"type": "array", "items": {"$ref": "#/$defs/block"}},
+        "provenance": {"oneOf": [{"$ref": "#/$defs/provenance"}, {"type": "null"}]},
+        "supersedes_native_id": {"type": ["string", "null"], "minLength": 1},
+        "extensions": {
+          "type": "object",
+          "propertyNames": {"not": {"enum": ["provenance", "supersedes_native_id"]}}
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"enum": ["text", "reasoning", "tool_call", "tool_result", "attachment", "unknown"]},
+        "text": {"type": ["string", "null"]},
+        "tool_call_id": {"type": ["string", "null"], "minLength": 1},
+        "tool_name": {"type": ["string", "null"], "minLength": 1},
+        "input": {},
+        "output": {},
+        "is_error": {"type": "boolean"},
+        "context_id": {"$ref": "#/$defs/identifier"},
+        "extensions": {
+          "type": "object",
+          "propertyNames": {"not": {"enum": ["tool_call", "tool_result"]}}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"enum": ["tool_call", "tool_result"]}}},
+          "then": {"required": ["tool_call_id"], "properties": {"tool_call_id": {"type": "string"}}},
+          "else": {"properties": {"tool_call_id": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"kind": {"const": "tool_call"}}},
+          "else": {"not": {"anyOf": [{"required": ["tool_name"]}, {"required": ["input"]}]}}
+        },
+        {
+          "if": {"properties": {"kind": {"const": "tool_result"}}},
+          "else": {"not": {"anyOf": [{"required": ["output"]}, {"required": ["is_error"]}]}}
+        },
+        {
+          "if": {"properties": {"kind": {"const": "attachment"}}},
+          "then": {"required": ["context_id"]},
+          "else": {"not": {"required": ["context_id"]}}
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model"],
+      "properties": {
+        "model": {"$ref": "#/$defs/nonemptyString"},
+        "provider": {"type": ["string", "null"], "minLength": 1},
+        "params": {"type": "object"},
+        "system_prompt_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "usage": {"type": "object"}
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {"$ref": "#/$defs/nonemptyString"},
+        "description": {"type": ["string", "null"]},
+        "input_schema": {"type": ["object", "null"]}
+      }
+    },
+    "contextItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "kind": {"type": ["string", "null"], "minLength": 1},
+        "name": {"type": ["string", "null"]},
+        "media_type": {"type": ["string", "null"], "minLength": 1},
+        "text": {"type": ["string", "null"]}
+      }
+    },
+    "annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"$ref": "#/$defs/nonemptyString"},
+        "event_native_id": {"type": ["string", "null"], "minLength": 1},
+        "rating": {"type": ["string", "integer", "null"]},
+        "text": {"type": ["string", "null"]},
+        "by": {"type": ["string", "null"]},
+        "at": {"oneOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]}
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "target_scope_id", "target_native_id"],
+      "properties": {
+        "kind": {"enum": ["branch", "continuation", "derived_from", "unknown"]},
+        "target_scope_id": {"$ref": "#/$defs/nonemptyString"},
+        "target_native_id": {"$ref": "#/$defs/nonemptyString"},
+        "target_source_kind": {"$ref": "#/$defs/nonemptyString"}
+      }
+    },
+    "metadataEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "not": {"enum": ["annotation", "usage_observations", "title"]}
+        },
+        "value": {}
+      }
+    }
+  }
+}

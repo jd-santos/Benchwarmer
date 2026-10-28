@@ -115,6 +115,15 @@ class BenchwarmerSettings(BaseModel):
         return self.jobs_dir / "workspaces"
 
     @property
+    def imports_dir(self) -> Path:
+        return self.data_root / "imports"
+
+    @property
+    def import_staging_dir(self) -> Path:
+        """Conversation files received over the API are staged here before import."""
+        return self.imports_dir / "staging"
+
+    @property
     def logs_dir(self) -> Path:
         return self.data_root / "logs"
 
@@ -133,6 +142,8 @@ class BenchwarmerSettings(BaseModel):
             self.jobs_dir,
             self.job_staging_dir,
             self.job_workspaces_dir,
+            self.imports_dir,
+            self.import_staging_dir,
             self.logs_dir,
             self.locks_dir,
         )

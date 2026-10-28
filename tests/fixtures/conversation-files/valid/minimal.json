@@ -1,0 +1,19 @@
+{
+  "format": "benchwarmer-conversation-file",
+  "format_version": 1,
+  "scope_id": "synthetic-tenant-b",
+  "native_id": "synthetic-minimal-1",
+  "events": [
+    {
+      "native_id": "u1",
+      "role": "user",
+      "content": [{"kind": "text", "text": "What time zone does the sample service log in?"}]
+    },
+    {
+      "native_id": "a1",
+      "parent_native_id": "u1",
+      "role": "assistant",
+      "content": [{"kind": "text", "text": "UTC, with the offset recorded per line."}]
+    }
+  ]
+}
