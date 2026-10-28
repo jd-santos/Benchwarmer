@@ -9,6 +9,14 @@ This project does not currently declare a Semantic Versioning policy.
 
 ### Added
 
+- Settle configuration in one `benchwarmer.toml` (`[paths]`, `[server]`,
+  `[providers]`) read from the data root or `BENCHWARMER_CONFIG`, with every
+  existing environment variable still honored and overriding the file. Add
+  the `benchwarmer serve` command, which loads settings, finds the built UI,
+  checks the data root is migrated, and starts Uvicorn, and `benchwarmer
+  init`, which writes a commented example settings file. The `[providers]`
+  allow and deny lists are passed to every harness the application starts.
+  See `docs/configuration.md`.
 - Prepare a reviewed bundle as a versioned task (`/api/v1/tasks`, Tasks page):
   a cut point that ends the candidate's view, criteria of acceptable behavior
   with a method (human, model judge, deterministic) and rubric version, the
@@ -60,8 +68,8 @@ This project does not currently declare a Semantic Versioning policy.
   derives one from the run and proposal content so an interrupted
   `propose_bundle` retry returns the existing bundle instead of a duplicate.
 - Register the pi-ai provider catalog in the harness (Anthropic, OpenAI,
-  OpenRouter, Google, Mistral, and the rest) behind an explicit exclusion
-  list; the operator supplies whichever provider key matches the chosen
+  OpenRouter, Google, Mistral, and the rest) within the operator's provider
+  lists; the operator supplies whichever provider key matches the chosen
   `provider/model-id`.
 - Let a harness provider be routed through a pass-through gateway with a base
   URL variable such as `ANTHROPIC_BASE_URL`; run reports record the override.

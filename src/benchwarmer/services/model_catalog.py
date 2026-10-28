@@ -101,7 +101,7 @@ class ModelCatalogService:
             result = self._run(
                 command,
                 cwd=str(self._settings.harness_dir),
-                env=dict(os.environ),
+                env=os.environ | self._settings.provider_environment(),
                 capture_output=True,
                 text=True,
                 timeout=LIST_TIMEOUT_SECONDS,

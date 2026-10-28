@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-import os
 from pathlib import Path
 from typing import Literal
 
@@ -47,7 +46,10 @@ def create_app(
     resolved_settings = (
         BenchwarmerSettings.from_environment() if environment_app else settings
     )
-    resolved_ui_root = _resolve_ui_root(ui_root, environment_app=environment_app)
+    resolved_ui_root = _resolve_ui_root(
+        resolved_settings.ui_root if environment_app and ui_root is None else ui_root,
+        environment_app=environment_app,
+    )
     runner = plan_runner or PlanRunner(resolved_settings)
     catalog = model_catalog or ModelCatalogService(resolved_settings)
 
@@ -114,21 +116,23 @@ def _recover_interrupted_plans(settings: BenchwarmerSettings) -> None:
 
 
 def _resolve_ui_root(ui_root: Path | None, *, environment_app: bool) -> Path | None:
-    """Resolve and validate the generated UI directory for this app mode."""
-    configured_root = ui_root
-    if configured_root is None and environment_app:
-        raw_root = os.environ.get("BENCHWARMER_UI_ROOT")
-        if raw_root is None:
-            raise ConfigurationError(
-                "BENCHWARMER_UI_ROOT is required when starting the application"
-            )
-        configured_root = Path(raw_root)
-    if configured_root is None:
+    """Resolve and validate the generated UI directory for this app mode.
+
+    An environment-driven application takes the UI root from the settings
+    (``BENCHWARMER_UI_ROOT`` or ``[paths] ui_root``) and refuses to start
+    without one; explicit construction may serve the API alone.
+    """
+    if ui_root is None and environment_app:
+        raise ConfigurationError(
+            "BENCHWARMER_UI_ROOT is required when starting the application; "
+            "set it or [paths] ui_root in benchwarmer.toml"
+        )
+    if ui_root is None:
         return None
-    if not configured_root.is_absolute():
+    if not ui_root.is_absolute():
         raise ConfigurationError("BENCHWARMER_UI_ROOT must be an absolute path")
 
-    resolved_root = configured_root.resolve()
+    resolved_root = ui_root.resolve()
     if not resolved_root.is_dir():
         raise ConfigurationError("BENCHWARMER_UI_ROOT must be an existing directory")
     if not (resolved_root / "200.html").is_file():

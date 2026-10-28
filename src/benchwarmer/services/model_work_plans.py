@@ -328,7 +328,7 @@ class PlanRunner:
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 stdin=subprocess.DEVNULL,
-                env=dict(os.environ),
+                env=os.environ | self._settings.provider_environment(),
             )
         except OSError as error:
             log.close()
