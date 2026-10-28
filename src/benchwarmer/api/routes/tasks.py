@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from benchwarmer.anonymize import MAX_TERMS
 from benchwarmer.config import BenchwarmerSettings
 from benchwarmer.db import create_engine, create_session_factory
 from benchwarmer.evidence import BundleDocument, ObjectiveType
@@ -20,6 +21,7 @@ from benchwarmer.services.case_export import (
     CaseRecord,
     export_case,
 )
+from benchwarmer.services.scrub_terms import MAX_TERM_LENGTH, NAME_PATTERN
 from benchwarmer.services.task_versions import (
     TaskConflict,
     TaskDetail,
@@ -134,13 +136,26 @@ class TaskUpdateRequest(_Strict):
     producer: _Producer = "web"
 
 
+class TermListRef(_Strict):
+    """A stored term list by name; the latest version when none is given."""
+
+    name: Annotated[str, Field(pattern=NAME_PATTERN)]
+    version: Annotated[int, Field(ge=1)] | None = None
+
+
 class CaseExportRequest(_Strict):
-    """Export one approved version, scrubbing these terms besides the built-in kinds."""
+    """Export one approved version, scrubbing these terms besides the built-in kinds.
+
+    ``terms`` and ``term_list`` combine; each side and the combination stay
+    under the scrubber's cap.
+    """
 
     version: Annotated[int, Field(ge=1)] | None = None
     terms: Annotated[
-        list[Annotated[str, Field(min_length=1, max_length=200)]], Field(max_length=200)
+        list[Annotated[str, Field(min_length=1, max_length=MAX_TERM_LENGTH)]],
+        Field(max_length=MAX_TERMS),
     ] = []
+    term_list: TermListRef | None = None
 
 
 def _split_response(split: TaskSplit) -> TaskSplitResponse:
@@ -370,7 +385,16 @@ def create_tasks_router(settings: BenchwarmerSettings) -> APIRouter:
         with session_scope() as session:
             try:
                 return export_case(
-                    session, task_id, version=request.version, terms=request.terms
+                    session,
+                    task_id,
+                    version=request.version,
+                    terms=request.terms,
+                    term_list_name=(
+                        None if request.term_list is None else request.term_list.name
+                    ),
+                    term_list_version=(
+                        None if request.term_list is None else request.term_list.version
+                    ),
                 )
             except TaskNotFound:
                 raise HTTPException(status_code=404, detail="Task not found") from None

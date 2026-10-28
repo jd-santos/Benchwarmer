@@ -3,14 +3,19 @@
 A case record is one JSON document with two sections that are stored together
 and meant to be served apart: ``candidate`` is what a configuration under test
 receives, ``judge`` is the historical evidence reserved for grading it. The
-export is deterministic for a given task version and term list, so repeating
-it yields the same bytes and the same digest. Both sections pass through the
-deterministic scrubber with one placeholder table, and the redaction manifest
-records counts by kind, never the original values.
+export is deterministic for a given task version, stored term list version,
+and inline terms, so repeating it yields the same bytes and the same digest.
+Both sections pass through the deterministic scrubber with one placeholder
+table, and the redaction manifest records counts by kind, never the original
+values. Terms may come inline with the request, from a named term list saved
+in the app, or both; the record names the list and version it used, never
+the terms. See ``docs/redaction.md``.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 import hashlib
 import json
 from typing import Any, Literal
@@ -25,6 +30,12 @@ from benchwarmer.anonymize import (
 )
 from benchwarmer.evidence import EvidenceRef
 from benchwarmer.services.evidence_bundles import LoadedConversation, load_conversations
+from benchwarmer.services.scrub_terms import (
+    TermListInvalid,
+    TermListNotFound,
+    get_term_list,
+    normalize_terms,
+)
 from benchwarmer.services.task_versions import (
     TaskDetail,
     TaskInvalid,
@@ -44,6 +55,14 @@ class CaseExportNotApproved(RuntimeError):
     def __init__(self, status: str) -> None:
         super().__init__(f"task version is {status}, not approved")
         self.status = status
+
+
+@dataclass(frozen=True)
+class TermListUse:
+    """The stored term list an export resolved, by name and exact version."""
+
+    name: str
+    version: int
 
 
 class CaseRecord(BaseModel):
@@ -95,9 +114,15 @@ def build_case_record(
     detail: TaskDetail,
     conversations: dict[tuple[str, str], LoadedConversation],
     *,
-    terms: list[str],
+    terms: Sequence[str],
+    term_list: TermListUse | None = None,
 ) -> CaseRecord:
-    """Assemble and scrub the record for one resolved, approved task version."""
+    """Assemble and scrub the record for one resolved, approved task version.
+
+    ``terms`` is the full list to scrub (inline terms plus any stored list's
+    terms, already combined); ``term_list`` only names where the stored part
+    came from.
+    """
     document = detail.document
     if document.status != "approved" or document.leakage_review is None:
         raise CaseExportNotApproved(document.status)
@@ -212,6 +237,11 @@ def build_case_record(
         "redaction": {
             "scrub_version": SCRUB_VERSION,
             "term_count": scrubber.term_count,
+            # Added after schema_version 1 shipped as an optional, additive
+            # field: null when every term came inline with the request.
+            "term_list": None
+            if term_list is None
+            else {"name": term_list.name, "version": term_list.version},
             # Filled below, once every section has been scrubbed.
             "manifest": {},
         },
@@ -252,8 +282,50 @@ def build_case_record(
     )
 
 
+def resolve_terms(
+    session: Session,
+    *,
+    terms: Sequence[str],
+    term_list_name: str | None,
+    term_list_version: int | None,
+) -> tuple[tuple[str, ...], TermListUse | None]:
+    """Combine inline terms with a stored list's terms under the scrubber's cap.
+
+    A pinned version resolves even when the list is retired, so an old record
+    can be reproduced; an unpinned name takes the latest version. Problems
+    surface as ``TaskInvalid`` issues that count terms and never quote them.
+    """
+    use: TermListUse | None = None
+    stored: tuple[str, ...] = ()
+    if term_list_name is not None:
+        try:
+            found = get_term_list(session, term_list_name, version=term_list_version)
+        except TermListNotFound:
+            raise TaskInvalid(
+                (
+                    TaskIssue(
+                        "term_list_not_found",
+                        "The named term list or version does not exist.",
+                    ),
+                )
+            ) from None
+        use = TermListUse(name=found.name, version=found.version)
+        stored = found.terms
+    try:
+        combined = normalize_terms([*stored, *terms])
+    except TermListInvalid as error:
+        raise TaskInvalid((TaskIssue("too_many_terms", str(error)),)) from None
+    return combined, use
+
+
 def export_case(
-    session: Session, task_id: str, *, version: int | None = None, terms: list[str]
+    session: Session,
+    task_id: str,
+    *,
+    version: int | None = None,
+    terms: Sequence[str],
+    term_list_name: str | None = None,
+    term_list_version: int | None = None,
 ) -> CaseRecord:
     """Export one approved task version; raises for drafts and retired versions."""
     detail = get_task(session, task_id, version=version)
@@ -276,4 +348,10 @@ def export_case(
     conversations = load_conversations(
         session, [*refs, EvidenceRef(**cut.model_dump())]
     )
-    return build_case_record(detail, conversations, terms=terms)
+    combined, use = resolve_terms(
+        session,
+        terms=terms,
+        term_list_name=term_list_name,
+        term_list_version=term_list_version,
+    )
+    return build_case_record(detail, conversations, terms=combined, term_list=use)

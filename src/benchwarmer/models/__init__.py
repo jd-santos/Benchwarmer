@@ -5,6 +5,7 @@ from benchwarmer.models.evidence_bundle import EvidenceBundle, EvidenceBundleRev
 from benchwarmer.models.harness_run import HarnessRun
 from benchwarmer.models.import_batch import ImportBatch
 from benchwarmer.models.model_work_plan import ModelWorkPlan
+from benchwarmer.models.scrub_term_list import ScrubTermList
 from benchwarmer.models.source import (
     ConversationRevision,
     NativeMessage,
@@ -29,6 +30,7 @@ __all__ = [
     "NativeSession",
     "NativeSnapshot",
     "NativeUsage",
+    "ScrubTermList",
     "Source",
     "SourceImportState",
     "SourcePresence",
