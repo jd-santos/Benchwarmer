@@ -3082,3 +3082,89 @@ input:focus-visible {
 .task-summary .segmented {
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+
+/* Analysis-only: the task's criteria need more than its reconstruction provides. Text plus
+   a dotted underline, so the state does not rest on color alone. */
+.task-analysis-only {
+	color: #714b12;
+	font-weight: 650;
+	text-decoration: underline dotted;
+	text-underline-offset: 0.15em;
+}
+
+.bundle-table td .task-analysis-only {
+	display: block;
+	margin-top: 0.15rem;
+	font-size: 0.8rem;
+}
+
+/* Read-only field in the task editor: a label and a value, no input. */
+.field__label {
+	color: #3f4d5b;
+	font-size: 0.875rem;
+	font-weight: 700;
+}
+
+.field__value {
+	margin: 0;
+	font-size: 0.95rem;
+}
+
+.criterion__needs .check-row label {
+	font-size: 0.9rem;
+}
+
+/* Partition assignment on the Tasks page: one quiet section under the list. */
+.partitions {
+	margin-top: 2.5rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid #aeb8c4;
+}
+
+.partitions h2 {
+	margin: 0 0 0.5rem;
+	font-size: 1.1rem;
+}
+
+.partitions__latest {
+	max-width: 48rem;
+	margin: 0 0 1.25rem;
+	font-size: 0.9rem;
+}
+
+.partitions__form {
+	display: grid;
+	max-width: 40rem;
+	gap: 1rem;
+}
+
+.partitions__fractions {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.75rem;
+}
+
+.partitions__fraction {
+	display: grid;
+	gap: 0.3rem;
+	font-size: 0.875rem;
+}
+
+.partitions__fraction input {
+	min-width: 0;
+	font-variant-numeric: tabular-nums;
+}
+
+.partitions__retired {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.9rem;
+}
+
+.partitions__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.6rem 1rem;
+}

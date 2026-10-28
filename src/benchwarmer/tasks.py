@@ -44,6 +44,17 @@ RECONSTRUCTION_LEVELS: tuple[ReconstructionLevel, ...] = (
     "fixture_backed",
     "fixed_multi_turn",
 )
+# What a criterion needs from the run to be checkable at all. A prompt-only
+# reconstruction satisfies none of these; a task whose criteria need more than
+# its reconstruction can establish stays analysis-only evidence (see
+# ``unmet_needs``) and cannot be approved as a runnable test.
+CriterionNeed = Literal["workspace", "tools", "multi_turn"]
+CRITERION_NEEDS: tuple[CriterionNeed, ...] = ("workspace", "tools", "multi_turn")
+SATISFIED_NEEDS: dict[ReconstructionLevel, frozenset[CriterionNeed]] = {
+    "prompt_only": frozenset(),
+    "fixture_backed": frozenset({"workspace", "tools"}),
+    "fixed_multi_turn": frozenset({"workspace", "tools", "multi_turn"}),
+}
 # Assigned per source family, never per task; see docs/experiments.md.
 Partition = Literal["development", "calibration", "holdout"]
 PARTITIONS: tuple[Partition, ...] = ("development", "calibration", "holdout")
@@ -85,6 +96,9 @@ class Criterion(_Strict):
     # Bumped whenever the statement or its checking changes meaning.
     rubric_version: Annotated[int, Field(ge=1)] = 1
     judge_evidence: Annotated[list[JudgeEvidence], Field(max_length=3)] = []
+    # What the run must provide for this criterion to be checkable; empty when
+    # the transcript to the cut point is enough. Optional and additive.
+    needs: Annotated[list[CriterionNeed], Field(max_length=3)] = []
     reviewer_label: ReviewerLabel | None = None
     note: _Note | None = None
 
@@ -96,6 +110,8 @@ class Criterion(_Strict):
             raise ValueError("only a human criterion carries a reviewer label")
         if len(set(self.judge_evidence)) != len(self.judge_evidence):
             raise ValueError("judge_evidence lists a field twice")
+        if len(set(self.needs)) != len(self.needs):
+            raise ValueError("needs lists a requirement twice")
         return self
 
 
@@ -129,6 +145,17 @@ class LeakageReview(_Strict):
     notes: _Note | None = None
 
 
+class UnmetNeed(_Strict):
+    """Needs the task's reconstruction level cannot satisfy.
+
+    ``criterion_id`` is ``None`` when the need comes from the task kind itself:
+    a coding task needs a workspace whatever its criteria say.
+    """
+
+    criterion_id: _Slug | None
+    needs: list[CriterionNeed]
+
+
 class TaskDocument(_Strict):
     """The reviewable content of one task version."""
 
@@ -150,9 +177,28 @@ class TaskDocument(_Strict):
     criteria: Annotated[list[Criterion], Field(max_length=MAX_CRITERIA)] = []
     expected_scope: ExpectedScope | None = None
     leakage_review: LeakageReview | None = None
+    # Legacy per-version field. Since partition assignment by family, the
+    # task-level assignment is authoritative; this is read only when a task
+    # has never been assigned.
     partition: Partition | None = None
     status: TaskStatus = "draft"
     reviewer_notes: _Note = ""
+
+    def unmet_needs(self) -> tuple[UnmetNeed, ...]:
+        """What the criteria (and a coding kind) need beyond the reconstruction.
+
+        Non-empty means the task can serve only as analysis evidence at this
+        reconstruction level; approval as a runnable test is refused.
+        """
+        satisfied = SATISFIED_NEEDS[self.reconstruction.level]
+        unmet: list[UnmetNeed] = []
+        if self.kind == "coding" and "workspace" not in satisfied:
+            unmet.append(UnmetNeed(criterion_id=None, needs=["workspace"]))
+        for criterion in self.criteria:
+            missing = [need for need in criterion.needs if need not in satisfied]
+            if missing:
+                unmet.append(UnmetNeed(criterion_id=criterion.id, needs=missing))
+        return tuple(unmet)
 
     @model_validator(mode="after")
     def _coherent(self) -> Self:

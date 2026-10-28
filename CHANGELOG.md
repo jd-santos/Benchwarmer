@@ -9,10 +9,20 @@ This project does not currently declare a Semantic Versioning policy.
 
 ### Added
 
+- Assign development, calibration, and holdout partitions by source family
+  (`POST /api/v1/tasks/partitions`, Tasks page): a seed and a split place each
+  family by hash, so tasks from one conversation and its continuations never
+  straddle the divide and the same seed never moves a family. Each run is
+  recorded with its seed, split, scope, time, and counts (migration `0009`);
+  the partition now lives on the task and the export reports it.
+- Refuse to approve a task whose criteria need more than its reconstruction
+  level provides. Criteria declare `needs` (workspace, tools, later turns), a
+  coding task needs a workspace, and a `prompt_only` version with such needs
+  stays a draft marked "Analysis only" instead of becoming a runnable test.
 - Prepare a reviewed bundle as a versioned task (`/api/v1/tasks`, Tasks page):
   a cut point that ends the candidate's view, criteria of acceptable behavior
   with a method (human, model judge, deterministic) and rubric version, the
-  reconstruction level with its gaps, a family and partition, and a leakage
+  reconstruction level with its gaps, a family, and a leakage
   review. Deterministic leakage flags (an answer cited before the cut, a
   criterion quoting the historical answer, a cut on an assistant turn, judge
   text already in the candidate section) must each be accepted before

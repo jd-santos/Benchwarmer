@@ -8,6 +8,8 @@ import type {
 	BundleStatus,
 	BundleSummary,
 	CaseRecord,
+	PartitionAssignment,
+	PartitionAssignRequest,
 	TaskDetail,
 	TaskDocument,
 	TaskDraft,
@@ -1121,6 +1123,12 @@ function isTaskDetail(value: unknown): value is TaskDetail {
 				isCount(item.number) &&
 				typeof item.status === 'string' &&
 				typeof item.created_at === 'string'
+		) &&
+		isNullableString(value.partition) &&
+		isNullableString(value.partition_assignment_id) &&
+		Array.isArray(value.unmet_needs) &&
+		value.unmet_needs.every(
+			(item) => isRecord(item) && isNullableString(item.criterion_id) && Array.isArray(item.needs)
 		)
 	);
 }
@@ -1149,11 +1157,70 @@ function isTaskSummary(value: unknown): value is TaskSummary {
 		typeof value.objective_type === 'string' &&
 		typeof value.family === 'string' &&
 		isNullableString(value.partition) &&
+		isNullableString(value.partition_assignment_id) &&
 		typeof value.bundle_id === 'string' &&
 		isCount(value.bundle_revision) &&
 		isCount(value.criterion_count) &&
+		typeof value.analysis_only === 'boolean' &&
 		typeof value.updated_at === 'string'
 	);
+}
+
+const partitionNames = ['development', 'calibration', 'holdout'] as const;
+
+function isPartitionCounts(value: unknown): value is Record<string, number> {
+	return isRecord(value) && partitionNames.every((name) => typeof value[name] === 'number');
+}
+
+function isPartitionAssignment(value: unknown): value is PartitionAssignment {
+	return (
+		isRecord(value) &&
+		typeof value.id === 'string' &&
+		typeof value.seed === 'string' &&
+		isPartitionCounts(value.split) &&
+		isRecord(value.scope) &&
+		Array.isArray(value.scope.statuses) &&
+		isPartitionCounts(value.task_counts) &&
+		isPartitionCounts(value.family_counts) &&
+		isCount(value.task_count) &&
+		isCount(value.family_count) &&
+		isCount(value.moved_families) &&
+		typeof value.producer === 'string' &&
+		typeof value.created_at === 'string'
+	);
+}
+
+/** The most recent partition assignment by family, or null before the first run. */
+export async function getPartitionAssignment(
+	options: ApiRequestOptions = {}
+): Promise<PartitionAssignment | null> {
+	const value = await getJson('/api/v1/tasks/partitions', options.signal, options.fetch);
+	if (value === null) return null;
+	if (!isPartitionAssignment(value)) {
+		throw new ApiClientError('The API partition response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
+}
+
+/** Assign partitions by family across the tasks in scope; HTTP 422 for a bad split. */
+export async function assignPartitions(
+	request: PartitionAssignRequest,
+	options: ApiRequestOptions = {}
+): Promise<PartitionAssignment> {
+	const value = await requestJson(
+		'/api/v1/tasks/partitions',
+		{ method: 'POST', body: request },
+		options.signal,
+		options.fetch
+	);
+	if (!isPartitionAssignment(value)) {
+		throw new ApiClientError('The API partition response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
 }
 
 function taskDetail(value: unknown): TaskDetail {

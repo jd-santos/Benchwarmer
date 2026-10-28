@@ -1,4 +1,4 @@
-import type { TaskDetail, TaskDraft, TaskSummary } from '$lib/api/types';
+import type { PartitionAssignment, TaskDetail, TaskDraft, TaskSummary } from '$lib/api/types';
 
 const ref = {
 	conversation_id: 'conversation-a',
@@ -115,6 +115,7 @@ export const task: TaskDetail = {
 				method: 'human',
 				rubric_version: 1,
 				judge_evidence: [],
+				needs: [],
 				reviewer_label: 'pass',
 				note: null
 			}
@@ -124,7 +125,24 @@ export const task: TaskDetail = {
 	bundle_latest_revision: 2,
 	split,
 	flags: [],
-	versions: [{ number: 1, status: 'draft', producer: 'web', created_at: '2026-10-26T10:00:00Z' }]
+	versions: [{ number: 1, status: 'draft', producer: 'web', created_at: '2026-10-26T10:00:00Z' }],
+	partition: null,
+	partition_assignment_id: null,
+	unmet_needs: []
+};
+
+export const partitionAssignment: PartitionAssignment = {
+	id: 'partition-1',
+	seed: 'autumn-1',
+	split: { development: 0.6, calibration: 0.2, holdout: 0.2 },
+	scope: { statuses: ['draft', 'approved'] },
+	task_counts: { development: 5, calibration: 2, holdout: 1 },
+	family_counts: { development: 3, calibration: 1, holdout: 1 },
+	task_count: 8,
+	family_count: 5,
+	moved_families: 0,
+	producer: 'web',
+	created_at: '2026-10-27T09:00:00Z'
 };
 
 export const taskSummary: TaskSummary = {
@@ -137,8 +155,10 @@ export const taskSummary: TaskSummary = {
 	objective_type: 'unknown',
 	family: 'conversation-a',
 	partition: null,
+	partition_assignment_id: null,
 	bundle_id: 'bundle-1',
 	bundle_revision: 2,
 	criterion_count: 1,
+	analysis_only: false,
 	updated_at: '2026-10-26T10:00:00Z'
 };

@@ -1,4 +1,4 @@
-import { getTasks } from '$lib/api/client';
+import { getPartitionAssignment, getTasks } from '$lib/api/client';
 import type { TaskStatus } from '$lib/api/types';
 import type { PageLoad } from './$types';
 
@@ -25,6 +25,8 @@ export const load: PageLoad = ({ fetch, url }) => {
 		tasks: getTasks(
 			{ ...(view === 'all' ? {} : { status: view }), ...(bundle ? { bundleId: bundle } : {}) },
 			{ fetch }
-		)
+		),
+		// The latest run is context, not the page's task; its failure must not block the list.
+		partitions: getPartitionAssignment({ fetch }).catch(() => null)
 	};
 };
