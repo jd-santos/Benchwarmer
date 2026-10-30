@@ -1,10 +1,10 @@
 # Turn selected evidence into runnable tasks
 
-Status: In progress on `task/task-versions`. The task version (cut point,
-candidate/judge split, criteria, reconstruction level, leakage flags and
-review, versioning) and the case-record export are implemented with an
-editor in the web app. Fixture-backed reconstruction, frozen-dataset
-membership, and model-assisted drafting are pending.
+Status: The task version (cut point, candidate/judge split, criteria,
+reconstruction level, leakage flags and review, versioning) and the case-record
+export are on main with an editor in the web app. Fixture-backed
+reconstruction, family-level partitions, the analysis-only approval guard, and
+model-assisted drafting remain.
 
 ## Purpose
 

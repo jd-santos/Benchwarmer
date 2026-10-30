@@ -1,16 +1,19 @@
 # Benchwarmer
 
-Benchwarmer is a private conversation library and model evaluation app. It will
-collect Codex, Pi, and Hermes histories across the user's machines, preserve
-native transcripts alongside shared records, and make that work searchable and
-reusable for evaluations. Usage and cost are part of the metadata, not the only
-reason to collect it.
+Benchwarmer is a private conversation library and model evaluation app. It
+imports agent and chat histories (Pi, ChatGPT exports, and a documented
+conversation file format other systems can write), preserves native transcripts
+alongside normalized records, and turns reviewed evidence into versioned
+evaluation tasks. Usage and cost are part of the metadata, not the only reason
+to collect it.
 
-The project has a fixture-backed application foundation with a Python backend,
-SQLite database, and mobile-friendly Svelte frontend. FastAPI serves the built
-application and versioned API from one origin. Private deployment on an
-always-on Mac mini over Tailscale remains planned. Real importers, conversation
-browsing, enrichment, and experiment execution are not implemented yet.
+The application has a Python backend, a SQLite database, and a mobile-friendly
+Svelte frontend served by FastAPI from one origin with a versioned API. It also
+serves as a component of a larger evaluation pipeline: a conversation file goes
+in, a reviewed case record comes out. Benchwarmer never runs the consuming
+program's cases or posts results to it. Model-driven analysis runs only from
+the hand-run harness or from an approved plan. Private deployment on an
+always-on host over Tailscale remains planned.
 
 ## Scope
 
