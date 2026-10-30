@@ -159,10 +159,13 @@ An approved version exports as a **case record**: one JSON document whose
 dropped, and whose `judge` section holds the historical turns, the cited
 items, and reviewer notes. Both sections pass through the deterministic
 scrubber with one placeholder table, and the redaction manifest records counts
-by kind, never original values. The export is deterministic per version and
-term list, so it can be repeated and compared by digest. Benchwarmer writes
-the file; where it is uploaded and how it is run belong to the consuming
-evaluation program.
+by kind, never original values. Terms come inline with the request or from a
+named, versioned term list saved in the app, and the record names the list
+version it used. The export is deterministic per task version, list version,
+and inline terms, so it can be repeated and compared by digest; see
+[redaction](redaction.md) for the detector kinds and what they miss.
+Benchwarmer writes the file; where it is uploaded and how it is run belong to
+the consuming evaluation program.
 
 Test proposed evaluators against failures, successes, and ambiguous or
 inapplicable cases. An evaluator that catches only the original failure is not

@@ -404,3 +404,74 @@ def test_export_splits_scrubs_and_repeats_identically(client: TestClient) -> Non
     without_terms = client.post(f"/api/v1/tasks/{task_id}/export", json={"terms": []})
     assert without_terms.json()["digest"] != record["digest"]
     assert "term" not in without_terms.json()["case"]["redaction"]["manifest"]
+    assert record["case"]["redaction"]["term_list"] is None
+
+
+def test_export_takes_terms_from_a_stored_list(client: TestClient) -> None:
+    detail = _conversation(client, "demo-import-duplicates")
+    bundle = _reviewed_bundle(client, detail)
+    draft = client.get(f"/api/v1/bundles/{bundle['id']}/task-draft").json()["document"]
+    task_id = client.post("/api/v1/tasks", json={"document": draft}).json()["id"]
+    approved = dict(
+        draft,
+        status="approved",
+        criteria=[_criterion()],
+        leakage_review=_REVIEW,
+        reviewer_notes="Hermes sessions were the symptom; ask Wexley about it.",
+    )
+    client.put(
+        f"/api/v1/tasks/{task_id}", json={"document": approved, "base_version": 1}
+    )
+    client.put("/api/v1/scrub-terms/program", json={"terms": ["Hermes"]})
+    client.put("/api/v1/scrub-terms/program", json={"terms": ["Hermes", "Wexley"]})
+
+    inline = client.post(
+        f"/api/v1/tasks/{task_id}/export", json={"terms": ["Hermes", "Wexley"]}
+    ).json()
+    by_list = client.post(
+        f"/api/v1/tasks/{task_id}/export", json={"term_list": {"name": "program"}}
+    )
+    assert by_list.status_code == 200, by_list.text
+    record = by_list.json()
+    redaction = record["case"]["redaction"]
+    assert redaction["term_list"] == {"name": "program", "version": 2}
+    assert redaction["term_count"] == 2 and redaction["manifest"]["term"] >= 2
+    assert "Hermes" not in by_list.text and "Wexley" not in by_list.text
+    assert record["judge"]["reviewer_notes"] == (
+        "<term-1> sessions were the symptom; ask <term-2> about it."
+    )
+    # Same placeholders and sections as the inline export; only the provenance
+    # under redaction differs, so the digest differs.
+    assert record["judge"] == inline["judge"]
+    assert record["candidate"] == inline["candidate"]
+    assert record["digest"] != inline["digest"]
+
+    # Pinned version, repeated: same bytes. Combined with an inline term: both
+    # apply, and the inline term that repeats a stored one is not counted twice.
+    pinned = {"term_list": {"name": "program", "version": 2}}
+    first = client.post(f"/api/v1/tasks/{task_id}/export", json=pinned)
+    second = client.post(f"/api/v1/tasks/{task_id}/export", json=pinned)
+    assert first.json() == second.json() == record
+    older = client.post(
+        f"/api/v1/tasks/{task_id}/export",
+        json={"term_list": {"name": "program", "version": 1}, "terms": ["hermes"]},
+    ).json()
+    assert older["case"]["redaction"]["term_list"]["version"] == 1
+    assert older["case"]["redaction"]["term_count"] == 1
+    assert "Wexley" in older["judge"]["reviewer_notes"]
+
+    # A retired list still resolves when pinned, so old records reproduce.
+    client.post("/api/v1/scrub-terms/program/retire")
+    assert client.post(f"/api/v1/tasks/{task_id}/export", json=pinned).json() == record
+
+    missing = client.post(
+        f"/api/v1/tasks/{task_id}/export", json={"term_list": {"name": "nope"}}
+    )
+    assert missing.status_code == 422
+    assert missing.json()["issues"][0]["code"] == "term_list_not_found"
+    too_many = client.post(
+        f"/api/v1/tasks/{task_id}/export",
+        json={"term_list": pinned["term_list"], "terms": [f"t{i}" for i in range(199)]},
+    )
+    assert too_many.status_code == 422
+    assert too_many.json()["issues"][0]["code"] == "too_many_terms"

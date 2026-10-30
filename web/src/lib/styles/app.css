@@ -3082,3 +3082,47 @@ input:focus-visible {
 .task-summary .segmented {
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+
+/* Scrub term lists */
+
+.term-lists__table .term-lists__notes {
+	max-width: 24rem;
+}
+
+.term-lists__table tbody th {
+	white-space: nowrap;
+}
+
+@media (max-width: 47.999rem) {
+	.term-lists__table .wide-only {
+		display: none;
+	}
+}
+
+.task-export .field + .field,
+.task-export .field__hint + .field {
+	margin-top: 0.75rem;
+}
+
+.term-lists__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.6rem 1rem;
+	margin-top: 1rem;
+}
+
+.term-list-editor {
+	display: grid;
+	max-width: 40rem;
+	margin-top: 1.5rem;
+	padding-top: 1.25rem;
+	gap: 1rem;
+	border-top: 1px solid #aeb8c4;
+}
+
+.term-list-editor h2 {
+	margin: 0;
+	color: #17324d;
+	font-size: 1.05rem;
+}

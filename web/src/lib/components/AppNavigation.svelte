@@ -91,6 +91,12 @@
 					<a href={sourcesHref} aria-current={isCurrent('/sources') ? 'page' : undefined}>Sources</a
 					>
 				</li>
+				<li>
+					<a
+						href={resolve('/scrub-terms')}
+						aria-current={isCurrent('/scrub-terms') ? 'page' : undefined}>Scrub terms</a
+					>
+				</li>
 			</ul>
 		</nav>
 	</div>

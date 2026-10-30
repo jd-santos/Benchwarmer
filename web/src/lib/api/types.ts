@@ -628,9 +628,40 @@ export interface CaseRecord {
 	case: Record<string, unknown> & {
 		id: string;
 		version: number;
-		redaction: { scrub_version: string; term_count: number; manifest: Record<string, number> };
+		redaction: {
+			scrub_version: string;
+			term_count: number;
+			/** The stored list used, or null when every term came inline. */
+			term_list?: TermListRef | null;
+			manifest: Record<string, number>;
+		};
 	};
 	candidate: Record<string, unknown>;
 	judge: Record<string, unknown>;
 	digest: string;
+}
+
+/** A stored term list by name; the latest version when none is given. */
+export interface TermListRef {
+	name: string;
+	version: number | null;
+}
+
+/** One term list's latest version; counts only, never the terms. */
+export interface TermListSummary {
+	name: string;
+	version: number;
+	term_count: number;
+	notes: string | null;
+	created_at: string;
+	retired_at: string | null;
+}
+
+/** One term list version with its terms; operator-only. */
+export interface TermListDetail extends TermListSummary {
+	terms: string[];
+}
+
+export interface TermListsResponse {
+	items: TermListSummary[];
 }

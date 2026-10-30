@@ -115,7 +115,7 @@ and the interface principles in [docs/architecture.md](docs/architecture.md).
 > Read the file below before changing architecture, scope, or evaluation
 > semantics.
 
-design: {architecture.md,conversation-library.md,evidence-bundles.md,experiments.md,decisions.md}
+design: {architecture.md,conversation-library.md,evidence-bundles.md,experiments.md,redaction.md,decisions.md}
 delivery: {roadmap.md,../todo/work/}
 evidence: {sources/,source-coverage.md}
 decisions: {decisions.md,decisions/}
@@ -151,6 +151,10 @@ tasks: {../todo/README.md,../todo/TODO.md}
 - **`docs/plans/` and `docs/TODO.md`**: Legacy redirects or explicitly historical
   evidence. Current implementation details are linked from work READMEs. Update
   the existing work record at handoff; do not create new timestamped handoffs.
+- **`docs/redaction.md`**: The scrubber's detector kinds and placeholders, the
+  one-pass rule, the redaction manifest, `scrub_version`, named term lists,
+  the term cap, the leak check, and what the scrubber misses. Program-neutral:
+  terms are operator data and never appear in code, logs, or records.
 - **`docs/evidence-bundles.md`**: Planned evidence-reference, bundle, selective
   inspection, pattern, and task-promotion semantics. Native evidence remains
   distinct from interpretations; analysis-only bundles need not be runnable.

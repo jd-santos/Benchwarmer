@@ -186,20 +186,91 @@ describe('task editor', () => {
 			judge: { historical: [] },
 			digest: 'abcdef1234567890'
 		};
-		const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(respond(200, record));
+		const fetchMock = vi
+			.fn<typeof fetch>()
+			.mockImplementation(async (input) =>
+				String(input).endsWith('/scrub-terms') ? respond(200, { items: [] }) : respond(200, record)
+			);
 		vi.stubGlobal('fetch', fetchMock);
 		const { queryByRole } = render(TaskEditor, { props: { detail: task } });
 		expect(queryByRole('button', { name: 'Export case record' })).toBeNull();
+		expect(fetchMock).not.toHaveBeenCalled();
 		cleanup();
 
 		const view = render(TaskEditor, { props: { detail: approved } });
+		expect(await view.findByText(/No stored lists yet/)).toBeTruthy();
+		expect((view.getByLabelText('Stored term list') as HTMLSelectElement).disabled).toBe(true);
 		await user.type(view.getByLabelText('Terms to scrub'), 'Acme');
 		await user.click(view.getByRole('button', { name: 'Export case record' }));
 
 		expect(await view.findByText('Scrubbed 2 term')).toBeTruthy();
-		const [url, init] = fetchMock.mock.calls[0]!;
-		expect(url).toBe('/api/v1/tasks/task-1/export');
-		expect(JSON.parse(String(init?.body))).toEqual({ version: 1, terms: ['Acme'] });
+		const exportCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/export'))!;
+		expect(exportCall[0]).toBe('/api/v1/tasks/task-1/export');
+		expect(JSON.parse(String(exportCall[1]?.body))).toEqual({ version: 1, terms: ['Acme'] });
 		expect(view.getByRole('button', { name: 'Download JSON' })).toBeTruthy();
+	});
+
+	it('exports with a stored term list pinned to the version shown', async () => {
+		const user = userEvent.setup();
+		const approved = {
+			...task,
+			document: {
+				...task.document,
+				status: 'approved' as const,
+				leakage_review: { by: 'jd', at: '2026-10-26T10:00:00Z', accepted_flags: [], notes: null }
+			}
+		};
+		const lists = {
+			items: [
+				{
+					name: 'program',
+					version: 3,
+					term_count: 12,
+					notes: 'Customer names',
+					created_at: '2026-10-27T09:00:00Z',
+					retired_at: null
+				}
+			]
+		};
+		const record = {
+			schema_version: 1,
+			case: {
+				id: 'task-1',
+				version: 1,
+				redaction: {
+					scrub_version: 'benchwarmer.anonymize-1',
+					term_count: 13,
+					term_list: { name: 'program', version: 3 },
+					manifest: { term: 4, hostname: 1 }
+				}
+			},
+			candidate: {},
+			judge: {},
+			digest: 'fedcba9876543210'
+		};
+		const fetchMock = vi
+			.fn<typeof fetch>()
+			.mockImplementation(async (input) =>
+				String(input).endsWith('/scrub-terms') ? respond(200, lists) : respond(200, record)
+			);
+		vi.stubGlobal('fetch', fetchMock);
+		const view = render(TaskEditor, { props: { detail: approved } });
+
+		await view.findByRole('option', { name: 'program' });
+		await user.selectOptions(view.getByLabelText('Stored term list'), 'program');
+		expect(view.getByText(/Version 3 · 12 terms · Customer names/)).toBeTruthy();
+		await user.type(view.getByLabelText('Terms to scrub'), 'Extra');
+		await user.click(view.getByRole('button', { name: 'Export case record' }));
+
+		expect(await view.findByText('Scrubbed 4 term, 1 hostname')).toBeTruthy();
+		expect(view.getByText(/List program version 3/)).toBeTruthy();
+		const exportCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/export'))!;
+		expect(JSON.parse(String(exportCall[1]?.body))).toEqual({
+			version: 1,
+			terms: ['Extra'],
+			term_list: { name: 'program', version: 3 }
+		});
+		// Only the list's name and version travel; its terms are never fetched here.
+		expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/scrub-terms/'))).toBe(false);
 	});
 });

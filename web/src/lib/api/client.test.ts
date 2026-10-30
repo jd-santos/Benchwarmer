@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiClientError, getHealth, getRuns, getSources, startImport } from './client';
+import {
+	ApiClientError,
+	exportTask,
+	getHealth,
+	getRuns,
+	getSources,
+	getTermList,
+	getTermLists,
+	retireTermList,
+	saveTermList,
+	startImport
+} from './client';
 import type { HealthResponse, RunsResponse, SourcesResponse } from './types';
 
 const healthResponse: HealthResponse = {
@@ -288,6 +299,77 @@ describe('startImport', () => {
 		await expect(startImport('pi-a', '/elsewhere')).rejects.toMatchObject({
 			status: 422,
 			body: { detail: 'path is outside the configured import roots' }
+		});
+	});
+});
+
+describe('term lists', () => {
+	const summary = {
+		name: 'program',
+		version: 2,
+		term_count: 3,
+		notes: null,
+		created_at: '2026-10-27T09:00:00Z',
+		retired_at: null
+	};
+
+	it('lists, reads, saves, and retires lists at their exact paths', async () => {
+		const fetchMock = vi
+			.fn<typeof fetch>()
+			.mockResolvedValueOnce(jsonResponse({ items: [summary] }))
+			.mockResolvedValueOnce(jsonResponse({ ...summary, version: 1, terms: ['Tallis'] }))
+			.mockResolvedValueOnce(jsonResponse({ ...summary, version: 3, terms: ['Tallis', 'Brae'] }))
+			.mockResolvedValueOnce(jsonResponse({ ...summary, retired_at: '2026-10-27T10:00:00Z' }));
+		vi.stubGlobal('fetch', fetchMock);
+
+		await expect(getTermLists(true)).resolves.toEqual({ items: [summary] });
+		expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/scrub-terms?include_retired=true');
+
+		await expect(getTermList('program', 1)).resolves.toMatchObject({ terms: ['Tallis'] });
+		expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/v1/scrub-terms/program?version=1');
+
+		await expect(saveTermList('program', ['Tallis', 'Brae'], null)).resolves.toMatchObject({
+			version: 3
+		});
+		expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/v1/scrub-terms/program');
+		expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({
+			method: 'PUT',
+			body: JSON.stringify({ terms: ['Tallis', 'Brae'], notes: null })
+		});
+
+		await expect(retireTermList('program')).resolves.toMatchObject({
+			retired_at: '2026-10-27T10:00:00Z'
+		});
+		expect(fetchMock.mock.calls[3]?.[0]).toBe('/api/v1/scrub-terms/program/retire');
+		expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: 'POST' });
+	});
+
+	it('rejects a list without its terms', async () => {
+		vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(summary)));
+		await expect(getTermList('program')).rejects.toMatchObject({ kind: 'invalid-contract' });
+	});
+
+	it('sends the list reference with an export only when one is chosen', async () => {
+		const record = {
+			schema_version: 1,
+			case: { id: 't', version: 1, redaction: { scrub_version: 'x', term_count: 0, manifest: {} } },
+			candidate: {},
+			judge: {},
+			digest: 'd'
+		};
+		const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse(record));
+		vi.stubGlobal('fetch', fetchMock);
+
+		await exportTask('t', 1, ['a']);
+		expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+			version: 1,
+			terms: ['a']
+		});
+		await exportTask('t', 1, [], { name: 'program', version: 2 });
+		expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+			version: 1,
+			terms: [],
+			term_list: { name: 'program', version: 2 }
 		});
 	});
 });

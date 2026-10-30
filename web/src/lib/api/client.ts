@@ -15,6 +15,10 @@ import type {
 	TaskStatus,
 	TaskSummary,
 	TasksResponse,
+	TermListDetail,
+	TermListRef,
+	TermListSummary,
+	TermListsResponse,
 	ContentBlock,
 	ConversationDetail,
 	ConversationEvent,
@@ -1256,11 +1260,15 @@ export async function exportTask(
 	id: string,
 	version: number,
 	terms: string[],
+	termList: TermListRef | null = null,
 	options: ApiRequestOptions = {}
 ): Promise<CaseRecord> {
 	const value = await requestJson(
 		`/api/v1/tasks/${encodeURIComponent(id)}/export`,
-		{ method: 'POST', body: { version, terms } },
+		{
+			method: 'POST',
+			body: termList === null ? { version, terms } : { version, terms, term_list: termList }
+		},
 		options.signal,
 		options.fetch
 	);
@@ -1277,4 +1285,97 @@ export async function exportTask(
 		});
 	}
 	return value as unknown as CaseRecord;
+}
+
+function isTermListSummary(value: unknown): value is TermListSummary {
+	return (
+		isRecord(value) &&
+		typeof value.name === 'string' &&
+		isCount(value.version) &&
+		isCount(value.term_count) &&
+		(value.notes === null || typeof value.notes === 'string') &&
+		typeof value.created_at === 'string' &&
+		(value.retired_at === null || typeof value.retired_at === 'string')
+	);
+}
+
+function termListDetail(value: unknown): TermListDetail {
+	const terms = isRecord(value) ? value.terms : undefined;
+	if (
+		!isTermListSummary(value) ||
+		!Array.isArray(terms) ||
+		!terms.every((term) => typeof term === 'string')
+	) {
+		throw new ApiClientError('The API term list did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value as TermListDetail;
+}
+
+/** Every stored term list's latest version, by name; no terms. */
+export async function getTermLists(
+	includeRetired = false,
+	options: ApiRequestOptions = {}
+): Promise<TermListsResponse> {
+	const search = includeRetired ? '?include_retired=true' : '';
+	const value = await getJson(`/api/v1/scrub-terms${search}`, options.signal, options.fetch);
+	if (!isRecord(value) || !Array.isArray(value.items) || !value.items.every(isTermListSummary)) {
+		throw new ApiClientError('The API term lists response did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return { items: value.items };
+}
+
+/** One list version with its terms; the latest when no version is given. */
+export async function getTermList(
+	name: string,
+	version: number | null = null,
+	options: ApiRequestOptions = {}
+): Promise<TermListDetail> {
+	const search = version === null ? '' : `?${new URLSearchParams({ version: String(version) })}`;
+	return termListDetail(
+		await getJson(
+			`/api/v1/scrub-terms/${encodeURIComponent(name)}${search}`,
+			options.signal,
+			options.fetch
+		)
+	);
+}
+
+/** Create a list or save its next version; an unchanged save keeps the version. */
+export async function saveTermList(
+	name: string,
+	terms: string[],
+	notes: string | null,
+	options: ApiRequestOptions = {}
+): Promise<TermListDetail> {
+	return termListDetail(
+		await requestJson(
+			`/api/v1/scrub-terms/${encodeURIComponent(name)}`,
+			{ method: 'PUT', body: { terms, notes } },
+			options.signal,
+			options.fetch
+		)
+	);
+}
+
+/** Retire every version of a list; pinned exports still resolve it. */
+export async function retireTermList(
+	name: string,
+	options: ApiRequestOptions = {}
+): Promise<TermListSummary> {
+	const value = await requestJson(
+		`/api/v1/scrub-terms/${encodeURIComponent(name)}/retire`,
+		{ method: 'POST' },
+		options.signal,
+		options.fetch
+	);
+	if (!isTermListSummary(value)) {
+		throw new ApiClientError('The API term list did not match its contract.', {
+			kind: 'invalid-contract'
+		});
+	}
+	return value;
 }
