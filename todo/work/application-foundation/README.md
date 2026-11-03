@@ -1,14 +1,15 @@
 # Finish the application foundation
 
-Status: Complete on `task/conversation-library`. Earlier foundation work merged
-in [pull request #5](https://github.com/jd-santos/Benchwarmer/pull/5); the
-single-origin completion is pending in
-[pull request #6](https://github.com/jd-santos/Benchwarmer/pull/6). The final
-integration gate and independent acceptance review passed.
+Status: Complete. Foundation work and single-origin completion merged in
+[pull request #5](https://github.com/jd-santos/Benchwarmer/pull/5) and
+[pull request #6](https://github.com/jd-santos/Benchwarmer/pull/6).
+The verification evidence below is historical, not a fresh test run.
+Production backup/restore and private deployment remain separate work records.
 
 ## Purpose
 
-Complete the fixture-backed path through SQLite, the Python API, and the responsive web application. This is the next executable work and unblocks the first importer.
+Retain the accepted fixture-backed foundation and its verification evidence.
+This is completed reference material, not the next implementation assignment.
 
 ## Dependencies and order
 

@@ -294,7 +294,8 @@ alerting covers the required behavior with fewer long-running processes.
 - The application image and static-file integration must define cache headers:
   immutable hashed assets may be cached long-term, while HTML and `200.html`
   must revalidate so deployments do not strand old asset references.
-- The accepted foundation decision must pin the Svelte CLI and adapter versions.
+- CLI and adapter selection are recorded in ADR 0001 and the committed frontend
+  lockfile; they are not unresolved deployment choices.
 - Before deployment, implementation must define the expected Alembic head used
   by the production readiness check. This does not choose the data-root or
   backup policy.
@@ -303,119 +304,9 @@ alerting covers the required behavior with fewer long-running processes.
 
 ## Verification
 
-### Decide private serving and supervision design verification
-
-Run build and static-fallback checks from a clean checkout:
-
-```sh
-npm --prefix web ci
-npm --prefix web run check
-npm --prefix web run build
-test -f web/build/200.html
-```
-
-The scaffold/build commands become executable in [Scaffold SvelteKit with the selected adapter and checks](../../todo/work/application-foundation/plan.md). Syntax, configuration
-shape, and the absence of a Node/SSR requirement are sufficient to accept this
-record through [the accepted foundation decisions](../decisions.md).
-
-### Implement and validate private deployment target-host verification
-
-After [foundation integration verification](../../todo/work/application-foundation/README.md), implement the deployment and render the merged configuration on
-the target host before startup. Verify that `benchwarmer` has no `ports` entry:
-
-```sh
-set -eu
-docker compose config --format json | python3 -c '
-import json, sys
-service = json.load(sys.stdin)["services"]["benchwarmer"]
-assert not service.get("ports"), "benchwarmer must not publish ports"
-assert service.get("network_mode") == "service:tailscale-hermes"
-'
-docker compose up -d --build --wait benchwarmer
-docker compose ps benchwarmer
-container_id="$(docker compose ps -q benchwarmer)"
-test -n "$container_id"
-docker inspect --format '{{json .HostConfig.PortBindings}}' "$container_id" |
-  python3 -c '
-import json, sys
-assert json.load(sys.stdin) in (None, {}), "container published a host port"
-'
-docker inspect --format '{{json .State.Health}}' "$container_id" |
-  python3 -c '
-import json, sys
-assert json.load(sys.stdin)["Status"] == "healthy"
-'
-```
-
-The rendered-config assertion must pass before startup. The post-start
-port-binding inspection must then return `null` or an empty mapping as defense in
-depth. Check the loopback application and declarative Serve route without
-printing identity headers or private configuration:
-
-```sh
-set -eu
-docker compose exec -T benchwarmer python -c \
-  "import json,urllib.request; print(json.load(urllib.request.urlopen(\
-'http://127.0.0.1:8000/api/v1/health')))"
-docker compose exec -T tailscale-hermes tailscale serve status --json |
-  python3 -c '
-import json, sys
-payload = json.dumps(json.load(sys.stdin), sort_keys=True)
-assert "8443" in payload
-assert "http://127.0.0.1:8000" in payload
-'
-curl --fail --show-error \
-  https://<node>.<tailnet>.ts.net:8443/api/v1/health
-curl --fail --show-error https://<node>.<tailnet>.ts.net:8443/
-```
-
-Compare the health response's Alembic revision with `alembic heads`. From a LAN
-peer and an unauthorized tailnet identity, verify that port 8000 and the HTTPS
-origin respectively are unreachable. Confirm that `tailscale funnel status`
-does not list Benchwarmer. These checks must emit only pass/fail status in the
-deployment record; never retain raw Serve/Funnel JSON, node names, identities,
-or the complete private routing configuration.
-
-Exercise process behavior in a maintenance window:
-
-```sh
-set -eu
-restore_service() {
-  docker compose start benchwarmer >/dev/null 2>&1 || true
-}
-trap restore_service EXIT HUP INT TERM
-
-container_id="$(docker compose ps -q benchwarmer)"
-test -n "$container_id"
-restart_before="$(docker inspect --format '{{.RestartCount}}' "$container_id")"
-docker compose exec -T benchwarmer sh -c 'kill -KILL 1' || true
-attempt=0
-restart_after="$restart_before"
-health=""
-while [ "$attempt" -lt 30 ]; do
-  restart_after="$(docker inspect --format '{{.RestartCount}}' "$container_id")"
-  health="$(docker inspect --format '{{.State.Health.Status}}' "$container_id")"
-  if [ "$restart_after" -gt "$restart_before" ] && [ "$health" = healthy ]; then
-    break
-  fi
-  attempt=$((attempt + 1))
-  sleep 1
-done
-test "$restart_after" -gt "$restart_before"
-test "$health" = healthy
-docker compose stop benchwarmer
-test "$(docker inspect --format '{{.State.Status}}' "$container_id")" = exited
-sleep 5
-test "$(docker inspect --format '{{.State.Status}}' "$container_id")" = exited
-docker compose start benchwarmer
-trap - EXIT HUP INT TERM
-```
-
-Killing PID 1 from an exec process simulates an application crash rather than a
-Docker stop operation. The restart count must increase after that crash and the
-service must return to healthy. An operator stop must remain stopped through the
-explicit delay. `set -eu` makes every assertion fail closed, while the trap
-restores the service if the block exits early. Finally, make the health probe
-fail in a disposable deployment and confirm Docker reports `unhealthy` without
-claiming it automatically restarted; restore the configuration, inspect logs,
-and verify HTTPS recovery.
+Build, target-host exposure, route/privacy, readiness, crash-restart, and
+operator-stop procedures live in the
+[private deployment work record](../../todo/work/private-deployment/README.md#deployment-verification-procedure).
+A rendered configuration is not a live deployment result. Design acceptance
+remains independent of target-host verification; deployment stays planned until
+that work record has sanitized execution evidence.

@@ -52,6 +52,7 @@ Commands or target-host checks that validate the proposal.
 - [Private serving and supervision](0003-serving-supervision.md)
 - [First import adapter](0004-first-import-adapter.md)
 - [Cross-machine collection](0005-cross-machine-collection.md)
+- [Source evidence and reconciliation](0007-source-evidence-and-reconciliation.md)
 
 ## Proposed records
 

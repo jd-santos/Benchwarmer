@@ -22,6 +22,16 @@ Related observations stay retained and their overlap decisions are inspectable. 
 
 - [ ] Reconcile overlapping harness/provider observations
   - Dependencies: [Add a second source adapter](../additional-sources/README.md)
+  - Contract: [ADR 0007](../../../docs/decisions/0007-source-evidence-and-reconciliation.md).
+    Retain both observations and explicit evidence links. Verified native/provider
+    identifiers may support joins; similarity-only matches stay candidates.
+  - Verify synthetic fixtures for colliding IDs across source scopes, protocol IDs
+    versus provider generation IDs, missing IDs, contradictory observations, and
+    false matches sharing model/timestamp/token counts. No destructive merge.
+  - Aggregate request and session scopes without counting the same usage twice;
+    reasoning/cache subsets must not be added to their containing totals.
+  - Test unknown versus confirmed zero, estimates versus charges, balance versus
+    spend history, and timestamped price evidence versus current catalog prices.
 
 - [ ] Expose gaps and reconciliation decisions in API and UI
   - Dependencies: [Reconcile overlapping harness/provider observations](../usage-reconciliation/README.md)
@@ -41,3 +51,4 @@ results at handoff. This record currently defines planned work.
 - [Current priorities](../../TODO.md)
 - [Conversation workflow](../../../docs/conversation-library.md)
 - [Experiment semantics](../../../docs/experiments.md)
+- [Source evidence and reconciliation](../../../docs/decisions/0007-source-evidence-and-reconciliation.md)

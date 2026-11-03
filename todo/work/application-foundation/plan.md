@@ -241,15 +241,16 @@ application data outside the checkout by default.
 3. Run `uv run pytest tests/test_config.py -q` and verify the new tests fail.
 4. Implement a typed settings object that resolves database, artifact,
    snapshot, and job/log paths from one root. Avoid module-import side effects.
-5. Run the focused tests, then execute ADR 0002's complete disposable
-   WAL/recovery prototype without bypassing its preflight. Require
-   `recovery prototype: PASS` and verify it leaves no state in the checkout.
+5. Run the focused configuration and runtime safety tests. The old ADR 0002
+   prototype is retired; application recovery tests are owned by
+   [backup and recovery](../backup-and-recovery/README.md), not this completed
+   foundation step.
 6. Run all Python checks from [Python quality tooling](plan.md).
 7. Commit with `feat: add private data root configuration`.
 
 **Acceptance:** Tests use `tmp_path`; importing the package creates no files;
-an invalid root fails with an actionable error; the recovery fixture passes;
-and no private path or runtime state enters git.
+an invalid root fails with an actionable error; and no private path or runtime
+state enters git. Foundation completion is not production recovery evidence.
 
 ### Add database migration plumbing
 

@@ -45,6 +45,17 @@ generation identifier without private paths or content.
   - Scope: write-gate timeout and concurrent mutation, interrupted publication,
     partial generation, database and durable-file corruption, path traversal,
     rollback, absent external credentials, restart, and reference verification
+  - Keep a committed transaction in an active WAL while taking the coordinated
+    backup; prove restored database rows and durable-file digests agree. Do not
+    restore live sidecars, jobs, logs, or locks. Use the migrated application and
+    real reference verifier, not the retired design prototype from ADR 0002.
+  - Reject manifest and database-reference paths before filesystem joins/reads:
+    non-string, empty, dot-only, absolute, traversal, noncanonical repeated slash,
+    leading `./`, and trailing slash. Include symlink, missing/extra file,
+    unsupported schema/format, length, digest, and integrity failures.
+  - Restart the application against restored state, check references read-only,
+    and verify failure preserves the old root and fences writers. Assert the
+    runtime safety gate in each WAL-capable process before its first connection.
 
 - [ ] Run and record a target-host restore drill
   - Dependencies: [Prove crash-safe recovery in disposable roots](../backup-and-recovery/README.md), [Implement and validate private deployment](../private-deployment/README.md)
@@ -57,6 +68,11 @@ generation identifier without private paths or content.
     root is not equivalent evidence
 
 ## Verification
+
+Also choose backup destination, encryption, schedule, rotation, and failure
+notification before unattended operation. Expose disk usage and last verified
+backup age; keep at least one verified generation outside the live disk's failure
+domain. No deployment or backup drill was performed by documentation cleanup.
 
 Before implementation, name the command surfaces, affected mutation paths,
 fixtures, target-host storage policy, and focused checks here. Follow

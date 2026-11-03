@@ -12,6 +12,15 @@ the shared [coverage matrix](../source-coverage.md) and
 writers. Reports describe dated observed capability; the accepted adapter
 decision determines implementation order.
 
+## Evidence lifecycle
+
+Reports retain inspection dates and version boundaries; they are not a live
+inventory or execution checklist. Later follow-ups must say which earlier
+findings they supersede. Put enduring policy in
+[decision records](../decisions/README.md), implementation gaps in the existing
+work READMEs, and leave commands/results in reports only as dated evidence.
+Do not reopen completed discovery or infer operational readiness from parsing.
+
 ## Completed reports
 
 - [Pi](pi.md)

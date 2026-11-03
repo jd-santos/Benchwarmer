@@ -19,6 +19,13 @@ snapshots and two revisions. Full directory persistence, rewrite/truncation
 reconciliation, and enrolled collector delivery remain pending. The stored Pi
 cost remains a harness-side calculation, not an actual provider charge.
 
+## Original inspection, 2026-09-08
+
+The following sections retain dated upstream and negative local evidence. The
+follow-up above supersedes installation absence and local-file availability,
+not the untested execution, retention, or provider-link claims. Current pending
+implementation work lives in [the adapter record](../../todo/work/additional-sources/README.md).
+
 - Work: [Inspect Pi capabilities](pi.md)
 - Observed version/account scope: No Pi executable, process, global npm package,
   default agent directory, default session directory, or Pi directory override was

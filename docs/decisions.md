@@ -68,6 +68,10 @@ execution is a harness. The approved workflow is in
   optional three-or-four-times-daily `launchd` schedule after the manual path is
   reliable. Keep browsing central over Tailscale; desktop sync is deferred. See
   [ADR 0005](decisions/0005-cross-machine-collection.md).
+- **Evidence and reconciliation:** Preserve source-native identity, versioned
+  observations, explicit unknowns, overlapping usage scopes, and partial replay
+  capture. Verified links do not erase raw observations; heuristics are not
+  automatic joins. See [ADR 0007](decisions/0007-source-evidence-and-reconciliation.md).
 - **Experiments:** Start with native harness configurations, capturing accessible
   system prompts, tools, skills and differences. Controlled comparisons remain
   a later capability, rather than an initial requirement.

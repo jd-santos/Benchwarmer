@@ -8,15 +8,17 @@
 
 - **Project**: Benchwarmer, a private conversation library and model evaluation
   app: collect, normalize, enrich, discover, select, and evaluate
-- **Tech stack**: Python 3.12+, uv, SQLite and Svelte (planned application);
+- **Tech stack**: Python 3.13.15 (pinned runtime), uv, SQLite and Svelte;
   a pinned Pi Durable TypeScript harness under `harness/` for Benchwarmer's own
   model-driven workflows
 - **Architecture**: Central API and worker, private native snapshots and normalized
   conversations, harness-neutral task units, and source/execution adapters.
   Cross-machine collection follows ADR 0005's manual-first push topology.
-- **Status**: Partial application foundation and validated conversation/approval
-  contracts. Real importers, conversation browsing, enrichment, and trial execution
-  are not yet implemented. Target host is an always-on Mac mini alongside Hermes Agent.
+- **Status**: Application code includes importers, conversation browsing, evidence
+  bundles, task versions, and approved model-work surfaces. Source-device gates,
+  broader enrichment, trial execution, and deployment are tracked separately in
+  the workbench; code presence is not operational verification. Target host is an
+  always-on Mac mini alongside Hermes Agent.
 - **Access and UI**: Private hosting over Tailscale, with a mobile-friendly Svelte
   interface. Central serving follows ADR 0003; live deployment remains pending.
 

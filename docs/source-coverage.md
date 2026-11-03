@@ -1,6 +1,9 @@
 # Source coverage matrix
 
-**Status:** Completed evidence synthesis for [the source coverage review](source-coverage.md)
+**Status:** Dated evidence synthesis, not a live installation inventory.
+Implementation status lives in [source adapter work](../todo/work/additional-sources/README.md)
+and [Hermes import](../todo/work/hermes-import/README.md). Durable cross-source
+rules live in [ADR 0007](decisions/0007-source-evidence-and-reconciliation.md).
 
 **Evidence date:** 2026-09-24
 
@@ -172,8 +175,9 @@ must not infer absent components.
 
 ## Execution support
 
-- **Pi:** upstream CLI print/JSON stream, RPC, SDK, and extensions; local execution
-  is unavailable until an installation is discovered and version-gated.
+- **Pi:** upstream CLI print/JSON stream, RPC, SDK, and extensions; the later
+  2026-09-23 check established a local installation and parsing/import evidence,
+  not validation of these execution interfaces.
 - **Hermes:** local CLI/gateway/runtime surfaces exist, but execution must remain
   separate from read-only import and needs explicit approval and private output.
 - **Codex:** installed `exec`, `review`, resume, and app-server thread/turn methods
@@ -186,8 +190,9 @@ silently trigger paid or externally mutating work.
 
 ## Retention and deletion uncertainty
 
-- **Pi:** versioned session files can be inspected offline, but the report did not
-  establish a local retention policy because no installation was present.
+- **Pi:** versioned session files were inspected in the later local follow-up.
+  Effective source retention, external cleanup, and deletion races remain unknown;
+  successful parsing does not establish a retention guarantee.
 - **Hermes:** installed defaults and current documentation conflict on pruning;
   effective private configuration was intentionally not inspected.
 - **Codex:** current documentation distinguishes archive from deletion and
@@ -220,7 +225,9 @@ confidence label and user-visible provenance.
 
 ## Known gaps to carry forward
 
-1. Pi must be inspected again if a local installation becomes available.
+1. Pi local v3/v1 parsing and two temporary imports were verified in the dated
+   follow-up. Rewrite/deletion reconciliation and collector delivery remain in
+   [the adapter work record](../todo/work/additional-sources/README.md).
 2. Hermes schema adapters need fixtures for each supported schema/version pair,
    including rewinds, compression continuations, usage updates, and deletions.
 3. Codex account/rate-limit coverage needs a privacy-preserving live probe before
@@ -234,17 +241,10 @@ confidence label and user-visible provenance.
 7. No source alone captures all prompt, tool, artifact, environment, and approval
    state required for exact replay.
 
-## Select the first import adapter handoff
+## Adapter selection and follow-up
 
-The first-adapter decision must score at least:
-
-- local availability and privacy boundary;
-- stable source-native identity;
-- viable incremental import plus full-rescan recovery;
-- schema/version compatibility strategy;
-- fixture availability without private payloads;
-- usage provenance and unknown-field handling; and
-- user value from the sessions currently available.
-
-[the first-adapter decision](decisions/0004-first-import-adapter.md) must record the choice and rejected alternatives in ADR 0004. This
-matrix deliberately makes no selection.
+[ADR 0004](decisions/0004-first-import-adapter.md) selected Hermes. Do not rerun
+the original first-adapter selection from this matrix. Later adapter work uses
+[additional-source research](../todo/work/additional-source-research/README.md)
+and [the adapter work record](../todo/work/additional-sources/README.md), with
+fresh version boundaries, private validation gates, and source-specific fixtures.
